@@ -1,0 +1,179 @@
+name: Build SrtExtractor Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  SIGN_CODE: false
+  BASE_DIR: D:\a\SrtExtractor\SrtExtractor
+  ARTIFACTS_DIR: D:\a\SrtExtractor\SrtExtractor\artifacts
+  TEMP_DIR: D:\a\SrtExtractor\SrtExtractor\artifacts\temp
+  SolutionPath: D:\a\SrtExtractor\SrtExtractor\SrtExtractor.sln
+  SetupPath: D:\a\SrtExtractor\SrtExtractor\SrtExtractorSetup
+  SrtExtractorBin: D:\a\SrtExtractor\SrtExtractor\SrtExtractor\bin\Release\net9.0-windows
+  SrtExtractorExe: D:\a\SrtExtractor\SrtExtractor\SrtExtractor\bin\Release\net9.0-windows\SrtExtractor.exe
+  SrtExtractorInstallerExe: D:\a\SrtExtractor\SrtExtractor\artifacts\SrtExtractorInstaller.exe
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          path: .
+
+      - name: Set default version for test build
+        run: echo "APP_VERSION=1.0.0-dev" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: powershell
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Create artifacts and temp directories
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env.ARTIFACTS_DIR }}"
+          New-Item -ItemType Directory -Force -Path "${{ env.TEMP_DIR }}"
+        shell: powershell
+
+      - name: Restore NuGet packages
+        run: dotnet restore "${{ env.SolutionPath }}"
+        shell: powershell
+
+      - name: Build SrtExtractor
+        run: dotnet build "${{ env.SolutionPath }}" --configuration Release --no-restore
+        shell: powershell
+
+      - name: Build SubtitleEdit CLI
+        run: |
+          $cliPath = "SubtitleEdit-CLI\src\se-cli"
+          if (Test-Path $cliPath) {
+            Push-Location $cliPath
+            dotnet restore
+            dotnet build -c Release
+            Pop-Location
+          } else {
+            Write-Warning "SubtitleEdit-CLI submodule not found, skipping CLI build"
+          }
+        shell: powershell
+
+      - name: Download FFmpeg
+        run: |
+          $ffmpegPath = "FFmpeg"
+          if (Test-Path $ffmpegPath) {
+            Push-Location $ffmpegPath
+            .\download-ffmpeg.ps1
+            Pop-Location
+          } else {
+            Write-Warning "FFmpeg submodule not found, skipping FFmpeg download"
+          }
+        shell: powershell
+
+      - name: Copy external tools to output directory
+        run: |
+          $outputDir = "${{ env.SrtExtractorBin }}"
+          
+          # Copy SubtitleEdit CLI if built
+          $cliExe = "SubtitleEdit-CLI\src\se-cli\bin\Release\net8.0\seconv.exe"
+          if (Test-Path $cliExe) {
+            Copy-Item $cliExe $outputDir -Force
+            Write-Host "Copied seconv.exe to output directory"
+          }
+          
+          # Copy FFmpeg if downloaded
+          $ffmpegExe = "FFmpeg\ffmpeg.exe"
+          $ffprobeExe = "FFmpeg\ffprobe.exe"
+          if (Test-Path $ffmpegExe) {
+            Copy-Item $ffmpegExe $outputDir -Force
+            Copy-Item $ffprobeExe $outputDir -Force
+            Write-Host "Copied FFmpeg tools to output directory"
+          }
+        shell: powershell
+
+      - name: Download and Install Inno Setup
+        run: |
+          Invoke-WebRequest -Uri https://jrsoftware.org/download.php/is.exe -OutFile inno-setup-installer.exe
+          Start-Process -FilePath .\inno-setup-installer.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait
+        shell: powershell
+
+      - name: Create Inno Setup script
+        run: |
+          $setupScript = @"
+[Setup]
+AppName=SrtExtractor
+AppVersion=${{ env.APP_VERSION }}
+AppPublisher=ZentrixLabs
+AppPublisherURL=https://zentrixlabs.net/
+AppSupportURL=https://github.com/ZentrixLabs/SrtExtractor
+AppUpdatesURL=https://github.com/ZentrixLabs/SrtExtractor/releases
+DefaultDirName={autopf}\SrtExtractor
+DefaultGroupName=SrtExtractor
+AllowNoIcons=yes
+LicenseFile=LICENSE.txt
+OutputDir=${{ env.ARTIFACTS_DIR }}
+OutputBaseFilename=SrtExtractorInstaller
+SetupIconFile=SrtExtractor\SrtExtractor.ico
+Compression=lzma
+SolidCompression=yes
+WizardStyle=modern
+PrivilegesRequired=admin
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
+[Files]
+Source: "${{ env.SrtExtractorBin }}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
+
+[Icons]
+Name: "{group}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"
+Name: "{group}\{cm:UninstallProgram,SrtExtractor}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\SrtExtractor.exe"; Description: "{cm:LaunchProgram,SrtExtractor}"; Flags: nowait postinstall skipifsilent
+"@
+          
+          $setupScript | Out-File -FilePath "SrtExtractorSetup.iss" -Encoding UTF8
+        shell: powershell
+
+      - name: Build Inno Setup Installer
+        run: |
+          $env:Path += ";C:\Program Files (x86)\Inno Setup 6"
+          ISCC.exe "SrtExtractorSetup.iss" /DMyAppVersion="${{ env.APP_VERSION }}" > "${{ env.ARTIFACTS_DIR }}\iscc.log" 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content "${{ env.ARTIFACTS_DIR }}\iscc.log"
+            exit $LASTEXITCODE
+          }
+        shell: powershell
+
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SrtExtractor-Installer
+          path: ${{ env.SrtExtractorInstallerExe }}
+          retention-days: 30
+
+      - name: Upload Build Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Build-Logs
+          path: ${{ env.ARTIFACTS_DIR }}\*.log
+          retention-days: 7
