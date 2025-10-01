@@ -7,11 +7,13 @@ namespace SrtExtractor.Models;
 /// <param name="Codec">The codec type (e.g., S_TEXT/UTF8, S_HDMV/PGS)</param>
 /// <param name="Language">The language code (e.g., eng, spa, fra)</param>
 /// <param name="Forced">Whether this is a forced subtitle track</param>
+/// <param name="IsClosedCaption">Whether this is a closed caption track</param>
 /// <param name="Name">Optional track name or description</param>
 public record SubtitleTrack(
     int Id,
     string Codec,
     string Language,
     bool Forced,
+    bool IsClosedCaption,
     string? Name
 );

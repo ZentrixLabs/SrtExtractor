@@ -35,6 +35,7 @@ namespace SrtExtractor
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
         services.AddSingleton<IWingetService, WingetService>();
         services.AddSingleton<IMkvToolService, MkvToolService>();
+        services.AddSingleton<IFfmpegService, FfmpegService>();
         services.AddSingleton<ISubtitleOcrService, SubtitleOcrService>();
 
             // Register ViewModels

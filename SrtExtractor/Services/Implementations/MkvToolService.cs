@@ -12,13 +12,13 @@ public class MkvToolService : IMkvToolService
 {
     private readonly ILoggingService _loggingService;
     private readonly IProcessRunner _processRunner;
-    private readonly ISettingsService _settingsService;
+    private readonly IToolDetectionService _toolDetectionService;
 
-    public MkvToolService(ILoggingService loggingService, IProcessRunner processRunner, ISettingsService settingsService)
+    public MkvToolService(ILoggingService loggingService, IProcessRunner processRunner, IToolDetectionService toolDetectionService)
     {
         _loggingService = loggingService;
         _processRunner = processRunner;
-        _settingsService = settingsService;
+        _toolDetectionService = toolDetectionService;
     }
 
     public async Task<ProbeResult> ProbeAsync(string mkvPath)
@@ -32,14 +32,15 @@ public class MkvToolService : IMkvToolService
 
         try
         {
-            var settings = await _settingsService.LoadSettingsAsync();
-            if (string.IsNullOrEmpty(settings.MkvMergePath))
+            // Get the tool path directly from tool detection
+            var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
+            if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
             {
-                throw new InvalidOperationException("MKVToolNix path not configured");
+                throw new InvalidOperationException("MKVToolNix not found");
             }
 
             // Run mkvmerge -J to get JSON output
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.MkvMergePath, $"-J \"{mkvPath}\"");
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolStatus.Path, $"-J \"{mkvPath}\"");
 
             if (exitCode != 0)
             {
@@ -65,10 +66,19 @@ public class MkvToolService : IMkvToolService
 
         try
         {
-            var settings = await _settingsService.LoadSettingsAsync();
-            if (string.IsNullOrEmpty(settings.MkvExtractPath))
+            // Get the tool path directly from tool detection
+            var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
+            if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
             {
-                throw new InvalidOperationException("MKVToolNix extract path not configured");
+                throw new InvalidOperationException("MKVToolNix not found");
+            }
+
+            // Get mkvextract path (same directory as mkvmerge)
+            var mkvDir = Path.GetDirectoryName(toolStatus.Path);
+            var mkvextractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe");
+            if (!File.Exists(mkvextractPath))
+            {
+                throw new InvalidOperationException($"mkvextract.exe not found at: {mkvextractPath}");
             }
 
             // Ensure output directory exists
@@ -80,7 +90,7 @@ public class MkvToolService : IMkvToolService
 
             // Run mkvextract tracks
             var args = $"tracks \"{mkvPath}\" {trackId}:\"{outSrt}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.MkvExtractPath, args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args);
 
             if (exitCode != 0)
             {
@@ -108,10 +118,19 @@ public class MkvToolService : IMkvToolService
 
         try
         {
-            var settings = await _settingsService.LoadSettingsAsync();
-            if (string.IsNullOrEmpty(settings.MkvExtractPath))
+            // Get the tool path directly from tool detection
+            var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
+            if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
             {
-                throw new InvalidOperationException("MKVToolNix extract path not configured");
+                throw new InvalidOperationException("MKVToolNix not found");
+            }
+
+            // Get mkvextract path (same directory as mkvmerge)
+            var mkvDir = Path.GetDirectoryName(toolStatus.Path);
+            var mkvextractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe");
+            if (!File.Exists(mkvextractPath))
+            {
+                throw new InvalidOperationException($"mkvextract.exe not found at: {mkvextractPath}");
             }
 
             // Ensure output directory exists
@@ -123,7 +142,7 @@ public class MkvToolService : IMkvToolService
 
             // Run mkvextract tracks
             var args = $"tracks \"{mkvPath}\" {trackId}:\"{outSup}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.MkvExtractPath, args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args);
 
             if (exitCode != 0)
             {
@@ -194,7 +213,17 @@ public class MkvToolService : IMkvToolService
                             }
                         }
 
-                        tracks.Add(new SubtitleTrack(id, codec, language, forced, name));
+                        // Detect closed captions based on track name or codec
+                        var isClosedCaption = false;
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            var nameLower = name.ToLowerInvariant();
+                            isClosedCaption = nameLower.Contains("cc") || 
+                                            nameLower.Contains("closed caption") ||
+                                            nameLower.Contains("caption");
+                        }
+
+                        tracks.Add(new SubtitleTrack(id, codec, language, forced, isClosedCaption, name));
                     }
                 }
             }

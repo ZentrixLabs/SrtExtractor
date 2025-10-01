@@ -20,6 +20,12 @@ public interface IToolDetectionService
     Task<ToolStatus> CheckSubtitleEditAsync();
 
     /// <summary>
+    /// Check if FFmpeg is installed and available.
+    /// </summary>
+    /// <returns>Tool status with installation details</returns>
+    Task<ToolStatus> CheckFfmpegAsync();
+
+    /// <summary>
     /// Find a tool executable in common installation locations.
     /// </summary>
     /// <param name="toolName">Name of the tool to find</param>

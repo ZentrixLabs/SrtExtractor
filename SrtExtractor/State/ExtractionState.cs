@@ -28,9 +28,15 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private ToolStatus _subtitleEditStatus = new(false, null, null, null);
 
+    [ObservableProperty]
+    private ToolStatus _ffmpegStatus = new(false, null, null, null);
+
     // Settings
     [ObservableProperty]
     private bool _preferForced = true;
+
+    [ObservableProperty]
+    private bool _preferClosedCaptions = false;
 
     [ObservableProperty]
     private string _ocrLanguage = "eng";
@@ -38,15 +44,56 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
 
+    partial void OnPreferForcedChanged(bool value)
+    {
+        if (value)
+        {
+            PreferClosedCaptions = false;
+            FileNamePattern = "{basename}.{lang}{forced}.srt";
+        }
+    }
+
+    partial void OnPreferClosedCaptionsChanged(bool value)
+    {
+        if (value)
+        {
+            PreferForced = false;
+            FileNamePattern = "{basename}.{lang}{cc}.srt";
+        }
+    }
+
+    partial void OnMkvPathChanged(string? value)
+    {
+        OnPropertyChanged(nameof(CanProbe));
+        OnPropertyChanged(nameof(CanExtract));
+    }
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanProbe));
+        OnPropertyChanged(nameof(CanExtract));
+    }
+
+    partial void OnSelectedTrackChanged(SubtitleTrack? value)
+    {
+        OnPropertyChanged(nameof(CanExtract));
+    }
+
     // UI State
     [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
+    private bool _isProcessing = false;
+
+    [ObservableProperty]
+    private string _processingMessage = "";
+
+    [ObservableProperty]
     private string _logText = string.Empty;
 
     // Computed Properties
-    public bool AreToolsAvailable => MkvToolNixStatus.IsInstalled && SubtitleEditStatus.IsInstalled;
+    public bool AreToolsAvailable => MkvToolNixStatus.IsInstalled && SubtitleEditStatus.IsInstalled && FfmpegStatus.IsInstalled;
     
     public bool CanProbe => !string.IsNullOrEmpty(MkvPath) && AreToolsAvailable && !IsBusy;
     
@@ -97,6 +144,10 @@ public partial class ExtractionState : ObservableObject
         {
             SubtitleEditStatus = status;
         }
+        else if (string.Equals(toolName, "FFmpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            FfmpegStatus = status;
+        }
 
         // Notify that computed properties have changed
         OnPropertyChanged(nameof(AreToolsAvailable));
@@ -116,12 +167,40 @@ public partial class ExtractionState : ObservableObject
         var directory = Path.GetDirectoryName(mkvPath) ?? "";
         
         var forcedSuffix = track.Forced ? ".forced" : "";
+        var ccSuffix = track.IsClosedCaption ? ".cc" : "";
         var pattern = FileNamePattern
             .Replace("{basename}", baseName)
             .Replace("{lang}", track.Language)
-            .Replace("{forced}", forcedSuffix);
+            .Replace("{forced}", forcedSuffix)
+            .Replace("{cc}", ccSuffix);
 
         return Path.Combine(directory, pattern);
+    }
+
+    /// <summary>
+    /// Update processing message.
+    /// </summary>
+    public void UpdateProcessingMessage(string message)
+    {
+        ProcessingMessage = message;
+    }
+
+    /// <summary>
+    /// Start processing with initial message.
+    /// </summary>
+    public void StartProcessing(string message)
+    {
+        IsProcessing = true;
+        ProcessingMessage = message;
+    }
+
+    /// <summary>
+    /// Stop processing and reset message.
+    /// </summary>
+    public void StopProcessing()
+    {
+        IsProcessing = false;
+        ProcessingMessage = "";
     }
 
     /// <summary>
@@ -133,6 +212,8 @@ public partial class ExtractionState : ObservableObject
         Tracks.Clear();
         SelectedTrack = null;
         IsBusy = false;
+        IsProcessing = false;
+        ProcessingMessage = "";
         ClearLog();
     }
 }

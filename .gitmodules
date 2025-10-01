@@ -1,3 +1,6 @@
 [submodule "SrtExtractor/SubtitleEdit-CLI"]
 	path = SrtExtractor/SubtitleEdit-CLI
 	url = https://github.com/SubtitleEdit/subtitleedit-cli.git
+[submodule "FFmpeg"]
+	path = FFmpeg
+	url = https://git.ffmpeg.org/ffmpeg.git

@@ -102,6 +102,54 @@ public class ToolDetectionService : IToolDetectionService
         return new ToolStatus(false, null, null, "Subtitle Edit CLI (seconv.exe) not found. Will be built automatically on next build.");
     }
 
+    public async Task<ToolStatus> CheckFfmpegAsync()
+    {
+        _loggingService.LogInfo("Checking FFmpeg installation");
+
+        // Common installation paths for FFmpeg
+        var commonPaths = new[]
+        {
+            // First check our built FFmpeg in the output directory
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe"),
+            // Then check common installation paths
+            @"C:\ffmpeg\bin\ffmpeg.exe",
+            @"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+            @"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "ffmpeg", "bin", "ffmpeg.exe")
+        };
+
+        var ffmpegPath = await FindToolPathAsync("ffmpeg.exe", commonPaths);
+        if (ffmpegPath != null)
+        {
+            var isValid = await ValidateToolAsync(ffmpegPath);
+            if (isValid)
+            {
+                var version = await GetToolVersionAsync(ffmpegPath);
+                var isBuiltIn = ffmpegPath.Contains(AppDomain.CurrentDomain.BaseDirectory);
+                var statusText = isBuiltIn ? "Built-in" : "External";
+                _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, ffmpegPath, version, null));
+                return new ToolStatus(true, ffmpegPath, version, null);
+            }
+        }
+
+        // Also check if it's in PATH
+        try
+        {
+            var (exitCode, _, _) = await _processRunner.RunAsync("ffmpeg", "-version");
+            if (exitCode == 0)
+            {
+                _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, "ffmpeg", "Unknown", null));
+                return new ToolStatus(true, "ffmpeg", "Unknown", null);
+            }
+        }
+        catch
+        {
+            // Tool not in PATH
+        }
+
+        return new ToolStatus(false, null, null, "FFmpeg not found. Will be downloaded automatically on next build.");
+    }
+
     public async Task<string?> FindToolPathAsync(string toolName, string[] commonPaths)
     {
         _loggingService.LogInfo($"Searching for {toolName} in {commonPaths.Length} common paths");
@@ -250,6 +298,13 @@ public class ToolDetectionService : IToolDetectionService
                 // Subtitle Edit - try /help (but it might open GUI, so we'll just check if file exists and is executable)
                 // For now, just verify the file exists and is executable
                 _loggingService.LogInfo($"Subtitle Edit validation successful (file exists): {toolPath}");
+                return true;
+            }
+            else if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
+            {
+                // FFmpeg tools - just check if file exists and is executable
+                // FFmpeg has quirky behavior with --version, so we'll trust that if it exists, it works
+                _loggingService.LogInfo($"FFmpeg validation successful (file exists): {toolPath}");
                 return true;
             }
             else

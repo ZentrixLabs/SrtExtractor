@@ -142,7 +142,7 @@ public class WingetService : IWingetService
     /// <summary>
     /// Install Subtitle Edit CLI by downloading from GitHub releases.
     /// </summary>
-    public async Task<bool> InstallSubtitleEditAsync()
+    public Task<bool> InstallSubtitleEditAsync()
     {
         _loggingService.LogInfo("Opening SubtitleEdit-CLI GitHub releases page...");
         
@@ -158,13 +158,13 @@ public class WingetService : IWingetService
             
             _loggingService.LogInfo("GitHub releases page opened in browser");
             _loggingService.LogInstallation("Subtitle Edit CLI", true, "GitHub page opened - please download and extract seconv.exe");
-            return true;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to open GitHub releases page", ex);
             _loggingService.LogInstallation("Subtitle Edit CLI", false, "Failed to open browser");
-            return false;
+            return Task.FromResult(false);
         }
     }
 }

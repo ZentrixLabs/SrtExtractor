@@ -9,6 +9,7 @@ namespace SrtExtractor.Models;
 /// <param name="AutoDetectTools">Whether to automatically detect tools on startup</param>
 /// <param name="LastToolCheck">Timestamp of last tool detection</param>
 /// <param name="PreferForced">Whether to prefer forced subtitle tracks</param>
+/// <param name="PreferClosedCaptions">Whether to prefer closed caption tracks</param>
 /// <param name="DefaultOcrLanguage">Default language for OCR processing</param>
 /// <param name="FileNamePattern">Pattern for output file naming</param>
 public record AppSettings(
@@ -18,6 +19,7 @@ public record AppSettings(
     bool AutoDetectTools,
     DateTime? LastToolCheck,
     bool PreferForced,
+    bool PreferClosedCaptions,
     string DefaultOcrLanguage,
     string FileNamePattern
 )
@@ -32,6 +34,7 @@ public record AppSettings(
         AutoDetectTools: true,
         LastToolCheck: null,
         PreferForced: true,
+        PreferClosedCaptions: false,
         DefaultOcrLanguage: "eng",
         FileNamePattern: "{basename}.{lang}{forced}.srt"
     );

@@ -6,13 +6,14 @@
         xmlns:local="clr-namespace:SrtExtractor.Views"
         xmlns:converters="clr-namespace:SrtExtractor.Converters"
         mc:Ignorable="d"
-        Title="SrtExtractor - MKV Subtitle Extractor" 
-        Height="700" Width="900"
-        MinHeight="600" MinWidth="800">
+            Title="SrtExtractor - MKV/MP4 Subtitle Extractor"
+        Height="800" Width="1000"
+        MinHeight="700" MinWidth="900">
     
     <Window.Resources>
         <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <Style TargetType="Button">
             <Setter Property="Padding" Value="8,4"/>
@@ -36,14 +37,15 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- File Selection Row -->
-        <GroupBox Header="MKV File" Grid.Row="0">
+        <GroupBox Header="Video File" Grid.Row="0">
             <StackPanel Orientation="Horizontal">
-                <Button Content="Pick MKV..." 
+                <Button Content="Pick Video..." 
                         Command="{Binding PickMkvCommand}"
                         IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
                 <TextBox Text="{Binding State.MkvPath}" 
@@ -59,6 +61,7 @@
             <StackPanel>
                 <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -91,6 +94,17 @@
                                Margin="8,0"/>
                 </StackPanel>
 
+                <!-- FFmpeg Status -->
+                <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="FFmpeg:" FontWeight="Bold" Width="120"/>
+                    <TextBlock Text="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
+                               Margin="4,0"/>
+                    <TextBlock Text="(Auto-downloaded)" 
+                               FontStyle="Italic" 
+                               Foreground="Gray" 
+                               Margin="8,0"/>
+                </StackPanel>
+
                 <!-- Tool Paths Display -->
                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="20,4,0,4">
                     <TextBlock Text="{Binding State.MkvToolNixStatus.Path, StringFormat='Path: {0}'}" 
@@ -101,6 +115,13 @@
 
                 <StackPanel Grid.Row="1" Grid.Column="1" Margin="20,4,0,4">
                     <TextBlock Text="{Binding State.SubtitleEditStatus.Path, StringFormat='Path: {0}'}" 
+                               FontSize="10" 
+                               Foreground="Gray"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="20,4,0,4">
+                    <TextBlock Text="{Binding State.FfmpegStatus.Path, StringFormat='Path: {0}'}" 
                                FontSize="10" 
                                Foreground="Gray"
                                TextWrapping="Wrap"/>
@@ -120,10 +141,16 @@
         <!-- Settings Row -->
         <GroupBox Header="Settings" Grid.Row="2">
             <StackPanel Orientation="Horizontal">
-                <CheckBox Content="Prefer forced subtitles" 
-                          IsChecked="{Binding State.PreferForced}"
-                          VerticalAlignment="Center"
-                          Margin="0,0,20,0"/>
+                <RadioButton Content="Prefer forced subtitles" 
+                             IsChecked="{Binding State.PreferForced}"
+                             GroupName="SubtitlePreference"
+                             VerticalAlignment="Center"
+                             Margin="0,0,20,0"/>
+                <RadioButton Content="Prefer CC (Closed Captions)" 
+                             IsChecked="{Binding State.PreferClosedCaptions}"
+                             GroupName="SubtitlePreference"
+                             VerticalAlignment="Center"
+                             Margin="0,0,20,0"/>
                 <TextBlock Text="OCR Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                 <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
                           ItemsSource="{Binding State.AvailableLanguages}"
@@ -132,7 +159,7 @@
                 <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                 <TextBox Text="{Binding State.FileNamePattern}" 
                          Width="200"
-                         ToolTip="Pattern: {basename}.{lang}{forced}.srt"/>
+                         ToolTip="Pattern: {basename}.{lang}{forced}{cc}.srt"/>
             </StackPanel>
         </GroupBox>
 
@@ -153,8 +180,21 @@
             </StackPanel>
         </GroupBox>
 
+        <!-- Processing Indicator -->
+        <GroupBox Header="Processing" Grid.Row="4" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" 
+                            Width="20" 
+                            Height="20" 
+                            Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding State.ProcessingMessage}" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </GroupBox>
+
         <!-- Track List -->
-        <GroupBox Header="Subtitle Tracks" Grid.Row="4">
+        <GroupBox Header="Subtitle Tracks" Grid.Row="5">
             <DataGrid ItemsSource="{Binding State.Tracks}" 
                       SelectedItem="{Binding State.SelectedTrack}"
                       AutoGenerateColumns="False" 
@@ -185,7 +225,7 @@
         </GroupBox>
 
         <!-- Log Display -->
-        <GroupBox Header="Log" Grid.Row="5">
+        <GroupBox Header="Log" Grid.Row="6">
             <ScrollViewer Height="150" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 

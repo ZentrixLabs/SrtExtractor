@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IToolDetectionService _toolDetectionService;
     private readonly IWingetService _wingetService;
     private readonly IMkvToolService _mkvToolService;
+    private readonly IFfmpegService _ffmpegService;
     private readonly ISubtitleOcrService _ocrService;
     private readonly ISettingsService _settingsService;
 
@@ -30,6 +31,7 @@ public partial class MainViewModel : ObservableObject
         IToolDetectionService toolDetectionService,
         IWingetService wingetService,
         IMkvToolService mkvToolService,
+        IFfmpegService ffmpegService,
         ISubtitleOcrService ocrService,
         ISettingsService settingsService)
     {
@@ -37,6 +39,7 @@ public partial class MainViewModel : ObservableObject
         _toolDetectionService = toolDetectionService;
         _wingetService = wingetService;
         _mkvToolService = mkvToolService;
+        _ffmpegService = ffmpegService;
         _ocrService = ocrService;
         _settingsService = settingsService;
 
@@ -60,6 +63,8 @@ public partial class MainViewModel : ObservableObject
                     ExtractCommand.NotifyCanExecuteChanged();
                 });
             }
+            // Note: Settings are saved manually when user changes them
+            // Automatic saving was removed to prevent infinite loops
         };
 
         // Initialize the application
@@ -85,8 +90,8 @@ public partial class MainViewModel : ObservableObject
         {
             var openFileDialog = new OpenFileDialog
             {
-                Title = "Select MKV File",
-                Filter = "MKV Files (*.mkv)|*.mkv|All Files (*.*)|*.*",
+                Title = "Select Video File",
+                Filter = "Video Files (*.mkv;*.mp4)|*.mkv;*.mp4|MKV Files (*.mkv)|*.mkv|MP4 Files (*.mp4)|*.mp4|All Files (*.*)|*.*",
                 DefaultExt = "mkv"
             };
 
@@ -115,9 +120,22 @@ public partial class MainViewModel : ObservableObject
         try
         {
             State.IsBusy = true;
-            State.AddLogMessage("Probing MKV file for subtitle tracks...");
+            State.StartProcessing("Analyzing video file...");
+            State.AddLogMessage("Probing video file for subtitle tracks...");
 
-            var result = await _mkvToolService.ProbeAsync(State.MkvPath);
+            State.UpdateProcessingMessage("Reading subtitle tracks...");
+            
+            // Use appropriate service based on file extension
+            ProbeResult result;
+            var fileExtension = Path.GetExtension(State.MkvPath).ToLowerInvariant();
+            if (fileExtension == ".mp4")
+            {
+                result = await _ffmpegService.ProbeAsync(State.MkvPath);
+            }
+            else
+            {
+                result = await _mkvToolService.ProbeAsync(State.MkvPath);
+            }
             
             State.Tracks.Clear();
             foreach (var track in result.Tracks)
@@ -129,6 +147,7 @@ public partial class MainViewModel : ObservableObject
             var selectedTrack = SelectBestTrack(result.Tracks);
             State.SelectedTrack = selectedTrack;
 
+            State.UpdateProcessingMessage("Analysis completed!");
             State.AddLogMessage($"Found {result.Tracks.Count} subtitle tracks");
             if (selectedTrack != null)
             {
@@ -137,13 +156,14 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _loggingService.LogError("Failed to probe MKV tracks", ex);
+            _loggingService.LogError("Failed to probe video tracks", ex);
             State.AddLogMessage($"Error probing tracks: {ex.Message}");
-            MessageBox.Show($"Failed to probe MKV file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to probe video file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
             State.IsBusy = false;
+            State.StopProcessing();
         }
     }
 
@@ -155,28 +175,46 @@ public partial class MainViewModel : ObservableObject
         try
         {
             State.IsBusy = true;
+            State.StartProcessing("Preparing extraction...");
             State.AddLogMessage($"Extracting subtitle track {State.SelectedTrack.Id}...");
 
             var outputPath = State.GenerateOutputFilename(State.MkvPath, State.SelectedTrack);
 
-            if (State.SelectedTrack.Codec.Contains("S_TEXT/UTF8"))
+            // Use appropriate service based on file extension
+            var fileExtension = Path.GetExtension(State.MkvPath).ToLowerInvariant();
+            if (fileExtension == ".mp4")
+            {
+                // Use FFmpeg for MP4 files
+                State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
+                await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath);
+                State.UpdateProcessingMessage("MP4 extraction completed!");
+                State.AddLogMessage($"Subtitles extracted to: {outputPath}");
+            }
+            else if (State.SelectedTrack.Codec.Contains("S_TEXT/UTF8") || State.SelectedTrack.Codec.Contains("SubRip/SRT"))
             {
                 // Direct text extraction
+                State.UpdateProcessingMessage("Extracting text subtitles...");
                 await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath);
+                State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
             }
             else if (State.SelectedTrack.Codec.Contains("S_HDMV/PGS"))
             {
                 // PGS extraction + OCR
                 var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
+                
+                State.UpdateProcessingMessage("Extracting PGS subtitles...");
                 await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath);
                 State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
+                State.UpdateProcessingMessage("Starting OCR conversion...");
                 State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
                 await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage);
+                State.UpdateProcessingMessage("OCR conversion completed!");
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
                 // Clean up temporary SUP file
+                State.UpdateProcessingMessage("Cleaning up temporary files...");
                 try
                 {
                     File.Delete(tempSupPath);
@@ -185,6 +223,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     // Ignore cleanup errors
                 }
+                State.UpdateProcessingMessage("PGS extraction completed!");
             }
             else
             {
@@ -203,6 +242,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
+            State.StopProcessing();
         }
     }
 
@@ -239,7 +279,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-
     private void BrowseMkvToolNix()
     {
         var openFileDialog = new OpenFileDialog
@@ -270,6 +309,7 @@ public partial class MainViewModel : ObservableObject
             // Load settings
             var settings = await _settingsService.LoadSettingsAsync();
             State.PreferForced = settings.PreferForced;
+            State.PreferClosedCaptions = settings.PreferClosedCaptions;
             State.OcrLanguage = settings.DefaultOcrLanguage;
             State.FileNamePattern = settings.FileNamePattern;
 
@@ -296,6 +336,10 @@ public partial class MainViewModel : ObservableObject
         // Detect Subtitle Edit
         var seStatus = await _toolDetectionService.CheckSubtitleEditAsync();
         State.UpdateToolStatus("SubtitleEdit", seStatus);
+
+        // Detect FFmpeg
+        var ffmpegStatus = await _toolDetectionService.CheckFfmpegAsync();
+        State.UpdateToolStatus("FFmpeg", ffmpegStatus);
 
         if (State.AreToolsAvailable)
         {
@@ -345,42 +389,111 @@ public partial class MainViewModel : ObservableObject
         if (!tracks.Any())
             return null;
 
-        // Priority order: forced UTF-8 -> UTF-8 -> forced PGS -> PGS
         var preferredLanguage = "eng"; // Could be made configurable
 
-        // First, try to find forced UTF-8 in preferred language
-        var forcedUtf8 = tracks.FirstOrDefault(t => 
-            t.Forced && 
-            t.Codec.Contains("S_TEXT/UTF8") && 
-            string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-        
-        if (forcedUtf8 != null)
-            return forcedUtf8;
+        // Priority order based on user preferences:
+        // If PreferClosedCaptions: CC forced UTF-8 -> CC UTF-8 -> forced UTF-8 -> UTF-8 -> CC forced PGS -> CC PGS -> forced PGS -> PGS
+        // If PreferForced: forced UTF-8 -> UTF-8 -> forced PGS -> PGS -> CC forced UTF-8 -> CC UTF-8 -> CC forced PGS -> CC PGS
 
-        // Then, try any UTF-8 in preferred language
-        var utf8 = tracks.FirstOrDefault(t => 
-            t.Codec.Contains("S_TEXT/UTF8") && 
-            string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-        
-        if (utf8 != null)
-            return utf8;
+        if (State.PreferClosedCaptions)
+        {
+            // Prefer CC tracks first
+            var ccForcedUtf8 = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && t.Forced && 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccForcedUtf8 != null) return ccForcedUtf8;
 
-        // Then, try forced PGS in preferred language
-        var forcedPgs = tracks.FirstOrDefault(t => 
-            t.Forced && 
-            t.Codec.Contains("S_HDMV/PGS") && 
-            string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-        
-        if (forcedPgs != null)
-            return forcedPgs;
+            var ccUtf8 = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccUtf8 != null) return ccUtf8;
 
-        // Finally, try any PGS in preferred language
-        var pgs = tracks.FirstOrDefault(t => 
-            t.Codec.Contains("S_HDMV/PGS") && 
-            string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-        
-        if (pgs != null)
-            return pgs;
+            var forcedUtf8 = tracks.FirstOrDefault(t => 
+                t.Forced && 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (forcedUtf8 != null) return forcedUtf8;
+
+            var utf8 = tracks.FirstOrDefault(t => 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (utf8 != null) return utf8;
+
+            var ccForcedPgs = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && t.Forced && 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccForcedPgs != null) return ccForcedPgs;
+
+            var ccPgs = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccPgs != null) return ccPgs;
+
+            var forcedPgs = tracks.FirstOrDefault(t => 
+                t.Forced && 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (forcedPgs != null) return forcedPgs;
+
+            var pgs = tracks.FirstOrDefault(t => 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (pgs != null) return pgs;
+        }
+        else if (State.PreferForced)
+        {
+            // Prefer forced tracks first
+            var forcedUtf8 = tracks.FirstOrDefault(t => 
+                t.Forced && 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (forcedUtf8 != null) return forcedUtf8;
+
+            var utf8 = tracks.FirstOrDefault(t => 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (utf8 != null) return utf8;
+
+            var forcedPgs = tracks.FirstOrDefault(t => 
+                t.Forced && 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (forcedPgs != null) return forcedPgs;
+
+            var pgs = tracks.FirstOrDefault(t => 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (pgs != null) return pgs;
+
+            // Then try CC tracks
+            var ccForcedUtf8 = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && t.Forced && 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccForcedUtf8 != null) return ccForcedUtf8;
+
+            var ccUtf8 = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && 
+                t.Codec.Contains("S_TEXT/UTF8") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccUtf8 != null) return ccUtf8;
+
+            var ccForcedPgs = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && t.Forced && 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccForcedPgs != null) return ccForcedPgs;
+
+            var ccPgs = tracks.FirstOrDefault(t => 
+                t.IsClosedCaption && 
+                t.Codec.Contains("S_HDMV/PGS") && 
+                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
+            if (ccPgs != null) return ccPgs;
+        }
 
         // If no preferred language found, return the first track
         return tracks.First();
@@ -405,6 +518,30 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
+        }
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        try
+        {
+            var settings = new AppSettings(
+                MkvMergePath: null, // These will be updated when tools are detected
+                MkvExtractPath: null,
+                SubtitleEditPath: null,
+                AutoDetectTools: true,
+                LastToolCheck: DateTime.Now,
+                PreferForced: State.PreferForced,
+                PreferClosedCaptions: State.PreferClosedCaptions,
+                DefaultOcrLanguage: State.OcrLanguage,
+                FileNamePattern: State.FileNamePattern
+            );
+
+            await _settingsService.SaveSettingsAsync(settings);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to save settings", ex);
         }
     }
 
