@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SrtExtractor", "SrtExtractor\SrtExtractor.csproj", "{27D929D5-CD83-4984-B690-FFA6AD728030}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{27D929D5-CD83-4984-B690-FFA6AD728030}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27D929D5-CD83-4984-B690-FFA6AD728030}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27D929D5-CD83-4984-B690-FFA6AD728030}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27D929D5-CD83-4984-B690-FFA6AD728030}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5ED18DF1-E42D-4773-8EA3-26F96AA93159}
+	EndGlobalSection
+EndGlobal
