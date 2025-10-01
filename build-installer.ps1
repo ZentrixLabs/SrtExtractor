@@ -47,21 +47,15 @@ try {
         Write-Warning "SubtitleEdit-CLI submodule not found, skipping CLI build"
     }
     
-    # Download FFmpeg if submodule exists
-    if (Test-Path "FFmpeg") {
-        Write-Host "Downloading FFmpeg..." -ForegroundColor Yellow
-        Push-Location "FFmpeg"
-        .\download-ffmpeg.ps1
-        Pop-Location
-        
-        # Copy FFmpeg tools to output directory
-        if (Test-Path "FFmpeg\ffmpeg.exe") {
-            Copy-Item "FFmpeg\ffmpeg.exe" "SrtExtractor\bin\$Configuration\net9.0-windows\" -Force
-            Copy-Item "FFmpeg\ffprobe.exe" "SrtExtractor\bin\$Configuration\net9.0-windows\" -Force
-            Write-Host "Copied FFmpeg tools to output directory" -ForegroundColor Green
-        }
-    } else {
-        Write-Warning "FFmpeg submodule not found, skipping FFmpeg download"
+    # Download FFmpeg
+    Write-Host "Downloading FFmpeg..." -ForegroundColor Yellow
+    .\download-ffmpeg.ps1
+    
+    # Copy FFmpeg tools to output directory
+    if (Test-Path "tools\ffmpeg\ffmpeg.exe") {
+        Copy-Item "tools\ffmpeg\ffmpeg.exe" "SrtExtractor\bin\$Configuration\net9.0-windows\" -Force
+        Copy-Item "tools\ffmpeg\ffprobe.exe" "SrtExtractor\bin\$Configuration\net9.0-windows\" -Force
+        Write-Host "Copied FFmpeg tools to output directory" -ForegroundColor Green
     }
     
     # Check if Inno Setup is installed
