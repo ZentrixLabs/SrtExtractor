@@ -1,0 +1,169 @@
+# SrtExtractor - Cursor Rules
+
+## 📋 Project Overview
+This is a WPF (.NET 9) application for extracting subtitles from MKV files. The app uses MVVM pattern with centralized error handling and logging.
+
+## 🏗️ Architecture Standards
+
+### **MVVM Pattern**
+- Follow strict MVVM separation: Models, Views, ViewModels, Services
+- Use `CommunityToolkit.Mvvm` for `ObservableObject` and `RelayCommand`
+- All business logic goes in ViewModels, not code-behind
+- Use data binding for UI updates, not direct property access
+
+### **Service Layer**
+- All external dependencies abstracted through service interfaces
+- Services handle their own error logging and validation
+- Use dependency injection for service registration
+- Services are stateless and thread-safe
+
+## 📁 Project Structure
+Reference `SrtExtractor_Structure.md` for complete folder structure and organization.
+
+Key folders:
+- `Models/` - Data structures and business entities
+- `ViewModels/` - MVVM ViewModels with business logic
+- `Views/` - XAML UI components
+- `State/` - Observable state objects for data binding
+- `Services/Interfaces/` - Service contracts
+- `Services/Implementations/` - Service implementations
+
+## 🚫 Critical Rules
+
+### **NO PRINT STATEMENTS**
+- **NEVER** use `Console.WriteLine()`, `Debug.WriteLine()`, or `print()`
+- **ALWAYS** use `ILoggingService` for all output
+- **ONLY** exception: Specific debugging scenarios (document why)
+
+### **Centralized Logging**
+- **Location**: `C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\`
+- **Format**: `srt_YYYYMMDD.txt` (rolling daily logs)
+- **Service**: Use `ILoggingService` injected into all classes
+- **Levels**: Info, Warning, Error with proper context
+
+### **Error Handling**
+- **Service Layer**: Catch, log, and return error status or rethrow
+- **ViewModel Layer**: Catch service errors and update UI state
+- **Never**: Swallow exceptions silently
+- **Always**: Provide meaningful error messages to users
+
+## 🔧 Code Standards
+
+### **Naming Conventions**
+- **Classes**: PascalCase (`MainViewModel`)
+- **Methods**: PascalCase (`ExtractSubtitlesAsync`)
+- **Properties**: PascalCase (`CanProbe`)
+- **Fields**: camelCase with underscore (`_loggingService`)
+- **Constants**: PascalCase (`DefaultOcrLanguage`)
+
+### **Async/Await Patterns**
+- **All I/O operations**: Use async/await
+- **Service methods**: Return `Task` or `Task<T>`
+- **UI operations**: Use `ConfigureAwait(false)` for service calls
+- **Cancellation**: Support `CancellationToken` where appropriate
+
+### **Data Binding**
+- Use `{Binding}` with proper property paths
+- Use `{Binding CommandName}` for button actions
+- Use value converters for UI transformations
+- Define styles and templates in App.xaml
+
+## 📝 Logging Examples
+
+### **✅ Correct Logging**
+```csharp
+// Service layer
+_loggingService.LogInfo($"Starting tool detection for {toolName}");
+_loggingService.LogError("Failed to extract subtitles", exception);
+_loggingService.LogToolDetection("MKVToolNix", toolStatus);
+
+// ViewModel layer
+_loggingService.LogInfo("User selected MKV file", memberName: nameof(PickMkvCommand));
+```
+
+### **❌ Incorrect (Will be flagged)**
+```csharp
+Console.WriteLine("Starting tool detection");
+Debug.WriteLine("Error occurred");
+print("User action");
+```
+
+## 🎯 MVVM Implementation
+
+### **ViewModels**
+- Inherit from `ObservableObject`
+- Use `[ObservableProperty]` for auto-generated properties
+- Use `IRelayCommand` for commands
+- Inject services through constructor
+- Handle all business logic and state management
+
+### **State Objects**
+- Use `ObservableObject` for data binding
+- Group related properties logically
+- Use computed properties for derived state
+- Keep UI state separate from business data
+
+### **Services**
+- Implement interface contracts
+- Handle external dependencies (files, processes, network)
+- Log all operations and errors
+- Return meaningful error information
+- Support cancellation tokens
+
+## 🧪 Testing Requirements
+
+### **Unit Tests**
+- Test all service implementations with mocked dependencies
+- Test ViewModel command execution and state updates
+- Test model validation and data transformations
+- Mock `ILoggingService` in tests
+
+### **Integration Tests**
+- Test tool detection with actual installations
+- Test file operations with sample MKV files
+- Test error scenarios (missing tools, invalid files)
+
+## 📚 Documentation
+
+### **Code Documentation**
+- **Public APIs**: XML documentation comments
+- **Complex Logic**: Inline comments explaining business rules
+- **Service Methods**: Document parameters, return values, and exceptions
+- **ViewModels**: Document command behavior and state changes
+
+### **Architecture Decisions**
+- Document why specific patterns were chosen
+- Explain service layer design decisions
+- Document error handling strategies
+- Record tool detection and installation logic
+
+## 🔍 Code Review Checklist
+
+Before submitting code, ensure:
+- [ ] No print statements (use `ILoggingService`)
+- [ ] Proper MVVM separation maintained
+- [ ] Services handle errors and log appropriately
+- [ ] ViewModels use commands and data binding
+- [ ] Async/await used for I/O operations
+- [ ] Error handling provides user feedback
+- [ ] Code follows naming conventions
+- [ ] XML documentation for public APIs
+
+## 🚀 Implementation Phases
+
+1. **Foundation**: Models, service interfaces, logging service
+2. **Core Services**: Tool detection, winget, settings, process runner
+3. **MKV/OCR Services**: MkvToolService, SubtitleOcrService
+4. **State & ViewModel**: ExtractionState, MainViewModel
+5. **UI**: MainWindow with proper data binding
+6. **Integration**: Error handling, logging, testing
+
+## 📖 Reference Documents
+
+- **SrtExtractor_Plan.md**: Complete project plan and requirements
+- **SrtExtractor_Structure.md**: Detailed architecture and standards
+- **README.md**: Setup and usage instructions
+
+---
+
+Follow these rules to ensure consistent, maintainable, and testable code that follows WPF/MVVM best practices.
