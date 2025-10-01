@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SrtExtractor.Models;
 
@@ -43,6 +44,8 @@ public partial class ExtractionState : ObservableObject
 
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
+
+
 
     partial void OnPreferForcedChanged(bool value)
     {
@@ -216,4 +219,5 @@ public partial class ExtractionState : ObservableObject
         ProcessingMessage = "";
         ClearLog();
     }
+
 }

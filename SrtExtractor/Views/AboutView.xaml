@@ -15,24 +15,28 @@
         
         <!-- Header -->
         <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,20">
-            <!-- ZentrixLabs Logo -->
-            <Border Background="White" 
-                    CornerRadius="8" 
-                    Padding="10" 
-                    Margin="0,0,0,20"
-                    HorizontalAlignment="Center">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" 
-                                      Direction="315" 
-                                      ShadowDepth="3" 
-                                      Opacity="0.3" 
-                                      BlurRadius="5"/>
-                </Border.Effect>
-                <Image Source="pack://application:,,,/ZLLogo.png" 
-                       Width="200" 
-                       Height="200" 
-                       Stretch="Uniform"/>
-            </Border>
+                <!-- ZentrixLabs Logo -->
+                <Border Background="White" 
+                        CornerRadius="8" 
+                        Padding="10" 
+                        Margin="0,0,0,20"
+                        HorizontalAlignment="Center">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Gray" 
+                                          Direction="315" 
+                                          ShadowDepth="3" 
+                                          Opacity="0.3" 
+                                          BlurRadius="5"/>
+                    </Border.Effect>
+                    <Border Background="Black" 
+                            CornerRadius="4" 
+                            Padding="15">
+                        <Image Source="pack://application:,,,/ZLLogo.png" 
+                               Width="200" 
+                               Height="200" 
+                               Stretch="Uniform"/>
+                    </Border>
+                </Border>
             
             <TextBlock Text="SrtExtractor" 
                        FontSize="32" 

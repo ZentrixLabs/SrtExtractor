@@ -12,17 +12,17 @@ namespace SrtExtractor.Models;
 /// <param name="PreferClosedCaptions">Whether to prefer closed caption tracks</param>
 /// <param name="DefaultOcrLanguage">Default language for OCR processing</param>
 /// <param name="FileNamePattern">Pattern for output file naming</param>
-public record AppSettings(
-    string? MkvMergePath,
-    string? MkvExtractPath,
-    string? SubtitleEditPath,
-    bool AutoDetectTools,
-    DateTime? LastToolCheck,
-    bool PreferForced,
-    bool PreferClosedCaptions,
-    string DefaultOcrLanguage,
-    string FileNamePattern
-)
+    public record AppSettings(
+        string? MkvMergePath,
+        string? MkvExtractPath,
+        string? SubtitleEditPath,
+        bool AutoDetectTools,
+        DateTime? LastToolCheck,
+        bool PreferForced,
+        bool PreferClosedCaptions,
+        string DefaultOcrLanguage,
+        string FileNamePattern
+    )
 {
     /// <summary>
     /// Default settings for new installations.
@@ -33,9 +33,9 @@ public record AppSettings(
         SubtitleEditPath: null,
         AutoDetectTools: true,
         LastToolCheck: null,
-        PreferForced: true,
-        PreferClosedCaptions: false,
-        DefaultOcrLanguage: "eng",
-        FileNamePattern: "{basename}.{lang}{forced}.srt"
+            PreferForced: true,
+            PreferClosedCaptions: false,
+            DefaultOcrLanguage: "eng",
+            FileNamePattern: "{basename}.{lang}{forced}.srt"
     );
 }

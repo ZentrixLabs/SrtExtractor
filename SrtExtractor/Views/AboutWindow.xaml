@@ -9,7 +9,8 @@
         Height="700" Width="900"
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+            Background="White">
     
     <local:AboutView/>
 </Window>

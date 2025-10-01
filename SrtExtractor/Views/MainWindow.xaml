@@ -1,14 +1,15 @@
-﻿<Window x:Class="SrtExtractor.Views.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SrtExtractor.Views"
-        xmlns:converters="clr-namespace:SrtExtractor.Converters"
-        mc:Ignorable="d"
+﻿    <Window x:Class="SrtExtractor.Views.MainWindow"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            xmlns:local="clr-namespace:SrtExtractor.Views"
+            xmlns:converters="clr-namespace:SrtExtractor.Converters"
+            mc:Ignorable="d"
             Title="SrtExtractor - MKV/MP4 Subtitle Extractor"
-        Height="800" Width="1000"
-        MinHeight="700" MinWidth="900">
+            Height="800" Width="1000"
+            MinHeight="700" MinWidth="900"
+            Background="White">
     
     <Window.Resources>
         <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
@@ -140,26 +141,32 @@
 
         <!-- Settings Row -->
         <GroupBox Header="Settings" Grid.Row="2">
-            <StackPanel Orientation="Horizontal">
-                <RadioButton Content="Prefer forced subtitles" 
-                             IsChecked="{Binding State.PreferForced}"
-                             GroupName="SubtitlePreference"
-                             VerticalAlignment="Center"
-                             Margin="0,0,20,0"/>
-                <RadioButton Content="Prefer CC (Closed Captions)" 
-                             IsChecked="{Binding State.PreferClosedCaptions}"
-                             GroupName="SubtitlePreference"
-                             VerticalAlignment="Center"
-                             Margin="0,0,20,0"/>
-                <TextBlock Text="OCR Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
-                          ItemsSource="{Binding State.AvailableLanguages}"
-                          Width="80"
-                          Margin="0,0,20,0"/>
-                <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Text="{Binding State.FileNamePattern}" 
-                         Width="200"
-                         ToolTip="Pattern: {basename}.{lang}{forced}{cc}.srt"/>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,5">
+                    <RadioButton Content="Prefer forced subtitles" 
+                                 IsChecked="{Binding State.PreferForced}"
+                                 GroupName="SubtitlePreference"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,20,0"/>
+                    <RadioButton Content="Prefer CC (Closed Captions)" 
+                                 IsChecked="{Binding State.PreferClosedCaptions}"
+                                 GroupName="SubtitlePreference"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,20,0"/>
+                </StackPanel>
+                
+                <StackPanel Orientation="Horizontal" Margin="0,10">
+                    <TextBlock Text="OCR Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
+                              ItemsSource="{Binding State.AvailableLanguages}"
+                              Width="80"
+                              Margin="0,0,20,0"/>
+                    <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding State.FileNamePattern}" 
+                             Width="200"
+                             ToolTip="Pattern: {basename}.{lang}{forced}{cc}.srt"/>
+                </StackPanel>
+                
             </StackPanel>
         </GroupBox>
 

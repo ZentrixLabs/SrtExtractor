@@ -308,10 +308,10 @@ public partial class MainViewModel : ObservableObject
             
             // Load settings
             var settings = await _settingsService.LoadSettingsAsync();
-            State.PreferForced = settings.PreferForced;
-            State.PreferClosedCaptions = settings.PreferClosedCaptions;
-            State.OcrLanguage = settings.DefaultOcrLanguage;
-            State.FileNamePattern = settings.FileNamePattern;
+                State.PreferForced = settings.PreferForced;
+                State.PreferClosedCaptions = settings.PreferClosedCaptions;
+                State.OcrLanguage = settings.DefaultOcrLanguage;
+                State.FileNamePattern = settings.FileNamePattern;
 
             // Detect tools
             await DetectToolsAsync();
@@ -531,10 +531,10 @@ public partial class MainViewModel : ObservableObject
                 SubtitleEditPath: null,
                 AutoDetectTools: true,
                 LastToolCheck: DateTime.Now,
-                PreferForced: State.PreferForced,
-                PreferClosedCaptions: State.PreferClosedCaptions,
-                DefaultOcrLanguage: State.OcrLanguage,
-                FileNamePattern: State.FileNamePattern
+                    PreferForced: State.PreferForced,
+                    PreferClosedCaptions: State.PreferClosedCaptions,
+                    DefaultOcrLanguage: State.OcrLanguage,
+                    FileNamePattern: State.FileNamePattern
             );
 
             await _settingsService.SaveSettingsAsync(settings);
