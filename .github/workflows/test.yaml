@@ -71,14 +71,7 @@ jobs:
 
       - name: Download FFmpeg
         run: |
-          $ffmpegPath = "FFmpeg"
-          if (Test-Path $ffmpegPath) {
-            Push-Location $ffmpegPath
-            .\download-ffmpeg.ps1
-            Pop-Location
-          } else {
-            Write-Warning "FFmpeg submodule not found, skipping FFmpeg download"
-          }
+          .\download-ffmpeg.ps1
         shell: powershell
 
       - name: Copy external tools to output directory
@@ -93,8 +86,8 @@ jobs:
           }
           
           # Copy FFmpeg if downloaded
-          $ffmpegExe = "FFmpeg\ffmpeg.exe"
-          $ffprobeExe = "FFmpeg\ffprobe.exe"
+          $ffmpegExe = "tools\ffmpeg\ffmpeg.exe"
+          $ffprobeExe = "tools\ffmpeg\ffprobe.exe"
           if (Test-Path $ffmpegExe) {
             Copy-Item $ffmpegExe $outputDir -Force
             Copy-Item $ffprobeExe $outputDir -Force
