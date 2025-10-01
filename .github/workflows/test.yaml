@@ -101,55 +101,14 @@ jobs:
           Start-Process -FilePath .\inno-setup-installer.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait
         shell: powershell
 
-      - name: Create Inno Setup script
-        run: |
-          $setupScript = @'
-[Setup]
-AppName=SrtExtractor
-AppVersion=${{ env.APP_VERSION }}
-AppPublisher=ZentrixLabs
-AppPublisherURL=https://zentrixlabs.net/
-AppSupportURL=https://github.com/ZentrixLabs/SrtExtractor
-AppUpdatesURL=https://github.com/ZentrixLabs/SrtExtractor/releases
-DefaultDirName={autopf}\SrtExtractor
-DefaultGroupName=SrtExtractor
-AllowNoIcons=yes
-LicenseFile=LICENSE.txt
-OutputDir=${{ env.ARTIFACTS_DIR }}
-OutputBaseFilename=SrtExtractorInstaller
-SetupIconFile=SrtExtractor\SrtExtractor.ico
-Compression=lzma
-SolidCompression=yes
-WizardStyle=modern
-PrivilegesRequired=admin
-
-[Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
-
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-
-[Files]
-Source: "${{ env.SrtExtractorBin }}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
-
-[Icons]
-Name: "{group}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"
-Name: "{group}\{cm:UninstallProgram,SrtExtractor}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; Tasks: desktopicon
-
-[Run]
-Filename: "{app}\SrtExtractor.exe"; Description: "{cm:LaunchProgram,SrtExtractor}"; Flags: nowait postinstall skipifsilent
-'@
-          
-          $setupScript | Out-File -FilePath "SrtExtractorSetup.iss" -Encoding UTF8
+      - name: Copy SrtExtractorIcon.ico to working directory
+        run: Copy-Item "SrtExtractor\SrtExtractor.ico" -Destination "SrtExtractor.ico"
         shell: powershell
 
       - name: Build Inno Setup Installer
         run: |
           $env:Path += ";C:\Program Files (x86)\Inno Setup 6"
-          ISCC.exe "SrtExtractorSetup.iss" /DMyAppVersion="${{ env.APP_VERSION }}" > "${{ env.ARTIFACTS_DIR }}\iscc.log" 2>&1
+          ISCC.exe "SrtExtractorSetup.iss" /DMyAppVersion="${{ env.APP_VERSION }}" /DSrtExtractorBin="${{ env.SrtExtractorBin }}" > "${{ env.ARTIFACTS_DIR }}\iscc.log" 2>&1
           if ($LASTEXITCODE -ne 0) {
             Get-Content "${{ env.ARTIFACTS_DIR }}\iscc.log"
             exit $LASTEXITCODE

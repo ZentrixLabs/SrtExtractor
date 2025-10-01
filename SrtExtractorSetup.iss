@@ -1,6 +1,6 @@
 [Setup]
 AppName=SrtExtractor
-AppVersion=1.0.0
+AppVersion={#MyAppVersion}
 AppPublisher=ZentrixLabs
 AppPublisherURL=https://zentrixlabs.net/
 AppSupportURL=https://github.com/ZentrixLabs/SrtExtractor
@@ -11,7 +11,7 @@ AllowNoIcons=yes
 LicenseFile=LICENSE.txt
 OutputDir=artifacts
 OutputBaseFilename=SrtExtractorInstaller
-SetupIconFile=SrtExtractor\SrtExtractor.ico
+SetupIconFile=SrtExtractor.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -27,7 +27,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
-Source: "SrtExtractor\bin\Release\net9.0-windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SrtExtractorBin}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
