@@ -1,0 +1,151 @@
+<UserControl x:Class="SrtExtractor.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="800" d:DesignWidth="600">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,20">
+            <!-- ZentrixLabs Logo -->
+            <Border Background="White" 
+                    CornerRadius="8" 
+                    Padding="10" 
+                    Margin="0,0,0,20"
+                    HorizontalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect Color="Gray" 
+                                      Direction="315" 
+                                      ShadowDepth="3" 
+                                      Opacity="0.3" 
+                                      BlurRadius="5"/>
+                </Border.Effect>
+                <Image Source="pack://application:,,,/ZLLogo.png" 
+                       Width="200" 
+                       Height="200" 
+                       Stretch="Uniform"/>
+            </Border>
+            
+            <TextBlock Text="SrtExtractor" 
+                       FontSize="32" 
+                       FontWeight="Bold" 
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="MKV/MP4 Subtitle Extractor" 
+                       FontSize="16" 
+                       Foreground="Gray" 
+                       HorizontalAlignment="Center" 
+                       Margin="0,5,0,0"/>
+            <TextBlock Text="by ZentrixLabs" 
+                       FontSize="14" 
+                       Foreground="DarkBlue" 
+                       HorizontalAlignment="Center" 
+                       Margin="0,10,0,0"/>
+        </StackPanel>
+        
+        <!-- Content Area -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Version: 1.0.0" FontSize="14" Margin="0,0,0,5"/>
+                <TextBlock Text="Developed by ZentrixLabs" FontSize="14" Margin="0,0,0,15"/>
+                
+                <!-- Description -->
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,20">
+                    SrtExtractor is a powerful and easy-to-use desktop application designed to simplify the process of extracting subtitles from your video files. Whether you're dealing with MKV containers or MP4 files with embedded "Timed Text" subtitles, SrtExtractor provides a seamless experience to convert them into the widely compatible SRT format.
+                    <LineBreak/><LineBreak/>
+                    Built with .NET 9 and WPF, this application leverages industry-standard command-line tools for robust subtitle probing and extraction.
+                </TextBlock>
+
+                <!-- Key Features -->
+                <TextBlock Text="Key Features:" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
+                <StackPanel Margin="0,0,0,20">
+                    <TextBlock Text="• Intuitive User Interface: Easily select video files, view available subtitle tracks, and initiate extraction." TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Text="• Automatic Tool Management: Detects and auto-downloads necessary external tools." TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Text="• Flexible Output: Generates SRT files with customizable naming patterns." TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Text="• Real-time Logging: Provides detailed logs of all operations." TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Text="• Supports MKV and MP4: Handles a wide range of video formats and subtitle codecs." TextWrapping="Wrap" Margin="0,0,0,5"/>
+                </StackPanel>
+
+                <!-- Credits Section -->
+                <TextBlock Text="Credits &amp; Acknowledgments" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
+                <StackPanel Margin="0,0,0,20">
+                    <TextBlock Text="This application relies on several excellent open-source tools:" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    
+                    <!-- MKVToolNix -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                        <TextBlock Text="• " FontWeight="Bold"/>
+                        <TextBlock Text="MKVToolNix" FontWeight="Bold"/>
+                        <TextBlock Text=" - Matroska tools for video container operations" Margin="5,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Margin="0,0,0,5">
+                        <Run Text="    "/>
+                        <Hyperlink NavigateUri="https://mkvtoolnix.download/" RequestNavigate="Hyperlink_RequestNavigate">
+                            <Run Text="https://mkvtoolnix.download/"/>
+                        </Hyperlink>
+                    </TextBlock>
+                    
+                    <!-- Subtitle Edit -->
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <TextBlock Text="• " FontWeight="Bold"/>
+                        <TextBlock Text="Subtitle Edit" FontWeight="Bold"/>
+                        <TextBlock Text=" - OCR conversion for image-based subtitles" Margin="5,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Margin="0,0,0,5">
+                        <Run Text="    "/>
+                        <Hyperlink NavigateUri="https://github.com/SubtitleEdit/" RequestNavigate="Hyperlink_RequestNavigate">
+                            <Run Text="https://github.com/SubtitleEdit/"/>
+                        </Hyperlink>
+                    </TextBlock>
+                    
+                    <!-- FFmpeg -->
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <TextBlock Text="• " FontWeight="Bold"/>
+                        <TextBlock Text="FFmpeg" FontWeight="Bold"/>
+                        <TextBlock Text=" - Complete multimedia framework for MP4 processing" Margin="5,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Margin="0,0,0,5">
+                        <Run Text="    "/>
+                        <Hyperlink NavigateUri="https://ffmpeg.org/" RequestNavigate="Hyperlink_RequestNavigate">
+                            <Run Text="https://ffmpeg.org/"/>
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- Links Section -->
+                <TextBlock Text="Links" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
+                <StackPanel Margin="0,0,0,20">
+                    <TextBlock Margin="0,0,0,5">
+                        <Run Text="• " FontWeight="Bold"/>
+                        <Run Text="Project Repository: " FontWeight="Bold"/>
+                        <Hyperlink NavigateUri="https://github.com/ZentrixLabs/SrtExtractor" RequestNavigate="Hyperlink_RequestNavigate">
+                            <Run Text="https://github.com/ZentrixLabs/SrtExtractor"/>
+                        </Hyperlink>
+                    </TextBlock>
+                    
+                    <TextBlock Margin="0,5,0,0">
+                        <Run Text="• " FontWeight="Bold"/>
+                        <Run Text="ZentrixLabs Website: " FontWeight="Bold"/>
+                        <Hyperlink NavigateUri="https://zentrixlabs.net/" RequestNavigate="Hyperlink_RequestNavigate">
+                            <Run Text="https://zentrixlabs.net/"/>
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Footer -->
+        <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,20,0,0">
+            <TextBlock Text="© 2025 ZentrixLabs. All rights reserved." 
+                       FontSize="12" 
+                       Foreground="Gray" 
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -177,6 +177,10 @@
                 <Button Content="Clear Log" 
                         Click="ClearLog_Click"
                         Background="LightGray"/>
+                <Button Content="About" 
+                        Click="About_Click"
+                        Background="LightGreen"
+                        Margin="10,0,0,0"/>
             </StackPanel>
         </GroupBox>
 

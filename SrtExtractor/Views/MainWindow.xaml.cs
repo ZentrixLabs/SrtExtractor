@@ -21,5 +21,12 @@ namespace SrtExtractor.Views
                 viewModel.State.ClearLog();
             }
         }
+
+        private void About_Click(object sender, RoutedEventArgs e)
+        {
+            var aboutWindow = new AboutWindow();
+            aboutWindow.Owner = this;
+            aboutWindow.ShowDialog();
+        }
     }
 }
