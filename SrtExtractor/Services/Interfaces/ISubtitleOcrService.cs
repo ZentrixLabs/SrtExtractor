@@ -1,0 +1,22 @@
+namespace SrtExtractor.Services.Interfaces;
+
+/// <summary>
+/// Service for Subtitle Edit OCR operations.
+/// </summary>
+public interface ISubtitleOcrService
+{
+    /// <summary>
+    /// Perform OCR on a SUP file to convert it to SRT format.
+    /// </summary>
+    /// <param name="supPath">Path to the input SUP file</param>
+    /// <param name="outSrt">Path to the output SRT file</param>
+    /// <param name="language">Language code for OCR (e.g., eng, spa, fra)</param>
+    /// <param name="fixCommonErrors">Whether to apply common error fixes</param>
+    /// <param name="removeHi">Whether to remove hearing impaired text</param>
+    Task OcrSupToSrtAsync(
+        string supPath, 
+        string outSrt, 
+        string language, 
+        bool fixCommonErrors = true, 
+        bool removeHi = true);
+}

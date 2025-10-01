@@ -1,0 +1,201 @@
+﻿<Window x:Class="SrtExtractor.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SrtExtractor.Views"
+        xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        mc:Ignorable="d"
+        Title="SrtExtractor - MKV Subtitle Extractor" 
+        Height="700" Width="900"
+        MinHeight="600" MinWidth="800">
+    
+    <Window.Resources>
+        <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+        
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        
+        <Style TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- File Selection Row -->
+        <GroupBox Header="MKV File" Grid.Row="0">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Pick MKV..." 
+                        Command="{Binding PickMkvCommand}"
+                        IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                <TextBox Text="{Binding State.MkvPath}" 
+                         IsReadOnly="True" 
+                         Margin="4,0"
+                         VerticalAlignment="Center"
+                         MinWidth="300"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Tool Status Panel -->
+        <GroupBox Header="Tool Status" Grid.Row="1">
+            <StackPanel>
+                <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- MKVToolNix Status -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="MKVToolNix:" FontWeight="Bold" Width="120"/>
+                    <TextBlock Text="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
+                               Margin="4,0"/>
+                    <Button Content="Install via winget" 
+                            Command="{Binding InstallMkvToolNixCommand}"
+                            Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                            Background="LightGreen"/>
+                    <Button Content="Browse..." 
+                            Command="{Binding BrowseMkvToolNixCommand}"/>
+                </StackPanel>
+
+                <!-- Subtitle Edit Status -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,4">
+                    <TextBlock Text="Subtitle Edit CLI:" FontWeight="Bold" Width="120"/>
+                    <TextBlock Text="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
+                               Margin="4,0"/>
+                    <TextBlock Text="(Auto-built)" 
+                               FontStyle="Italic" 
+                               Foreground="Gray" 
+                               Margin="8,0"/>
+                </StackPanel>
+
+                <!-- Tool Paths Display -->
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="20,4,0,4">
+                    <TextBlock Text="{Binding State.MkvToolNixStatus.Path, StringFormat='Path: {0}'}" 
+                               FontSize="10" 
+                               Foreground="Gray"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="20,4,0,4">
+                    <TextBlock Text="{Binding State.SubtitleEditStatus.Path, StringFormat='Path: {0}'}" 
+                               FontSize="10" 
+                               Foreground="Gray"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+                </Grid>
+                
+                <!-- Re-detect Tools Button -->
+                <Button Content="🔄 Re-detect Tools" 
+                        Command="{Binding ReDetectToolsCommand}"
+                        Background="LightBlue" 
+                        Margin="0,8,0,0"
+                        Padding="8,4"
+                        HorizontalAlignment="Center"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Settings Row -->
+        <GroupBox Header="Settings" Grid.Row="2">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox Content="Prefer forced subtitles" 
+                          IsChecked="{Binding State.PreferForced}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,20,0"/>
+                <TextBlock Text="OCR Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
+                          ItemsSource="{Binding State.AvailableLanguages}"
+                          Width="80"
+                          Margin="0,0,20,0"/>
+                <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Text="{Binding State.FileNamePattern}" 
+                         Width="200"
+                         ToolTip="Pattern: {basename}.{lang}{forced}.srt"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Action Buttons -->
+        <GroupBox Header="Actions" Grid.Row="3">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Probe Tracks" 
+                        Command="{Binding ProbeCommand}"
+                        IsEnabled="{Binding State.CanProbe}"
+                        Background="LightBlue"/>
+                <Button Content="Extract Selected → SRT" 
+                        Command="{Binding ExtractCommand}"
+                        IsEnabled="{Binding State.CanExtract}"
+                        Background="LightCoral"/>
+                <Button Content="Clear Log" 
+                        Click="ClearLog_Click"
+                        Background="LightGray"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Track List -->
+        <GroupBox Header="Subtitle Tracks" Grid.Row="4">
+            <DataGrid ItemsSource="{Binding State.Tracks}" 
+                      SelectedItem="{Binding State.SelectedTrack}"
+                      AutoGenerateColumns="False" 
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" 
+                                        Binding="{Binding Id}" 
+                                        Width="40"/>
+                    <DataGridTextColumn Header="Codec" 
+                                        Binding="{Binding Codec}" 
+                                        Width="120"/>
+                    <DataGridTextColumn Header="Language" 
+                                        Binding="{Binding Language}" 
+                                        Width="80"/>
+                    <DataGridCheckBoxColumn Header="Forced" 
+                                            Binding="{Binding Forced}" 
+                                            Width="60"/>
+                    <DataGridTextColumn Header="Name" 
+                                        Binding="{Binding Name}" 
+                                        Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+
+        <!-- Log Display -->
+        <GroupBox Header="Log" Grid.Row="5">
+            <ScrollViewer Height="150" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <TextBox Text="{Binding State.LogText}" 
+                         IsReadOnly="True" 
+                         TextWrapping="Wrap" 
+                         AcceptsReturn="True"
+                         Background="Black" 
+                         Foreground="LightGreen"
+                         FontFamily="Consolas"
+                         FontSize="11"/>
+            </ScrollViewer>
+        </GroupBox>
+    </Grid>
+</Window>
