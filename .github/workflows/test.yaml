@@ -103,7 +103,7 @@ jobs:
 
       - name: Create Inno Setup script
         run: |
-          $setupScript = @"
+          $setupScript = @'
 [Setup]
 AppName=SrtExtractor
 AppVersion=${{ env.APP_VERSION }}
@@ -141,7 +141,7 @@ Name: "{autodesktop}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; Tasks: d
 
 [Run]
 Filename: "{app}\SrtExtractor.exe"; Description: "{cm:LaunchProgram,SrtExtractor}"; Flags: nowait postinstall skipifsilent
-"@
+'@
           
           $setupScript | Out-File -FilePath "SrtExtractorSetup.iss" -Encoding UTF8
         shell: powershell
