@@ -1,0 +1,288 @@
+name: Build, Sign, and Release SrtExtractor
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  SIGN_CODE: true # Enable code signing
+  BASE_DIR: ${{ github.workspace }}
+  ARTIFACTS_DIR: ${{ github.workspace }}\artifacts
+  TEMP_DIR: ${{ github.workspace }}\artifacts\temp
+  SolutionPath: ${{ github.workspace }}\SrtExtractor.sln
+  SrtExtractorBin: ${{ github.workspace }}\SrtExtractor\bin\Release\net9.0-windows
+  SrtExtractorExe: ${{ github.workspace }}\SrtExtractor\bin\Release\net9.0-windows\SrtExtractor.exe
+  SrtExtractorInstallerExe: ${{ github.workspace }}\artifacts\SrtExtractorInstaller.exe
+  RCEDIT_PATH: ${{ github.workspace }}\tools\rcedit\rcedit-x64.exe
+
+jobs:
+  build-sign-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: .
+          submodules: 'recursive' # Ensure submodules are checked out
+
+      - name: Extract version from tag
+        run: |
+          $version = "${{ github.ref_name }}"
+          $version = $version -replace '^v', ''
+          echo "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: powershell
+
+      - name: Debug APP_VERSION
+        run: echo "APP_VERSION is ${{ env.APP_VERSION }}"
+        shell: powershell
+
+      - name: Debug repository structure
+        run: dir "${{ github.workspace }}" -Recurse
+        shell: powershell
+
+      - name: Delay to ensure checkout completes
+        run: Start-Sleep -Seconds 5
+        shell: powershell
+
+      - name: Verify solution file exists
+        run: |
+          if (Test-Path "${{ env.SolutionPath }}") {
+            Write-Output "Solution file exists at ${{ env.SolutionPath }}"
+          } else {
+            Write-Error "Solution file does not exist at ${{ env.SolutionPath }}"
+            exit 1
+          }
+        shell: powershell
+
+      - name: Download NuGet CLI
+        run: |
+          Invoke-WebRequest -Uri https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -OutFile nuget.exe
+        shell: powershell
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Create artifacts directory
+        run: New-Item -ItemType Directory -Force -Path "${{ env.ARTIFACTS_DIR }}"
+        shell: powershell
+
+      - name: Create temp directory for signing
+        run: New-Item -ItemType Directory -Force -Path "${{ env.TEMP_DIR }}"
+        shell: powershell
+
+      - name: Create tools directory for rcedit
+        run: New-Item -ItemType Directory -Force -Path "tools\rcedit"
+        shell: powershell
+
+      - name: Download rcedit
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/electron/rcedit/releases/download/v1.1.1/rcedit-x64.exe" -OutFile "${{ env.RCEDIT_PATH }}"
+        shell: powershell
+
+      - name: Restore NuGet packages with nuget.exe
+        run: |
+          .\nuget.exe restore "${{ env.SolutionPath }}" -Verbosity detailed
+        shell: powershell
+        continue-on-error: true
+
+      - name: Restore NuGet packages with msbuild
+        run: msbuild "${{ env.SolutionPath }}" -t:Restore -p:Configuration=Release -p:Platform=x64
+        shell: powershell
+
+      - name: Build SubtitleEdit CLI
+        run: |
+          $cliPath = Join-Path "${{ github.workspace }}" "SubtitleEdit-CLI\src\se-cli"
+          if (Test-Path $cliPath) {
+            Push-Location $cliPath
+            dotnet restore
+            dotnet build -c Release
+            Pop-Location
+            Write-Host "SubtitleEdit CLI built successfully"
+          } else {
+            Write-Warning "SubtitleEdit-CLI submodule not found, skipping CLI build"
+          }
+        shell: powershell
+
+      - name: Download FFmpeg
+        run: |
+          .\download-ffmpeg.ps1
+        shell: powershell
+
+      - name: Copy external tools to output directory
+        run: |
+          $outputDir = "${{ env.SrtExtractorBin }}"
+          
+          # Copy SubtitleEdit CLI if built
+          $cliExe = Join-Path "${{ github.workspace }}" "SubtitleEdit-CLI\src\se-cli\bin\Release\net8.0\seconv.exe"
+          if (Test-Path $cliExe) {
+            Copy-Item $cliExe $outputDir -Force
+            Write-Host "Copied seconv.exe to output directory"
+          }
+          
+          # Copy FFmpeg if downloaded
+          $ffmpegExe = "tools\ffmpeg\ffmpeg.exe"
+          $ffprobeExe = "tools\ffmpeg\ffprobe.exe"
+          if (Test-Path $ffmpegExe) {
+            Copy-Item $ffmpegExe $outputDir -Force
+            Copy-Item $ffprobeExe $outputDir -Force
+            Write-Host "Copied FFmpeg tools to output directory"
+          }
+        shell: powershell
+
+      - name: Build SrtExtractor
+        run: msbuild "${{ env.SolutionPath }}" /p:Configuration=Release /p:Platform=x64
+        shell: powershell
+
+      - name: Debug build output directory before stamping
+        run: dir "${{ env.SrtExtractorBin }}" -Recurse
+        shell: powershell
+        continue-on-error: true
+
+      - name: Stamp version into SrtExtractor.exe
+        run: |
+          & "${{ env.RCEDIT_PATH }}" "${{ env.SrtExtractorExe }}" --set-version-string "ProductVersion" "${{ env.APP_VERSION }}"
+          & "${{ env.RCEDIT_PATH }}" "${{ env.SrtExtractorExe }}" --set-version-string "FileVersion" "${{ env.APP_VERSION }}"
+        shell: powershell
+
+      - name: Rebuild SrtExtractor project after stamping
+        run: msbuild "SrtExtractor\SrtExtractor.csproj" /p:Configuration=Release /p:Platform=x64
+        shell: powershell
+
+      - name: Conditionally sign SrtExtractor.exe
+        if: env.SIGN_CODE == 'true'
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.CODESIGN_USERNAME }}
+          password: ${{ secrets.CODESIGN_PASSWORD }}
+          credential_id: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.CODESIGN_TOTP_SECRET }}
+          file_path: ${{ env.SrtExtractorExe }}
+          output_path: ${{ env.TEMP_DIR }}
+          environment_name: PROD
+          signing_method: v2
+          malware_block: false
+        timeout-minutes: 10
+
+      - name: Debug CodeSignTool version and output
+        if: failure() && env.SIGN_CODE == 'true'
+        run: |
+          Write-Host "Code signing failed for SrtExtractor.exe"
+          Write-Host "Checking if file exists: ${{ env.SrtExtractorExe }}"
+          if (Test-Path "${{ env.SrtExtractorExe }}") {
+            Write-Host "File exists, size: $((Get-Item '${{ env.SrtExtractorExe }}').Length) bytes"
+          } else {
+            Write-Host "File does not exist"
+          }
+        shell: powershell
+        continue-on-error: true
+
+      - name: Replace SrtExtractor.exe with signed version
+        if: env.SIGN_CODE == 'true'
+        run: Copy-Item "${{ env.TEMP_DIR }}\SrtExtractor.exe" "${{ env.SrtExtractorExe }}" -Force
+        shell: powershell
+
+      - name: Download and Install Inno Setup
+        run: |
+          Invoke-WebRequest -Uri https://jrsoftware.org/download.php/is.exe -OutFile inno-setup-installer.exe
+          Start-Process -FilePath .\inno-setup-installer.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait
+        shell: powershell
+
+      - name: Copy SrtExtractor.ico to working directory
+        run: Copy-Item "SrtExtractor\SrtExtractor.ico" -Destination "SrtExtractor.ico"
+        shell: powershell
+
+      - name: Delay to ensure build outputs are accessible
+        run: Start-Sleep -Seconds 5
+        shell: powershell
+
+      - name: Verify SrtExtractor.ico exists in working directory
+        run: |
+          if (Test-Path "SrtExtractor.ico") {
+            Write-Output "SrtExtractor.ico exists in working directory"
+          } else {
+            Write-Error "SrtExtractor.ico does not exist in working directory"
+            exit 1
+          }
+        shell: powershell
+
+      - name: Build Inno Setup Installer
+        run: |
+          $env:Path += ";C:\Program Files (x86)\Inno Setup 6"
+          ISCC.exe "SrtExtractorSetup.iss" /DMyAppVersion="${{ env.APP_VERSION }}" /DSrtExtractorBin="${{ env.SrtExtractorBin }}" > "${{ env.ARTIFACTS_DIR }}\iscc.log" 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content "${{ env.ARTIFACTS_DIR }}\iscc.log"
+            exit $LASTEXITCODE
+          }
+        shell: powershell
+
+      - name: Debug artifacts directory
+        run: dir "${{ env.ARTIFACTS_DIR }}" -Recurse
+        shell: powershell
+        continue-on-error: true
+
+      - name: Conditionally sign SrtExtractorInstaller.exe
+        if: env.SIGN_CODE == 'true'
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.CODESIGN_USERNAME }}
+          password: ${{ secrets.CODESIGN_PASSWORD }}
+          credential_id: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.CODESIGN_TOTP_SECRET }}
+          file_path: ${{ env.SrtExtractorInstallerExe }}
+          output_path: ${{ env.TEMP_DIR }}
+          environment_name: PROD
+          signing_method: v2
+          malware_block: false
+        timeout-minutes: 10
+
+      - name: Debug CodeSignTool version and output (SrtExtractorInstaller)
+        if: failure() && env.SIGN_CODE == 'true'
+        run: |
+          Write-Host "Code signing failed for SrtExtractorInstaller.exe"
+          Write-Host "Checking if file exists: ${{ env.SrtExtractorInstallerExe }}"
+          if (Test-Path "${{ env.SrtExtractorInstallerExe }}") {
+            Write-Host "File exists, size: $((Get-Item '${{ env.SrtExtractorInstallerExe }}').Length) bytes"
+          } else {
+            Write-Host "File does not exist"
+          }
+        shell: powershell
+        continue-on-error: true
+
+      - name: Replace SrtExtractorInstaller.exe with signed version
+        if: env.SIGN_CODE == 'true'
+        run: Copy-Item "${{ env.TEMP_DIR }}\SrtExtractorInstaller.exe" "${{ env.SrtExtractorInstallerExe }}" -Force
+        shell: powershell
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SrtExtractor-Installer
+          path: ${{ env.SrtExtractorInstallerExe }}
+          retention-days: 7
+
+  release:
+    needs: build-sign-release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SrtExtractor-Installer
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/SrtExtractorInstaller.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

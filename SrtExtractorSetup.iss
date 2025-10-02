@@ -32,10 +32,10 @@ Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"
+Name: "{group}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\SrtExtractor.exe"
 Name: "{group}\{cm:UninstallProgram,SrtExtractor}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; Tasks: desktopicon
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; Tasks: quicklaunchicon
+Name: "{autodesktop}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\SrtExtractor.exe"; Tasks: desktopicon
+Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\SrtExtractor.exe"; Tasks: quicklaunchicon
 
 [Run]
 Filename: "{app}\SrtExtractor.exe"; Description: "{cm:LaunchProgram,SrtExtractor}"; Flags: nowait postinstall skipifsilent
