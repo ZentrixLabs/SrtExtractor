@@ -44,10 +44,6 @@ jobs:
         run: echo "APP_VERSION is ${{ env.APP_VERSION }}"
         shell: powershell
 
-      - name: Debug repository structure
-        run: dir "${{ github.workspace }}" -Recurse
-        shell: powershell
-
       - name: Initialize and update submodules
         run: |
           git submodule update --init --recursive
