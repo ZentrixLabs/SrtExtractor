@@ -13,10 +13,12 @@ public interface ISubtitleOcrService
     /// <param name="language">Language code for OCR (e.g., eng, spa, fra)</param>
     /// <param name="fixCommonErrors">Whether to apply common error fixes</param>
     /// <param name="removeHi">Whether to remove hearing impaired text</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     Task OcrSupToSrtAsync(
         string supPath, 
         string outSrt, 
         string language, 
         bool fixCommonErrors = true, 
-        bool removeHi = true);
+        bool removeHi = true,
+        CancellationToken cancellationToken = default);
 }

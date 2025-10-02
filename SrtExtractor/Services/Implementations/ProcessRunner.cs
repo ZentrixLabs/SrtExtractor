@@ -21,6 +21,15 @@ public class ProcessRunner : IProcessRunner
         string args, 
         CancellationToken ct = default)
     {
+        return await RunAsync(exe, args, TimeSpan.FromHours(2), ct);
+    }
+
+    public async Task<(int ExitCode, string StdOut, string StdErr)> RunAsync(
+        string exe, 
+        string args, 
+        TimeSpan timeout,
+        CancellationToken ct = default)
+    {
         _loggingService.LogInfo($"Running process: {exe} {args}");
 
         try
@@ -63,7 +72,7 @@ public class ProcessRunner : IProcessRunner
             process.BeginErrorReadLine();
 
             // Wait for process to complete or cancellation with timeout
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // 5 minute timeout
+            using var timeoutCts = new CancellationTokenSource(timeout);
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             
             try
@@ -72,7 +81,7 @@ public class ProcessRunner : IProcessRunner
             }
             catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
             {
-                _loggingService.LogWarning($"Process timed out after 5 minutes: {exe} {args}");
+                _loggingService.LogWarning($"Process timed out after {timeout.TotalMinutes:F0} minutes: {exe} {args}");
                 process.Kill();
                 throw new TimeoutException($"Process timed out: {exe}");
             }

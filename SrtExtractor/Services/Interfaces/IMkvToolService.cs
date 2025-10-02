@@ -20,8 +20,9 @@ public interface IMkvToolService
     /// <param name="mkvPath">Path to the MKV file</param>
     /// <param name="trackId">ID of the subtitle track to extract</param>
     /// <param name="outSrt">Output path for the SRT file</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Path to the extracted SRT file</returns>
-    Task<string> ExtractTextAsync(string mkvPath, int trackId, string outSrt);
+    Task<string> ExtractTextAsync(string mkvPath, int trackId, string outSrt, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extract a PGS subtitle track to SUP format.
@@ -29,6 +30,7 @@ public interface IMkvToolService
     /// <param name="mkvPath">Path to the MKV file</param>
     /// <param name="trackId">ID of the subtitle track to extract</param>
     /// <param name="outSup">Output path for the SUP file</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Path to the extracted SUP file</returns>
-    Task<string> ExtractPgsAsync(string mkvPath, int trackId, string outSup);
+    Task<string> ExtractPgsAsync(string mkvPath, int trackId, string outSup, CancellationToken cancellationToken = default);
 }

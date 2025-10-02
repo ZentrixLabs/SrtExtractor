@@ -22,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IFfmpegService _ffmpegService;
     private readonly ISubtitleOcrService _ocrService;
     private readonly ISettingsService _settingsService;
+    private CancellationTokenSource? _extractionCancellationTokenSource;
 
     [ObservableProperty]
     private ExtractionState _state = new();
@@ -47,6 +48,7 @@ public partial class MainViewModel : ObservableObject
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
         ProbeCommand = new AsyncRelayCommand(ProbeTracksAsync, () => State.CanProbe);
         ExtractCommand = new AsyncRelayCommand(ExtractSubtitlesAsync, () => State.CanExtract);
+        CancelCommand = new RelayCommand(CancelExtraction, () => State.IsProcessing);
         InstallMkvToolNixCommand = new AsyncRelayCommand(InstallMkvToolNixAsync);
         BrowseMkvToolNixCommand = new RelayCommand(BrowseMkvToolNix);
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
@@ -54,13 +56,14 @@ public partial class MainViewModel : ObservableObject
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(State.CanProbe) or nameof(State.CanExtract))
+            if (e.PropertyName is nameof(State.CanProbe) or nameof(State.CanExtract) or nameof(State.IsProcessing))
             {
                 // Use Dispatcher to ensure UI thread access
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ProbeCommand.NotifyCanExecuteChanged();
                     ExtractCommand.NotifyCanExecuteChanged();
+                    CancelCommand.NotifyCanExecuteChanged();
                 });
             }
             // Note: Settings are saved manually when user changes them
@@ -76,6 +79,7 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand PickMkvCommand { get; }
     public IAsyncRelayCommand ProbeCommand { get; }
     public IAsyncRelayCommand ExtractCommand { get; }
+    public IRelayCommand CancelCommand { get; }
     public IAsyncRelayCommand InstallMkvToolNixCommand { get; }
     public IRelayCommand BrowseMkvToolNixCommand { get; }
     public IAsyncRelayCommand ReDetectToolsCommand { get; }
@@ -167,10 +171,33 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private void CancelExtraction()
+    {
+        try
+        {
+            _loggingService.LogInfo("User requested cancellation of extraction");
+            State.AddLogMessage("Cancelling extraction...");
+            
+            _extractionCancellationTokenSource?.Cancel();
+            
+            State.StopProcessing();
+            State.AddLogMessage("Extraction cancelled by user");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error during cancellation", ex);
+            State.AddLogMessage($"Error during cancellation: {ex.Message}");
+        }
+    }
+
     private async Task ExtractSubtitlesAsync()
     {
         if (State.SelectedTrack == null || string.IsNullOrEmpty(State.MkvPath))
             return;
+
+        // Create cancellation token source for this extraction
+        _extractionCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _extractionCancellationTokenSource.Token;
 
         try
         {
@@ -186,7 +213,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Use FFmpeg for MP4 files
                 State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
-                await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath);
+                await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken);
                 State.UpdateProcessingMessage("MP4 extraction completed!");
                 State.AddLogMessage($"Subtitles extracted to: {outputPath}");
             }
@@ -194,7 +221,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Direct text extraction
                 State.UpdateProcessingMessage("Extracting text subtitles...");
-                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath);
+                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken);
                 State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
             }
@@ -203,13 +230,13 @@ public partial class MainViewModel : ObservableObject
                 // PGS extraction + OCR
                 var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
                 
-                State.UpdateProcessingMessage("Extracting PGS subtitles...");
-                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath);
+                State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
+                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath, cancellationToken);
                 State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
-                State.UpdateProcessingMessage("Starting OCR conversion...");
+                State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
                 State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
-                await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage);
+                await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken);
                 State.UpdateProcessingMessage("OCR conversion completed!");
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
@@ -233,6 +260,12 @@ public partial class MainViewModel : ObservableObject
             State.AddLogMessage("Subtitle extraction completed successfully!");
             MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+        catch (OperationCanceledException)
+        {
+            _loggingService.LogInfo("Subtitle extraction was cancelled by user");
+            State.AddLogMessage("Extraction cancelled by user");
+            // Don't show error message for user cancellation
+        }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to extract subtitles", ex);
@@ -243,6 +276,8 @@ public partial class MainViewModel : ObservableObject
         {
             State.IsBusy = false;
             State.StopProcessing();
+            _extractionCancellationTokenSource?.Dispose();
+            _extractionCancellationTokenSource = null;
         }
     }
 

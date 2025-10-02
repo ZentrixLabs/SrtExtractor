@@ -181,6 +181,11 @@
                         Command="{Binding ExtractCommand}"
                         IsEnabled="{Binding State.CanExtract}"
                         Background="LightCoral"/>
+                <Button Content="Cancel" 
+                        Command="{Binding CancelCommand}"
+                        IsEnabled="{Binding State.IsProcessing}"
+                        Background="Orange"
+                        Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 <Button Content="Clear Log" 
                         Click="ClearLog_Click"
                         Background="LightGray"/>

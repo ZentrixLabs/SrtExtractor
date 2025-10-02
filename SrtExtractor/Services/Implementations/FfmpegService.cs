@@ -111,7 +111,7 @@ public class FfmpegService : IFfmpegService
         }
     }
 
-    public async Task<string> ExtractSubtitleAsync(string mp4Path, int trackId, string outputPath)
+    public async Task<string> ExtractSubtitleAsync(string mp4Path, int trackId, string outputPath, CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Extracting subtitle track {trackId} from MP4 to: {outputPath}");
 
@@ -133,7 +133,7 @@ public class FfmpegService : IFfmpegService
 
             // Run ffmpeg to extract subtitle
             var args = $"-i \"{mp4Path}\" -map 0:s:{trackId} -c:s srt \"{outputPath}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffmpegPath, args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffmpegPath, args, cancellationToken);
 
             if (exitCode != 0)
             {

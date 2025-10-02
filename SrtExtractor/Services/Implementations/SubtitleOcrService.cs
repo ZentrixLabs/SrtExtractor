@@ -24,7 +24,8 @@ public class SubtitleOcrService : ISubtitleOcrService
         string outSrt, 
         string language, 
         bool fixCommonErrors = true, 
-        bool removeHi = true)
+        bool removeHi = true,
+        CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Starting OCR conversion: {supPath} -> {outSrt}");
 
@@ -55,7 +56,8 @@ public class SubtitleOcrService : ISubtitleOcrService
             
             // Use a shorter timeout for Subtitle Edit to prevent GUI hanging
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.SubtitleEditPath, args, cts.Token);
+            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.SubtitleEditPath, args, combinedCts.Token);
 
             if (exitCode != 0)
             {

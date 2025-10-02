@@ -60,7 +60,7 @@ public class MkvToolService : IMkvToolService
         }
     }
 
-    public async Task<string> ExtractTextAsync(string mkvPath, int trackId, string outSrt)
+    public async Task<string> ExtractTextAsync(string mkvPath, int trackId, string outSrt, CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Extracting text subtitle track {trackId} to: {outSrt}");
 
@@ -90,7 +90,7 @@ public class MkvToolService : IMkvToolService
 
             // Run mkvextract tracks
             var args = $"tracks \"{mkvPath}\" {trackId}:\"{outSrt}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args, cancellationToken);
 
             if (exitCode != 0)
             {
@@ -112,12 +112,15 @@ public class MkvToolService : IMkvToolService
         }
     }
 
-    public async Task<string> ExtractPgsAsync(string mkvPath, int trackId, string outSup)
+    public async Task<string> ExtractPgsAsync(string mkvPath, int trackId, string outSup, CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Extracting PGS subtitle track {trackId} to: {outSup}");
 
         try
         {
+            // Calculate timeout based on file size
+            var timeout = CalculateTimeoutForFile(mkvPath);
+            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(mkvPath):F1} GB");
             // Get the tool path directly from tool detection
             var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
             if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
@@ -142,7 +145,7 @@ public class MkvToolService : IMkvToolService
 
             // Run mkvextract tracks
             var args = $"tracks \"{mkvPath}\" {trackId}:\"{outSup}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args, timeout, cancellationToken);
 
             if (exitCode != 0)
             {
@@ -234,6 +237,65 @@ public class MkvToolService : IMkvToolService
         {
             _loggingService.LogError("Failed to parse mkvmerge JSON output", ex);
             throw new InvalidOperationException("Failed to parse MKV track information", ex);
+        }
+    }
+
+    /// <summary>
+    /// Calculate appropriate timeout based on file size.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>Calculated timeout duration</returns>
+    private static TimeSpan CalculateTimeoutForFile(string filePath)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            var sizeGB = fileInfo.Length / (1024.0 * 1024.0 * 1024.0);
+            
+            // Base timeout: 5 minutes for small files
+            var baseMinutes = 5.0;
+            
+            // Add time based on file size:
+            // - 1 minute per GB for files under 10GB
+            // - 2 minutes per GB for files 10-50GB  
+            // - 3 minutes per GB for files over 50GB
+            var additionalMinutes = sizeGB switch
+            {
+                < 10 => sizeGB * 1.0,
+                < 50 => sizeGB * 2.0,
+                _ => sizeGB * 3.0
+            };
+            
+            var totalMinutes = baseMinutes + additionalMinutes;
+            
+            // Cap at 4 hours maximum
+            var maxMinutes = 4 * 60;
+            totalMinutes = Math.Min(totalMinutes, maxMinutes);
+            
+            return TimeSpan.FromMinutes(totalMinutes);
+        }
+        catch
+        {
+            // If we can't determine file size, use a conservative 2-hour timeout
+            return TimeSpan.FromHours(2);
+        }
+    }
+
+    /// <summary>
+    /// Get file size in GB for logging purposes.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>File size in GB</returns>
+    private static double GetFileSizeGB(string filePath)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            return fileInfo.Length / (1024.0 * 1024.0 * 1024.0);
+        }
+        catch
+        {
+            return 0;
         }
     }
 }

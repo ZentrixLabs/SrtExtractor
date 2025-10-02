@@ -20,6 +20,7 @@ public interface IFfmpegService
     /// <param name="mp4Path">Path to the MP4 file</param>
     /// <param name="trackId">Track ID to extract</param>
     /// <param name="outputPath">Output SRT file path</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Path to the extracted SRT file</returns>
-    Task<string> ExtractSubtitleAsync(string mp4Path, int trackId, string outputPath);
+    Task<string> ExtractSubtitleAsync(string mp4Path, int trackId, string outputPath, CancellationToken cancellationToken = default);
 }
