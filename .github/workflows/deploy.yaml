@@ -136,8 +136,39 @@ jobs:
           # Copy SubtitleEdit CLI if built
           $cliExe = Join-Path "${{ github.workspace }}" "SubtitleEdit-CLI\src\se-cli\bin\Release\net8.0\seconv.exe"
           if (Test-Path $cliExe) {
-            Copy-Item $cliExe $outputDir -Force
-            Write-Host "Copied seconv.exe to output directory"
+            # Copy all seconv files (exe, dll, deps.json, runtimeconfig.json, etc.)
+            $cliDir = Split-Path $cliExe
+            $seconvFiles = Get-ChildItem -Path $cliDir -Filter "seconv.*" -File
+            foreach ($file in $seconvFiles) {
+              Copy-Item $file.FullName $outputDir -Force
+              Write-Host "Copied $($file.Name) to output directory"
+            }
+            # Also copy SkiaSharp.dll which is required
+            $skiaSharpDll = Join-Path $cliDir "SkiaSharp.dll"
+            if (Test-Path $skiaSharpDll) {
+              Copy-Item $skiaSharpDll $outputDir -Force
+              Write-Host "Copied SkiaSharp.dll to output directory"
+            }
+          } else {
+            # Fallback: copy from local build if submodule build failed
+            $localCliExe = Join-Path "${{ github.workspace }}" "SrtExtractor\bin\Debug\net9.0-windows\seconv.exe"
+            if (Test-Path $localCliExe) {
+              # Copy all seconv files from local build
+              $localCliDir = Split-Path $localCliExe
+              $seconvFiles = Get-ChildItem -Path $localCliDir -Filter "seconv.*" -File
+              foreach ($file in $seconvFiles) {
+                Copy-Item $file.FullName $outputDir -Force
+                Write-Host "Copied $($file.Name) from local build to output directory"
+              }
+              # Also copy SkiaSharp.dll which is required
+              $skiaSharpDll = Join-Path $localCliDir "SkiaSharp.dll"
+              if (Test-Path $skiaSharpDll) {
+                Copy-Item $skiaSharpDll $outputDir -Force
+                Write-Host "Copied SkiaSharp.dll from local build to output directory"
+              }
+            } else {
+              Write-Warning "seconv.exe not found in either submodule build or local build"
+            }
           }
           
           # Copy FFmpeg if downloaded

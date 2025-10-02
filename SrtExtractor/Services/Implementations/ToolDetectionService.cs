@@ -68,6 +68,7 @@ public class ToolDetectionService : IToolDetectionService
     public async Task<ToolStatus> CheckSubtitleEditAsync()
     {
         _loggingService.LogInfo("Checking Subtitle Edit CLI installation");
+        _loggingService.LogInfo($"AppDomain.CurrentDomain.BaseDirectory: {AppDomain.CurrentDomain.BaseDirectory}");
 
         // Look for seconv.exe (the actual CLI executable)
         var cliPath = await FindToolPathAsync("seconv.exe", _subtitleEditCommonPaths);
@@ -158,6 +159,7 @@ public class ToolDetectionService : IToolDetectionService
         foreach (var path in commonPaths)
         {
             var fullPath = Path.Combine(path, toolName);
+            _loggingService.LogInfo($"Checking path: {fullPath} (exists: {File.Exists(fullPath)})");
             if (File.Exists(fullPath))
             {
                 _loggingService.LogInfo($"Found {toolName} at {fullPath}");
