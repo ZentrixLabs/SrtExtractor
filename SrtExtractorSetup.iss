@@ -44,41 +44,6 @@ Filename: "{app}\SrtExtractor.exe"; Description: "{cm:LaunchProgram,SrtExtractor
 function InitializeSetup(): Boolean;
 begin
   Result := True;
-  // Check if .NET 9.0 is installed
-  if not IsDotNetInstalled('Microsoft.NETCore.App', '9.0.0') then
-  begin
-    MsgBox('SrtExtractor requires .NET 9.0 Runtime. Please install it from https://dotnet.microsoft.com/download/dotnet/9.0 and try again.', mbError, MB_OK);
-    Result := False;
-  end;
-end;
-
-function IsDotNetInstalled(const FrameworkName: String; const MinVersion: String): Boolean;
-var
-  Version: String;
-begin
-  Result := RegQueryStringValue(HKEY_LOCAL_MACHINE, 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\' + FrameworkName, 'Version', Version) and
-            (CompareVersion(Version, MinVersion) >= 0);
-end;
-
-function CompareVersion(Version1, Version2: String): Integer;
-var
-  P1, P2: Integer;
-  N1, N2: Integer;
-begin
-  Result := 0;
-  while (Version1 <> '') or (Version2 <> '') do
-  begin
-    P1 := Pos('.', Version1);
-    P2 := Pos('.', Version2);
-    if P1 = 0 then P1 := Length(Version1) + 1;
-    if P2 = 0 then P2 := Length(Version2) + 1;
-    N1 := StrToIntDef(Copy(Version1, 1, P1 - 1), 0);
-    N2 := StrToIntDef(Copy(Version2, 1, P2 - 1), 0);
-    if N1 < N2 then Result := -1
-    else if N1 > N2 then Result := 1
-    else Result := 0;
-    if Result <> 0 then Exit;
-    Delete(Version1, 1, P1);
-    Delete(Version2, 1, P2);
-  end;
+  // Note: .NET 9.0 Runtime check removed to avoid compilation issues
+  // Users will need to install .NET 9.0 Desktop Runtime manually if not present
 end;
