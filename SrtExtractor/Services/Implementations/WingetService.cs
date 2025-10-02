@@ -26,6 +26,14 @@ public class WingetService : IWingetService
         try
         {
             _loggingService.LogInfo("Checking winget availability");
+            
+            // First check if we're on Windows 10 (winget not available)
+            if (IsWindows10())
+            {
+                _loggingService.LogInfo("Windows 10 detected - winget not available");
+                return false;
+            }
+            
             var (exitCode, _, _) = await _processRunner.RunAsync("winget", "--version");
             var isAvailable = exitCode == 0;
             
@@ -35,6 +43,20 @@ public class WingetService : IWingetService
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to check winget availability", ex);
+            return false;
+        }
+    }
+
+    private static bool IsWindows10()
+    {
+        try
+        {
+            var version = Environment.OSVersion.Version;
+            // Windows 10 is version 10.0, Windows 11 is also 10.0 but build number >= 22000
+            return version.Major == 10 && version.Build < 22000;
+        }
+        catch
+        {
             return false;
         }
     }

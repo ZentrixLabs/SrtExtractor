@@ -39,6 +39,16 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
   - Subtitle Edit CLI (for OCR conversion)
   - FFmpeg (for MP4 processing)
 
+### ⚠️ Windows 10 Users
+
+**Important**: The automatic tool installation via winget requires **Windows 11**. If you're using Windows 10, you'll need to manually install MKVToolNix:
+
+1. Download MKVToolNix from: https://mkvtoolnix.download/downloads.html
+2. Install it to the default location
+3. SrtExtractor will automatically detect the installation
+
+The app will show a helpful dialog with download instructions if winget is not available.
+
 ## 📦 Installation
 
 1. **Download** the latest release from the [Releases](https://github.com/ZentrixLabs/SrtExtractor/releases) page

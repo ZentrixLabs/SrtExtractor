@@ -251,6 +251,22 @@ public partial class MainViewModel : ObservableObject
         try
         {
             State.IsBusy = true;
+            
+            // Check if winget is available
+            var wingetAvailable = await _wingetService.IsWingetAvailableAsync();
+            if (!wingetAvailable)
+            {
+                State.AddLogMessage("Winget not available - showing manual installation dialog");
+                // Show Windows 10 dialog
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var dialog = new Views.Windows10Dialog();
+                    dialog.Owner = Application.Current.MainWindow;
+                    dialog.ShowDialog();
+                });
+                return;
+            }
+
             State.AddLogMessage("Installing MKVToolNix via winget...");
 
             var success = await _wingetService.InstallPackageAsync("MoritzBunkus.MKVToolNix");
@@ -348,6 +364,22 @@ public partial class MainViewModel : ObservableObject
         else
         {
             State.AddLogMessage("Some required tools are missing. Use the install buttons to install them.");
+            
+            // Check if MKVToolNix is missing and winget is not available (Windows 10)
+            if (!mkvStatus.IsInstalled)
+            {
+                var wingetAvailable = await _wingetService.IsWingetAvailableAsync();
+                if (!wingetAvailable)
+                {
+                    // Show Windows 10 dialog
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var dialog = new Views.Windows10Dialog();
+                        dialog.Owner = Application.Current.MainWindow;
+                        dialog.ShowDialog();
+                    });
+                }
+            }
         }
     }
 
