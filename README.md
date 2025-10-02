@@ -21,6 +21,8 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 - **Real-time Logging**: Provides detailed logs of all operations
 - **User-friendly Interface**: Clean, intuitive WPF interface
 - **OCR Support**: Converts image-based subtitles (PGS) to text using Subtitle Edit
+- **Smart OCR Correction**: Automatically fixes common OCR errors in subtitle text
+- **Standalone Correction Tool**: Correct existing SRT files independently
 - **Preference Settings**: Choose between forced subtitles or closed captions
 
 ## 🛠️ Supported Subtitle Formats
@@ -73,6 +75,15 @@ The application will automatically detect and download required external tools o
 2. **Probe Tracks**: Click "Probe Tracks" to analyze the file for subtitle tracks
 3. **Select Track**: Choose your preferred subtitle track from the list
 4. **Extract**: Click "Extract Selected → SRT" to generate the SRT file
+5. **Automatic Correction**: OCR errors are automatically corrected during extraction
+
+### Standalone SRT Correction
+
+Use the "🔧 Correct SRT File" button to fix OCR errors in existing SRT files:
+1. Click "🔧 Correct SRT File"
+2. Select your SRT file
+3. Common OCR errors are automatically fixed
+4. File is updated in-place with corrections
 
 ### Settings
 
@@ -116,6 +127,21 @@ Built with modern .NET 9 and WPF, SrtExtractor follows the MVVM pattern:
 - **Purpose**: MP4 file processing and subtitle extraction
 - **Installation**: Auto-downloaded during development
 - **Tools Used**: `ffmpeg.exe`, `ffprobe.exe`
+
+## 🧠 Smart OCR Correction
+
+SrtExtractor includes an intelligent OCR correction system that automatically fixes common errors:
+
+### Automatic Fixes
+- **Extra Spaces**: `T he` → `The`, `sh it` → `shit`
+- **Missing Spaces**: `Yougotanybiscuits` → `You got any biscuits`
+- **Character Substitutions**: `RipIey` → `Ripley`, `feeIdead` → `feel dead`
+- **Apostrophe Issues**: `you)re` → `you're`, `won)t` → `won't`
+- **Contractions**: `I am` → `I'm`, `you are` → `you're`
+- **Common Phrases**: `Whatyoudoing` → `What you doing`
+
+### Correction Patterns
+The system uses regex-based patterns to identify and fix over 100 common OCR errors, ensuring your subtitles are clean and professional.
 
 ## 📝 Logging
 
