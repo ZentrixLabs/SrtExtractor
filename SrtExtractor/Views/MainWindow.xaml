@@ -136,6 +136,14 @@
                         Margin="0,8,0,0"
                         Padding="8,4"
                         HorizontalAlignment="Center"/>
+                
+                <!-- Correct SRT Button -->
+                <Button Content="🔧 Correct SRT File" 
+                        Command="{Binding CorrectSrtCommand}"
+                        Background="LightGreen" 
+                        Margin="0,4,0,0"
+                        Padding="8,4"
+                        HorizontalAlignment="Center"/>
             </StackPanel>
         </GroupBox>
 

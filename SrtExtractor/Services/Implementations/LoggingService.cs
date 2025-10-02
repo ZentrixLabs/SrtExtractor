@@ -22,6 +22,9 @@ public class LoggingService : ILoggingService
         
         // Ensure log directory exists
         Directory.CreateDirectory(_logDirectory);
+        
+        // Clean up old logs on startup
+        CleanupOldLogs();
     }
 
     public void LogInfo(string message, [CallerMemberName] string memberName = "")
@@ -92,6 +95,47 @@ public class LoggingService : ILoggingService
                 // If file logging fails, we can't do much about it
                 // In a production app, you might want to fall back to event log
             }
+        }
+    }
+
+    private void CleanupOldLogs()
+    {
+        try
+        {
+            // Keep logs for the last 7 days
+            var cutoffDate = DateTime.Now.AddDays(-7);
+            
+            if (!Directory.Exists(_logDirectory))
+                return;
+                
+            var logFiles = Directory.GetFiles(_logDirectory, "srt_*.txt");
+            var deletedCount = 0;
+            
+            foreach (var logFile in logFiles)
+            {
+                try
+                {
+                    var fileInfo = new FileInfo(logFile);
+                    if (fileInfo.CreationTime < cutoffDate)
+                    {
+                        File.Delete(logFile);
+                        deletedCount++;
+                    }
+                }
+                catch
+                {
+                    // Ignore individual file deletion errors
+                }
+            }
+            
+            if (deletedCount > 0)
+            {
+                LogInfo($"Cleaned up {deletedCount} old log files (older than 7 days)");
+            }
+        }
+        catch
+        {
+            // If cleanup fails, don't crash the application
         }
     }
 

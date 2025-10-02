@@ -37,6 +37,7 @@ namespace SrtExtractor
         services.AddSingleton<IMkvToolService, MkvToolService>();
         services.AddSingleton<IFfmpegService, FfmpegService>();
         services.AddSingleton<ISubtitleOcrService, SubtitleOcrService>();
+        services.AddSingleton<ISrtCorrectionService, SrtCorrectionService>();
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();

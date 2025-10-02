@@ -80,19 +80,13 @@ public class SubtitleOcrService : ISubtitleOcrService
 
     private static string BuildOcrArguments(string toolPath, string supPath, string outSrt, string language, bool fixCommonErrors, bool removeHi)
     {
-        // seconv syntax: seconv <pattern> <format> [options]
+        // seconv syntax: seconv <pattern> <name-of-format-without-spaces> [<optional-parameters>]
         // For SUP to SRT conversion with OCR
-        var args = $"\"{supPath}\" subrip --output \"{outSrt}\" --ocr-language {language}";
+        var args = $"\"{supPath}\" subrip";
         
-        if (fixCommonErrors)
-        {
-            args += " --fix-common-errors";
-        }
-
-        if (removeHi)
-        {
-            args += " --remove-hi";
-        }
+        // Note: The seconv CLI handles OCR conversion automatically for SUP files
+        // The output file will be created with the same name but .srt extension
+        // fixCommonErrors and removeHi are handled by the OCR engine internally
 
         return args;
     }

@@ -21,6 +21,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IMkvToolService _mkvToolService;
     private readonly IFfmpegService _ffmpegService;
     private readonly ISubtitleOcrService _ocrService;
+    private readonly ISrtCorrectionService _srtCorrectionService;
     private readonly ISettingsService _settingsService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
 
@@ -34,6 +35,7 @@ public partial class MainViewModel : ObservableObject
         IMkvToolService mkvToolService,
         IFfmpegService ffmpegService,
         ISubtitleOcrService ocrService,
+        ISrtCorrectionService srtCorrectionService,
         ISettingsService settingsService)
     {
         _loggingService = loggingService;
@@ -42,6 +44,7 @@ public partial class MainViewModel : ObservableObject
         _mkvToolService = mkvToolService;
         _ffmpegService = ffmpegService;
         _ocrService = ocrService;
+        _srtCorrectionService = srtCorrectionService;
         _settingsService = settingsService;
 
         // Initialize commands
@@ -52,6 +55,7 @@ public partial class MainViewModel : ObservableObject
         InstallMkvToolNixCommand = new AsyncRelayCommand(InstallMkvToolNixAsync);
         BrowseMkvToolNixCommand = new RelayCommand(BrowseMkvToolNix);
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
+        CorrectSrtCommand = new AsyncRelayCommand(CorrectSrtAsync);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -83,6 +87,7 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand InstallMkvToolNixCommand { get; }
     public IRelayCommand BrowseMkvToolNixCommand { get; }
     public IAsyncRelayCommand ReDetectToolsCommand { get; }
+    public IAsyncRelayCommand CorrectSrtCommand { get; }
 
     #endregion
 
@@ -240,6 +245,13 @@ public partial class MainViewModel : ObservableObject
                 State.UpdateProcessingMessage("OCR conversion completed!");
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
+                // Correct common OCR errors
+                State.UpdateProcessingMessage("Correcting common OCR errors...");
+                State.AddLogMessage("Correcting common OCR errors...");
+                await _srtCorrectionService.CorrectSrtFileAsync(outputPath, cancellationToken);
+                State.UpdateProcessingMessage("OCR correction completed!");
+                State.AddLogMessage("OCR correction completed!");
+
                 // Clean up temporary SUP file
                 State.UpdateProcessingMessage("Cleaning up temporary files...");
                 try
@@ -380,17 +392,47 @@ public partial class MainViewModel : ObservableObject
     {
         State.AddLogMessage("Detecting external tools...");
 
+        // Load current settings
+        var settings = await _settingsService.LoadSettingsAsync();
+        var settingsUpdated = false;
+
         // Detect MKVToolNix
         var mkvStatus = await _toolDetectionService.CheckMkvToolNixAsync();
         State.UpdateToolStatus("MKVToolNix", mkvStatus);
+        
+        // Update settings if MKVToolNix was found and not already configured
+        if (mkvStatus.IsInstalled && mkvStatus.Path != null && string.IsNullOrEmpty(settings.MkvMergePath))
+        {
+            var mkvDir = Path.GetDirectoryName(mkvStatus.Path);
+            settings = settings with 
+            { 
+                MkvMergePath = mkvStatus.Path,
+                MkvExtractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe")
+            };
+            settingsUpdated = true;
+        }
 
         // Detect Subtitle Edit
         var seStatus = await _toolDetectionService.CheckSubtitleEditAsync();
         State.UpdateToolStatus("SubtitleEdit", seStatus);
+        
+        // Update settings if Subtitle Edit was found and not already configured
+        if (seStatus.IsInstalled && seStatus.Path != null && string.IsNullOrEmpty(settings.SubtitleEditPath))
+        {
+            settings = settings with { SubtitleEditPath = seStatus.Path };
+            settingsUpdated = true;
+        }
 
         // Detect FFmpeg
         var ffmpegStatus = await _toolDetectionService.CheckFfmpegAsync();
         State.UpdateToolStatus("FFmpeg", ffmpegStatus);
+
+        // Save updated settings if any tool paths were detected
+        if (settingsUpdated)
+        {
+            await _settingsService.SaveSettingsAsync(settings);
+            _loggingService.LogInfo("Updated settings with detected tool paths");
+        }
 
         if (State.AreToolsAvailable)
         {
@@ -585,6 +627,44 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
+        }
+    }
+
+    private async Task CorrectSrtAsync()
+    {
+        try
+        {
+            State.IsBusy = true;
+            
+            var openFileDialog = new OpenFileDialog
+            {
+                Title = "Select SRT file to correct",
+                Filter = "SRT Files (*.srt)|*.srt|All Files (*.*)|*.*",
+                FileName = "*.srt"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                State.AddLogMessage($"Correcting OCR errors in: {openFileDialog.FileName}");
+                State.UpdateProcessingMessage("Correcting common OCR errors...");
+                
+                await _srtCorrectionService.CorrectSrtFileAsync(openFileDialog.FileName);
+                
+                State.AddLogMessage("SRT correction completed successfully!");
+                State.UpdateProcessingMessage("SRT correction completed!");
+                MessageBox.Show("SRT file has been corrected successfully!", "Correction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to correct SRT file", ex);
+            State.AddLogMessage($"Error correcting SRT file: {ex.Message}");
+            MessageBox.Show($"Failed to correct SRT file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            State.IsBusy = false;
+            State.UpdateProcessingMessage("");
         }
     }
 
