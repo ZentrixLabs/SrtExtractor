@@ -198,7 +198,7 @@ public partial class MainViewModel : ObservableObject
                 State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
             }
-            else if (State.SelectedTrack.Codec.Contains("S_HDMV/PGS"))
+            else if (State.SelectedTrack.Codec.Contains("PGS") || State.SelectedTrack.Codec.Contains("S_HDMV/PGS"))
             {
                 // PGS extraction + OCR
                 var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
@@ -455,24 +455,24 @@ public partial class MainViewModel : ObservableObject
 
             var ccForcedPgs = tracks.FirstOrDefault(t => 
                 t.IsClosedCaption && t.Forced && 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (ccForcedPgs != null) return ccForcedPgs;
 
             var ccPgs = tracks.FirstOrDefault(t => 
                 t.IsClosedCaption && 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (ccPgs != null) return ccPgs;
 
             var forcedPgs = tracks.FirstOrDefault(t => 
                 t.Forced && 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (forcedPgs != null) return forcedPgs;
 
             var pgs = tracks.FirstOrDefault(t => 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (pgs != null) return pgs;
         }
@@ -492,12 +492,12 @@ public partial class MainViewModel : ObservableObject
 
             var forcedPgs = tracks.FirstOrDefault(t => 
                 t.Forced && 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (forcedPgs != null) return forcedPgs;
 
             var pgs = tracks.FirstOrDefault(t => 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (pgs != null) return pgs;
 
@@ -516,13 +516,13 @@ public partial class MainViewModel : ObservableObject
 
             var ccForcedPgs = tracks.FirstOrDefault(t => 
                 t.IsClosedCaption && t.Forced && 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (ccForcedPgs != null) return ccForcedPgs;
 
             var ccPgs = tracks.FirstOrDefault(t => 
                 t.IsClosedCaption && 
-                t.Codec.Contains("S_HDMV/PGS") && 
+                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
                 string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
             if (ccPgs != null) return ccPgs;
         }
