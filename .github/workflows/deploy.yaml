@@ -12,7 +12,7 @@ permissions:
   id-token: write
 
 env:
-  SIGN_CODE: false # Disable code signing temporarily due to SSL.com regression
+  SIGN_CODE: true # Disable code signing temporarily due to SSL.com regression
   BASE_DIR: ${{ github.workspace }}
   ARTIFACTS_DIR: ${{ github.workspace }}\artifacts
   TEMP_DIR: ${{ github.workspace }}\artifacts\temp
