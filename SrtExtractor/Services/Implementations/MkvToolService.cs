@@ -226,7 +226,51 @@ public class MkvToolService : IMkvToolService
                                             nameLower.Contains("caption");
                         }
 
-                        tracks.Add(new SubtitleTrack(id, codec, language, forced, isClosedCaption, name));
+                        // Extract additional properties for enhanced track analysis
+                        long? bitrate = null;
+                        int? frameCount = null;
+                        double? duration = null;
+
+                        if (trackElement.TryGetProperty("properties", out var enhancedPropsElement))
+                        {
+                            // Extract bitrate
+                            if (enhancedPropsElement.TryGetProperty("tag_bps", out var bitrateElement))
+                            {
+                                if (long.TryParse(bitrateElement.GetString(), out var bps))
+                                {
+                                    bitrate = bps;
+                                }
+                            }
+
+                            // Extract frame count
+                            if (enhancedPropsElement.TryGetProperty("tag_number_of_frames", out var framesElement))
+                            {
+                                if (int.TryParse(framesElement.GetString(), out var frames))
+                                {
+                                    frameCount = frames;
+                                }
+                            }
+
+                            // Extract duration
+                            if (enhancedPropsElement.TryGetProperty("tag_duration", out var durationElement))
+                            {
+                                var durationStr = durationElement.GetString();
+                                if (!string.IsNullOrEmpty(durationStr))
+                                {
+                                    // Parse duration in format "HH:MM:SS.sssssssss"
+                                    // The format might have too many decimal places, so we'll parse manually
+                                    if (TryParseDuration(durationStr, out var totalSeconds))
+                                    {
+                                        duration = totalSeconds;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Detect track type based on characteristics
+                        var trackType = DetectTrackType(bitrate, frameCount, duration, forced, isClosedCaption);
+
+                        tracks.Add(new SubtitleTrack(id, codec, language, forced, isClosedCaption, name, bitrate, frameCount, duration, trackType, false));
                     }
                 }
             }
@@ -238,6 +282,96 @@ public class MkvToolService : IMkvToolService
             _loggingService.LogError("Failed to parse mkvmerge JSON output", ex);
             throw new InvalidOperationException("Failed to parse MKV track information", ex);
         }
+    }
+
+    /// <summary>
+    /// Try to parse duration string in format "HH:MM:SS.sssssssss" to total seconds.
+    /// </summary>
+    /// <param name="durationStr">Duration string to parse</param>
+    /// <param name="totalSeconds">Output total seconds</param>
+    /// <returns>True if parsing succeeded</returns>
+    private static bool TryParseDuration(string durationStr, out double totalSeconds)
+    {
+        totalSeconds = 0;
+        
+        try
+        {
+            // Split by colon to get HH:MM:SS.sssssssss
+            var parts = durationStr.Split(':');
+            if (parts.Length != 3) return false;
+            
+            // Parse hours
+            if (!int.TryParse(parts[0], out var hours)) return false;
+            
+            // Parse minutes  
+            if (!int.TryParse(parts[1], out var minutes)) return false;
+            
+            // Parse seconds with decimal part
+            if (!double.TryParse(parts[2], out var seconds)) return false;
+            
+            // Calculate total seconds
+            totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Detect track type based on characteristics like bitrate, frame count, and duration.
+    /// </summary>
+    /// <param name="bitrate">Track bitrate in bits per second</param>
+    /// <param name="frameCount">Number of subtitle frames</param>
+    /// <param name="duration">Track duration in seconds</param>
+    /// <param name="forced">Whether track is marked as forced</param>
+    /// <param name="isClosedCaption">Whether track is closed caption</param>
+    /// <returns>Detected track type</returns>
+    private static string DetectTrackType(long? bitrate, int? frameCount, double? duration, bool forced, bool isClosedCaption)
+    {
+        // Handle closed captions first
+        if (isClosedCaption)
+        {
+            return forced ? "CC Forced" : "CC";
+        }
+
+        // Handle explicitly forced tracks
+        if (forced)
+        {
+            return "Forced";
+        }
+
+        // Analyze characteristics for PGS tracks (which don't always have forced_track: true)
+        if (bitrate.HasValue && frameCount.HasValue)
+        {
+            // Very low bitrate and frame count = likely forced/partial
+            if (bitrate < 1000 && frameCount < 50)
+            {
+                return "Forced";
+            }
+
+            // Low bitrate and few frames = likely forced
+            if (bitrate < 10000 && frameCount < 200)
+            {
+                return "Forced";
+            }
+
+            // High bitrate and many frames = likely full subtitles
+            if (bitrate > 20000 && frameCount > 1000)
+            {
+                return "Full";
+            }
+
+            // Medium characteristics = likely full subtitles
+            if (bitrate > 10000 && frameCount > 500)
+            {
+                return "Full";
+            }
+        }
+
+        // Default to Full for text-based subtitles (S_TEXT/UTF8)
+        return "Full";
     }
 
     /// <summary>

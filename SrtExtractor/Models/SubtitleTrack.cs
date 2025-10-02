@@ -9,11 +9,21 @@ namespace SrtExtractor.Models;
 /// <param name="Forced">Whether this is a forced subtitle track</param>
 /// <param name="IsClosedCaption">Whether this is a closed caption track</param>
 /// <param name="Name">Optional track name or description</param>
+/// <param name="Bitrate">Track bitrate in bits per second</param>
+/// <param name="FrameCount">Number of subtitle frames</param>
+/// <param name="Duration">Track duration in seconds</param>
+/// <param name="TrackType">Detected track type (Full, Forced, Commentary, SDH)</param>
+/// <param name="IsRecommended">Whether this track is the recommended choice based on user preferences</param>
 public record SubtitleTrack(
     int Id,
     string Codec,
     string Language,
     bool Forced,
     bool IsClosedCaption,
-    string? Name
+    string? Name,
+    long? Bitrate = null,
+    int? FrameCount = null,
+    double? Duration = null,
+    string? TrackType = null,
+    bool IsRecommended = false
 );

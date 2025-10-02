@@ -47,6 +47,9 @@ public partial class MainViewModel : ObservableObject
         _srtCorrectionService = srtCorrectionService;
         _settingsService = settingsService;
 
+        // Subscribe to preference changes
+        State.PreferencesChanged += OnPreferencesChanged;
+
         // Initialize commands
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
         ProbeCommand = new AsyncRelayCommand(ProbeTracksAsync, () => State.CanProbe);
@@ -147,20 +150,33 @@ public partial class MainViewModel : ObservableObject
             }
             
             State.Tracks.Clear();
+            
+            // Auto-select best track first
+            var selectedTrack = SelectBestTrack(result.Tracks);
+            
+            // Add tracks with recommendation flag
             foreach (var track in result.Tracks)
             {
-                State.Tracks.Add(track);
+                var isRecommended = selectedTrack != null && track.Id == selectedTrack.Id;
+                var recommendedTrack = track with { IsRecommended = isRecommended };
+                State.Tracks.Add(recommendedTrack);
             }
 
-            // Auto-select best track
-            var selectedTrack = SelectBestTrack(result.Tracks);
             State.SelectedTrack = selectedTrack;
 
             State.UpdateProcessingMessage("Analysis completed!");
             State.AddLogMessage($"Found {result.Tracks.Count} subtitle tracks");
             if (selectedTrack != null)
             {
-                State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language})");
+                var englishTracks = result.Tracks.Where(t => string.Equals(t.Language, "eng", StringComparison.OrdinalIgnoreCase)).ToList();
+                if (englishTracks.Count == 1)
+                {
+                    State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language}) - Only English track available");
+                }
+                else
+                {
+                    State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language}) - Best of {englishTracks.Count} English tracks");
+                }
             }
         }
         catch (Exception ex)
@@ -248,9 +264,9 @@ public partial class MainViewModel : ObservableObject
                 // Correct common OCR errors
                 State.UpdateProcessingMessage("Correcting common OCR errors...");
                 State.AddLogMessage("Correcting common OCR errors...");
-                await _srtCorrectionService.CorrectSrtFileAsync(outputPath, cancellationToken);
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(outputPath, cancellationToken);
                 State.UpdateProcessingMessage("OCR correction completed!");
-                State.AddLogMessage("OCR correction completed!");
+                State.AddLogMessage($"🎯 OCR correction completed! Applied {correctionCount} corrections.");
 
                 // Clean up temporary SUP file
                 State.UpdateProcessingMessage("Cleaning up temporary files...");
@@ -493,6 +509,58 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Handles preference changes and updates recommendations.
+    /// </summary>
+    private void OnPreferencesChanged(object? sender, EventArgs e)
+    {
+        // Only update if we have tracks loaded
+        if (State.Tracks.Any())
+        {
+            UpdateRecommendationAndSelection();
+        }
+    }
+
+    /// <summary>
+    /// Updates the recommendation and selection when user preferences change.
+    /// </summary>
+    public void UpdateRecommendationAndSelection()
+    {
+        if (!State.Tracks.Any())
+            return;
+
+        // Get the original tracks without recommendation flags
+        var originalTracks = State.Tracks.Select(t => t with { IsRecommended = false }).ToList();
+        
+        // Re-select best track based on current preferences
+        var selectedTrack = SelectBestTrack(originalTracks);
+        
+        // Update all tracks with new recommendation flags
+        State.Tracks.Clear();
+        foreach (var track in originalTracks)
+        {
+            var isRecommended = selectedTrack != null && track.Id == selectedTrack.Id;
+            var recommendedTrack = track with { IsRecommended = isRecommended };
+            State.Tracks.Add(recommendedTrack);
+        }
+
+        // Update selection
+        State.SelectedTrack = selectedTrack;
+        
+        if (selectedTrack != null)
+        {
+            var availableTracks = originalTracks.Where(t => string.Equals(t.Language, "eng", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (availableTracks.Count == 1)
+            {
+                State.AddLogMessage($"Updated recommendation: Track {selectedTrack.Id} ({selectedTrack.Codec}, {selectedTrack.Language}) - Only English track available");
+            }
+            else
+            {
+                State.AddLogMessage($"Updated recommendation: Track {selectedTrack.Id} ({selectedTrack.Codec}, {selectedTrack.Language}) - Best of {availableTracks.Count} English tracks");
+            }
+        }
+    }
+
     private SubtitleTrack? SelectBestTrack(IReadOnlyList<SubtitleTrack> tracks)
     {
         if (!tracks.Any())
@@ -500,112 +568,81 @@ public partial class MainViewModel : ObservableObject
 
         var preferredLanguage = "eng"; // Could be made configurable
 
-        // Priority order based on user preferences:
-        // If PreferClosedCaptions: CC forced UTF-8 -> CC UTF-8 -> forced UTF-8 -> UTF-8 -> CC forced PGS -> CC PGS -> forced PGS -> PGS
-        // If PreferForced: forced UTF-8 -> UTF-8 -> forced PGS -> PGS -> CC forced UTF-8 -> CC UTF-8 -> CC forced PGS -> CC PGS
+        // Enhanced priority order based on user preferences and track characteristics:
+        // If PreferClosedCaptions: CC tracks first, then by type and quality
+        // If PreferForced: Forced tracks first, then by type and quality
+        // If neither: Full tracks first, then by quality
+
+        // Filter tracks by preferred language
+        var languageTracks = tracks.Where(t => 
+            string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!languageTracks.Any())
+        {
+            // If no tracks in preferred language, return the first track
+            return tracks.First();
+        }
 
         if (State.PreferClosedCaptions)
         {
-            // Prefer CC tracks first
-            var ccForcedUtf8 = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && t.Forced && 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccForcedUtf8 != null) return ccForcedUtf8;
+            // Prefer CC tracks first, then by type and quality
+            var ccTracks = languageTracks.Where(t => t.IsClosedCaption).ToList();
+            if (ccTracks.Any())
+            {
+                // Prefer forced CC, then regular CC, then by quality
+                var forcedCC = ccTracks.FirstOrDefault(t => t.TrackType == "CC Forced" || t.Forced);
+                if (forcedCC != null) return forcedCC;
 
-            var ccUtf8 = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccUtf8 != null) return ccUtf8;
+                var regularCC = ccTracks.FirstOrDefault(t => t.TrackType == "CC");
+                if (regularCC != null) return regularCC;
 
-            var forcedUtf8 = tracks.FirstOrDefault(t => 
-                t.Forced && 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (forcedUtf8 != null) return forcedUtf8;
-
-            var utf8 = tracks.FirstOrDefault(t => 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (utf8 != null) return utf8;
-
-            var ccForcedPgs = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && t.Forced && 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccForcedPgs != null) return ccForcedPgs;
-
-            var ccPgs = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccPgs != null) return ccPgs;
-
-            var forcedPgs = tracks.FirstOrDefault(t => 
-                t.Forced && 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (forcedPgs != null) return forcedPgs;
-
-            var pgs = tracks.FirstOrDefault(t => 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (pgs != null) return pgs;
+                // Return highest quality CC track
+                return GetBestQualityTrack(ccTracks);
+            }
         }
         else if (State.PreferForced)
         {
-            // Prefer forced tracks first
-            var forcedUtf8 = tracks.FirstOrDefault(t => 
-                t.Forced && 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (forcedUtf8 != null) return forcedUtf8;
-
-            var utf8 = tracks.FirstOrDefault(t => 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (utf8 != null) return utf8;
-
-            var forcedPgs = tracks.FirstOrDefault(t => 
-                t.Forced && 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (forcedPgs != null) return forcedPgs;
-
-            var pgs = tracks.FirstOrDefault(t => 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (pgs != null) return pgs;
-
-            // Then try CC tracks
-            var ccForcedUtf8 = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && t.Forced && 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccForcedUtf8 != null) return ccForcedUtf8;
-
-            var ccUtf8 = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && 
-                t.Codec.Contains("S_TEXT/UTF8") && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccUtf8 != null) return ccUtf8;
-
-            var ccForcedPgs = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && t.Forced && 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccForcedPgs != null) return ccForcedPgs;
-
-            var ccPgs = tracks.FirstOrDefault(t => 
-                t.IsClosedCaption && 
-                (t.Codec.Contains("PGS") || t.Codec.Contains("S_HDMV/PGS")) && 
-                string.Equals(t.Language, preferredLanguage, StringComparison.OrdinalIgnoreCase));
-            if (ccPgs != null) return ccPgs;
+            // Prefer forced tracks first, then by type and quality
+            var forcedTracks = languageTracks.Where(t => t.TrackType == "Forced" || t.TrackType == "CC Forced" || t.Forced).ToList();
+            if (forcedTracks.Any())
+            {
+                // Return highest quality forced track
+                return GetBestQualityTrack(forcedTracks);
+            }
         }
 
-        // If no preferred language found, return the first track
-        return tracks.First();
+        // Default: Prefer Full tracks, then by quality
+        var fullTracks = languageTracks.Where(t => t.TrackType == "Full").ToList();
+        if (fullTracks.Any())
+        {
+            return GetBestQualityTrack(fullTracks);
+        }
+
+        // Fallback: Return highest quality track in preferred language
+        return GetBestQualityTrack(languageTracks);
+    }
+
+    /// <summary>
+    /// Select the best quality track from a list of tracks based on bitrate, frame count, and codec type.
+    /// </summary>
+    /// <param name="tracks">List of tracks to choose from</param>
+    /// <returns>Best quality track</returns>
+    private static SubtitleTrack GetBestQualityTrack(IList<SubtitleTrack> tracks)
+    {
+        if (!tracks.Any()) return tracks.First();
+
+        // Prefer text-based subtitles over PGS when available
+        var textTracks = tracks.Where(t => t.Codec.Contains("S_TEXT")).ToList();
+        if (textTracks.Any())
+        {
+            tracks = textTracks;
+        }
+
+        // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec preference
+        return tracks.OrderByDescending(t => t.Bitrate ?? 0)
+                     .ThenByDescending(t => t.FrameCount ?? 0)
+                     .ThenByDescending(t => t.Codec.Contains("S_TEXT") ? 1 : 0)
+                     .First();
     }
 
     private async Task ReDetectToolsAsync()
@@ -648,9 +685,9 @@ public partial class MainViewModel : ObservableObject
                 State.AddLogMessage($"Correcting OCR errors in: {openFileDialog.FileName}");
                 State.UpdateProcessingMessage("Correcting common OCR errors...");
                 
-                await _srtCorrectionService.CorrectSrtFileAsync(openFileDialog.FileName);
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(openFileDialog.FileName);
                 
-                State.AddLogMessage("SRT correction completed successfully!");
+                State.AddLogMessage($"🎯 SRT correction completed successfully! Applied {correctionCount} corrections.");
                 State.UpdateProcessingMessage("SRT correction completed!");
                 MessageBox.Show("SRT file has been corrected successfully!", "Correction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             }

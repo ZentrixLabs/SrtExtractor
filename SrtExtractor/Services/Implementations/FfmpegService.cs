@@ -96,7 +96,39 @@ public class FfmpegService : IFfmpegService
                     // Map FFmpeg codec names to our internal format
                     var mappedCodec = MapFfmpegCodec(codec);
 
-                    tracks.Add(new SubtitleTrack(trackId, mappedCodec, language, forced, isClosedCaption, null));
+                    // Extract additional properties for MP4 tracks
+                    long? bitrate = null;
+                    int? frameCount = null;
+                    double? duration = null;
+
+                    if (stream.TryGetProperty("bit_rate", out var bitRateElement))
+                    {
+                        if (long.TryParse(bitRateElement.GetString(), out var bps))
+                        {
+                            bitrate = bps;
+                        }
+                    }
+
+                    if (stream.TryGetProperty("nb_frames", out var framesElement))
+                    {
+                        if (int.TryParse(framesElement.GetString(), out var frames))
+                        {
+                            frameCount = frames;
+                        }
+                    }
+
+                    if (stream.TryGetProperty("duration", out var durationElement))
+                    {
+                        if (double.TryParse(durationElement.GetString(), out var dur))
+                        {
+                            duration = dur;
+                        }
+                    }
+
+                    // Detect track type
+                    var trackType = DetectTrackType(bitrate, frameCount, duration, forced, isClosedCaption);
+
+                    tracks.Add(new SubtitleTrack(trackId, mappedCodec, language, forced, isClosedCaption, null, bitrate, frameCount, duration, trackType, false));
                     trackId++;
                 }
             }
@@ -189,5 +221,60 @@ public class FfmpegService : IFfmpegService
             "vtt" => "S_TEXT/VTT",
             _ => $"S_TEXT/{ffmpegCodec.ToUpperInvariant()}"
         };
+    }
+
+    /// <summary>
+    /// Detect track type based on characteristics like bitrate, frame count, and duration.
+    /// </summary>
+    /// <param name="bitrate">Track bitrate in bits per second</param>
+    /// <param name="frameCount">Number of subtitle frames</param>
+    /// <param name="duration">Track duration in seconds</param>
+    /// <param name="forced">Whether track is marked as forced</param>
+    /// <param name="isClosedCaption">Whether track is closed caption</param>
+    /// <returns>Detected track type</returns>
+    private static string DetectTrackType(long? bitrate, int? frameCount, double? duration, bool forced, bool isClosedCaption)
+    {
+        // Handle closed captions first
+        if (isClosedCaption)
+        {
+            return forced ? "CC Forced" : "CC";
+        }
+
+        // Handle explicitly forced tracks
+        if (forced)
+        {
+            return "Forced";
+        }
+
+        // Analyze characteristics for PGS tracks (which don't always have forced_track: true)
+        if (bitrate.HasValue && frameCount.HasValue)
+        {
+            // Very low bitrate and frame count = likely forced/partial
+            if (bitrate < 1000 && frameCount < 50)
+            {
+                return "Forced";
+            }
+
+            // Low bitrate and few frames = likely forced
+            if (bitrate < 10000 && frameCount < 200)
+            {
+                return "Forced";
+            }
+
+            // High bitrate and many frames = likely full subtitles
+            if (bitrate > 20000 && frameCount > 1000)
+            {
+                return "Full";
+            }
+
+            // Medium characteristics = likely full subtitles
+            if (bitrate > 10000 && frameCount > 500)
+            {
+                return "Full";
+            }
+        }
+
+        // Default to Full for text-based subtitles (S_TEXT/UTF8)
+        return "Full";
     }
 }

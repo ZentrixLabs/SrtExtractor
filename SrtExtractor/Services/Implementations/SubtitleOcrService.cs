@@ -80,14 +80,43 @@ public class SubtitleOcrService : ISubtitleOcrService
 
     private static string BuildOcrArguments(string toolPath, string supPath, string outSrt, string language, bool fixCommonErrors, bool removeHi)
     {
-        // seconv syntax: seconv <pattern> <name-of-format-without-spaces> [<optional-parameters>]
+        // seconv syntax: seconv <pattern> <format> [options]
         // For SUP to SRT conversion with OCR
-        var args = $"\"{supPath}\" subrip";
+        // Map language codes to OCR database names
+        var ocrDb = MapLanguageToOcrDb(language);
+        var args = $"\"{supPath}\" subrip /outputfilename:\"{outSrt}\" /ocrdb:{ocrDb}";
         
-        // Note: The seconv CLI handles OCR conversion automatically for SUP files
-        // The output file will be created with the same name but .srt extension
-        // fixCommonErrors and removeHi are handled by the OCR engine internally
+        if (fixCommonErrors)
+        {
+            // Note: fixCommonErrors functionality might be handled differently in this version
+            // Check if there's a specific parameter for this
+        }
+
+        if (removeHi)
+        {
+            args += " /RemoveTextForHI";
+        }
 
         return args;
+    }
+
+    /// <summary>
+    /// Map language codes to OCR database names.
+    /// </summary>
+    /// <param name="language">Language code (e.g., "eng", "spa", "fre")</param>
+    /// <returns>OCR database name</returns>
+    private static string MapLanguageToOcrDb(string language)
+    {
+        // Map common language codes to available OCR databases
+        return language.ToLowerInvariant() switch
+        {
+            "eng" or "en" => "Latin",  // English uses Latin script
+            "spa" or "es" => "Latin",  // Spanish uses Latin script
+            "fre" or "fr" => "Latin",  // French uses Latin script
+            "deu" or "de" => "Latin",  // German uses Latin script
+            "ita" or "it" => "Latin",  // Italian uses Latin script
+            "por" or "pt" => "Latin",  // Portuguese uses Latin script
+            _ => "Latin"               // Default to Latin for most Western languages
+        };
     }
 }

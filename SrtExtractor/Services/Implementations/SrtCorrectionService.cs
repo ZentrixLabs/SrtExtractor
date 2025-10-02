@@ -16,7 +16,7 @@ public class SrtCorrectionService : ISrtCorrectionService
         _loggingService = loggingService;
     }
 
-    public async Task CorrectSrtFileAsync(string srtPath, CancellationToken cancellationToken = default)
+    public async Task<int> CorrectSrtFileAsync(string srtPath, CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Correcting OCR errors in SRT file: {srtPath}");
 
@@ -28,7 +28,7 @@ public class SrtCorrectionService : ISrtCorrectionService
         try
         {
             var content = await File.ReadAllTextAsync(srtPath, cancellationToken);
-            var correctedContent = CorrectSrtContent(content);
+            var (correctedContent, correctionCount) = CorrectSrtContentWithCount(content);
             
             if (content != correctedContent)
             {
@@ -39,6 +39,8 @@ public class SrtCorrectionService : ISrtCorrectionService
             {
                 _loggingService.LogInfo("No corrections needed in SRT file");
             }
+
+            return correctionCount;
         }
         catch (Exception ex)
         {
@@ -47,9 +49,10 @@ public class SrtCorrectionService : ISrtCorrectionService
         }
     }
 
-    public string CorrectSrtContent(string content)
+    public (string correctedContent, int correctionCount) CorrectSrtContentWithCount(string content)
     {
         var corrected = content;
+        var totalCorrections = 0;
 
         // Common OCR error patterns
         var corrections = new Dictionary<string, string>
@@ -219,10 +222,21 @@ public class SrtCorrectionService : ISrtCorrectionService
             
             if (beforeCount > afterCount)
             {
-                _loggingService.LogInfo($"Applied correction: '{correction.Key}' → '{correction.Value}' ({beforeCount - afterCount} instances)");
+                var instances = beforeCount - afterCount;
+                totalCorrections += instances;
+                _loggingService.LogInfo($"Applied correction: '{correction.Key}' → '{correction.Value}' ({instances} instances)");
             }
         }
 
+        // Log total corrections summary
+        _loggingService.LogInfo($"🎯 Total OCR corrections applied: {totalCorrections}");
+
+        return (corrected, totalCorrections);
+    }
+
+    public string CorrectSrtContent(string content)
+    {
+        var (corrected, _) = CorrectSrtContentWithCount(content);
         return corrected;
     }
 }

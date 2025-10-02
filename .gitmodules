@@ -6,4 +6,4 @@
 	url = https://git.ffmpeg.org/ffmpeg.git
 [submodule "SubtitleEdit-CLI"]
 	path = SubtitleEdit-CLI
-	url = https://github.com/SubtitleEdit/subtitleedit-cli.git
+	url = https://github.com/ZentrixLabs/subtitleedit-cli.git

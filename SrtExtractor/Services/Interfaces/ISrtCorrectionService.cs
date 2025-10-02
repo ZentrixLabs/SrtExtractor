@@ -12,8 +12,8 @@ public interface ISrtCorrectionService
     /// </summary>
     /// <param name="srtPath">Path to the SRT file to correct</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Task representing the correction operation</returns>
-    Task CorrectSrtFileAsync(string srtPath, CancellationToken cancellationToken = default);
+    /// <returns>Task representing the correction operation, returning the number of corrections applied</returns>
+    Task<int> CorrectSrtFileAsync(string srtPath, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Corrects common OCR errors in SRT content text.

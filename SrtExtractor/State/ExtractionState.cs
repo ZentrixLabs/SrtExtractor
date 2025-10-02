@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -45,7 +46,8 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
 
-
+    // Events
+    public event EventHandler? PreferencesChanged;
 
     partial void OnPreferForcedChanged(bool value)
     {
@@ -54,6 +56,7 @@ public partial class ExtractionState : ObservableObject
             PreferClosedCaptions = false;
             FileNamePattern = "{basename}.{lang}{forced}.srt";
         }
+        PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnPreferClosedCaptionsChanged(bool value)
@@ -63,6 +66,7 @@ public partial class ExtractionState : ObservableObject
             PreferForced = false;
             FileNamePattern = "{basename}.{lang}{cc}.srt";
         }
+        PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnMkvPathChanged(string? value)
