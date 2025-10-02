@@ -93,7 +93,7 @@ jobs:
         continue-on-error: true
 
       - name: Restore NuGet packages with msbuild
-        run: msbuild "${{ env.SolutionPath }}" -t:Restore -p:Configuration=Release -p:Platform=x64
+        run: msbuild "${{ env.SolutionPath }}" -t:Restore -p:Configuration=Release -p:Platform="Any CPU"
         shell: powershell
 
       - name: Build SubtitleEdit CLI
@@ -137,7 +137,7 @@ jobs:
         shell: powershell
 
       - name: Build SrtExtractor
-        run: msbuild "${{ env.SolutionPath }}" /p:Configuration=Release /p:Platform=x64
+        run: msbuild "${{ env.SolutionPath }}" /p:Configuration=Release /p:Platform="Any CPU"
         shell: powershell
 
       - name: Debug build output directory before stamping
@@ -152,7 +152,7 @@ jobs:
         shell: powershell
 
       - name: Rebuild SrtExtractor project after stamping
-        run: msbuild "SrtExtractor\SrtExtractor.csproj" /p:Configuration=Release /p:Platform=x64
+        run: msbuild "SrtExtractor\SrtExtractor.csproj" /p:Configuration=Release /p:Platform="Any CPU"
         shell: powershell
 
       - name: Conditionally sign SrtExtractor.exe
