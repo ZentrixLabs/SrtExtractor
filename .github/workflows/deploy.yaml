@@ -179,7 +179,6 @@ jobs:
           environment_name: PROD
           signing_method: v2
           malware_block: false
-          tsa_url: http://timestamp.digicert.com
         timeout-minutes: 10
 
       - name: Debug CodeSignTool version and output
@@ -253,7 +252,6 @@ jobs:
           environment_name: PROD
           signing_method: v2
           malware_block: false
-          tsa_url: http://timestamp.digicert.com
         timeout-minutes: 10
 
       - name: Debug CodeSignTool version and output (SrtExtractorInstaller)
