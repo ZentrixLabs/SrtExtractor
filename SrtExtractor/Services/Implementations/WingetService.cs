@@ -27,10 +27,10 @@ public class WingetService : IWingetService
         {
             _loggingService.LogInfo("Checking winget availability");
             
-            // First check if we're on Windows 10 (winget not available)
-            if (IsWindows10())
+            // First check if we're on Windows 10 without winget support
+            if (IsWindows10WithoutWinget())
             {
-                _loggingService.LogInfo("Windows 10 detected - winget not available");
+                _loggingService.LogInfo("Windows 10 version too old - winget not available (requires 1809+)");
                 return false;
             }
             
@@ -47,13 +47,14 @@ public class WingetService : IWingetService
         }
     }
 
-    private static bool IsWindows10()
+    private static bool IsWindows10WithoutWinget()
     {
         try
         {
             var version = Environment.OSVersion.Version;
+            // Windows 10 versions before 1809 (build 17763) don't have winget
             // Windows 10 is version 10.0, Windows 11 is also 10.0 but build number >= 22000
-            return version.Major == 10 && version.Build < 22000;
+            return version.Major == 10 && version.Build < 17763;
         }
         catch
         {

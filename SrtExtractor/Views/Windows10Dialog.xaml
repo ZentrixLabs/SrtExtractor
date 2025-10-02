@@ -17,13 +17,13 @@
         
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="⚠️ Windows 10 Detected" 
+            <TextBlock Text="⚠️ Windows 10 Version Too Old" 
                        FontSize="24" 
                        FontWeight="Bold" 
                        Foreground="Orange" 
                        HorizontalAlignment="Center"
                        Margin="0,0,0,10"/>
-            <TextBlock Text="Automatic tool installation is not available on Windows 10" 
+            <TextBlock Text="Automatic tool installation requires Windows 10 version 1809 or later" 
                        FontSize="14" 
                        HorizontalAlignment="Center" 
                        Foreground="Gray"/>
@@ -32,7 +32,7 @@
         <!-- Content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock Text="SrtExtractor requires MKVToolNix to process MKV files, but winget (Windows Package Manager) is only available on Windows 11." 
+                <TextBlock Text="SrtExtractor requires MKVToolNix to process MKV files, but winget (Windows Package Manager) requires Windows 10 version 1809 (build 17763) or later." 
                            TextWrapping="Wrap" 
                            Margin="0,0,0,20"
                            FontSize="14"/>

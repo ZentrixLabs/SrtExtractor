@@ -41,13 +41,15 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 
 ### ⚠️ Windows 10 Users
 
-**Important**: The automatic tool installation via winget requires **Windows 11**. If you're using Windows 10, you'll need to manually install MKVToolNix:
+**Important**: The automatic tool installation via winget requires **Windows 10 version 1809 (build 17763) or later**. If you're using an older version of Windows 10, you'll need to manually install MKVToolNix:
 
 1. Download MKVToolNix from: https://mkvtoolnix.download/downloads.html
 2. Install it to the default location
 3. SrtExtractor will automatically detect the installation
 
 The app will show a helpful dialog with download instructions if winget is not available.
+
+**To check your Windows 10 version**: Press `Win + R`, type `winver`, and press Enter.
 
 ## 📦 Installation
 
