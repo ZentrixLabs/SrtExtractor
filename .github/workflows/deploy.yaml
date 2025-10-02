@@ -31,6 +31,7 @@ jobs:
         with:
           path: .
           submodules: 'recursive' # Ensure submodules are checked out
+          fetch-depth: 0 # Fetch all history for submodules
 
       - name: Extract version from tag
         run: |
@@ -45,6 +46,13 @@ jobs:
 
       - name: Debug repository structure
         run: dir "${{ github.workspace }}" -Recurse
+        shell: powershell
+
+      - name: Initialize and update submodules
+        run: |
+          git submodule update --init --recursive
+          Write-Host "Submodules initialized"
+          dir "${{ github.workspace }}" -Recurse | Where-Object { $_.Name -like "*SubtitleEdit*" -or $_.Name -like "*FFmpeg*" }
         shell: powershell
 
       - name: Delay to ensure checkout completes
@@ -96,6 +104,10 @@ jobs:
         run: msbuild "${{ env.SolutionPath }}" -t:Restore -p:Configuration=Release -p:Platform="Any CPU"
         shell: powershell
 
+      - name: Build SrtExtractor
+        run: msbuild "${{ env.SolutionPath }}" /p:Configuration=Release /p:Platform="Any CPU"
+        shell: powershell
+
       - name: Build SubtitleEdit CLI
         run: |
           $cliPath = Join-Path "${{ github.workspace }}" "SubtitleEdit-CLI\src\se-cli"
@@ -119,6 +131,12 @@ jobs:
         run: |
           $outputDir = "${{ env.SrtExtractorBin }}"
           
+          # Ensure output directory exists
+          if (-not (Test-Path $outputDir)) {
+            New-Item -ItemType Directory -Path $outputDir -Force
+            Write-Host "Created output directory: $outputDir"
+          }
+          
           # Copy SubtitleEdit CLI if built
           $cliExe = Join-Path "${{ github.workspace }}" "SubtitleEdit-CLI\src\se-cli\bin\Release\net8.0\seconv.exe"
           if (Test-Path $cliExe) {
@@ -134,10 +152,6 @@ jobs:
             Copy-Item $ffprobeExe $outputDir -Force
             Write-Host "Copied FFmpeg tools to output directory"
           }
-        shell: powershell
-
-      - name: Build SrtExtractor
-        run: msbuild "${{ env.SolutionPath }}" /p:Configuration=Release /p:Platform="Any CPU"
         shell: powershell
 
       - name: Debug build output directory before stamping
