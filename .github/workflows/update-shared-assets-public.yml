@@ -1,0 +1,86 @@
+name: Update Shared Assets (Public)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  update-assets:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Download latest ZLLogo.png (Public Access)
+      run: |
+        # Create assets directory if it doesn't exist
+        if (!(Test-Path "assets")) {
+          New-Item -ItemType Directory -Path "assets"
+        }
+        
+        # Download latest logo from shared media repository (public access)
+        $logoUrl = "https://raw.githubusercontent.com/ZentrixLabs/zentrixlabs-media/main/logos/ZLLogo.png"
+        $logoPath = "assets\ZLLogo.png"
+        
+        Write-Host "Downloading latest ZLLogo.png from shared repository (public access)..."
+        
+        try {
+          # Use public URL without authentication
+          Invoke-WebRequest -Uri $logoUrl -OutFile $logoPath
+          
+          # Verify download
+          if (Test-Path $logoPath) {
+            $fileSize = (Get-Item $logoPath).Length
+            Write-Host "Successfully downloaded ZLLogo.png (Size: $fileSize bytes)"
+          } else {
+            Write-Error "Failed to download ZLLogo.png"
+            exit 1
+          }
+        }
+        catch {
+          Write-Warning "Failed to download from public URL: $($_.Exception.Message)"
+          Write-Host "Continuing build with existing assets..."
+          # Don't fail the build if asset download fails
+        }
+        
+    - name: Copy logo to SrtExtractor project
+      run: |
+        # Copy to SrtExtractor project root
+        if (Test-Path "assets\ZLLogo.png") {
+          Copy-Item "assets\ZLLogo.png" "SrtExtractor\ZLLogo.png" -Force
+          Copy-Item "assets\ZLLogo.png" "ZLLogo.png" -Force
+          Write-Host "Updated ZLLogo.png in project directories"
+        } else {
+          Write-Host "No logo file to copy - using existing assets"
+        }
+        
+    - name: Build project
+      run: |
+        dotnet build SrtExtractor\SrtExtractor.csproj --configuration Release
+        
+    - name: Commit updated assets (if changed)
+      if: github.event_name == 'push'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Check if any logo files were updated
+        $changes = git diff --name-only
+        if ($changes -contains "SrtExtractor\ZLLogo.png" -or $changes -contains "ZLLogo.png") {
+          git add "SrtExtractor\ZLLogo.png"
+          git add "ZLLogo.png"
+          git commit -m "Update ZLLogo.png from shared media repository [skip ci]"
+          git push
+          Write-Host "Committed updated logo files"
+        } else {
+          Write-Host "No logo updates detected"
+        }

@@ -24,6 +24,12 @@ namespace SrtExtractor.Views
             
             // Check if settings should be opened on startup
             Loaded += MainWindow_Loaded;
+            
+            // Subscribe to recent files changes
+            if (viewModel.State != null)
+            {
+                viewModel.State.PropertyChanged += State_PropertyChanged;
+            }
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -244,6 +250,9 @@ namespace SrtExtractor.Views
         {
             if (DataContext is MainViewModel viewModel)
             {
+                // Populate recent files menu
+                PopulateRecentFilesMenu();
+                
                 // Check if settings should be opened on startup
                 if (viewModel.State.ShowSettingsOnStartup)
                 {
@@ -262,6 +271,50 @@ namespace SrtExtractor.Views
                                       "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
+            }
+        }
+
+        private void State_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainViewModel.State.RecentFiles))
+            {
+                Dispatcher.Invoke(PopulateRecentFilesMenu);
+            }
+        }
+
+        private void PopulateRecentFilesMenu()
+        {
+            if (DataContext is not MainViewModel viewModel) return;
+
+            // Clear existing recent file menu items (except the "No recent files" item)
+            var itemsToRemove = RecentFilesMenuItem.Items.Cast<MenuItem>()
+                .Where(item => item != NoRecentFilesMenuItem)
+                .ToList();
+            
+            foreach (var item in itemsToRemove)
+            {
+                RecentFilesMenuItem.Items.Remove(item);
+            }
+
+            // Show/hide "No recent files" message
+            NoRecentFilesMenuItem.Visibility = viewModel.State.RecentFiles.Count == 0 
+                ? Visibility.Visible 
+                : Visibility.Collapsed;
+
+            // Add recent files
+            foreach (var filePath in viewModel.State.RecentFiles)
+            {
+                var fileName = Path.GetFileName(filePath);
+                var menuItem = new MenuItem
+                {
+                    Header = fileName,
+                    ToolTip = filePath,
+                    Command = viewModel.OpenRecentFileCommand,
+                    CommandParameter = filePath
+                };
+                
+                // Insert before the "No recent files" item
+                RecentFilesMenuItem.Items.Insert(RecentFilesMenuItem.Items.Count - 1, menuItem);
             }
         }
     }

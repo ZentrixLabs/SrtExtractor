@@ -25,6 +25,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IMultiPassCorrectionService _multiPassCorrectionService;
     private readonly ISettingsService _settingsService;
     private readonly INetworkDetectionService _networkDetectionService;
+    private readonly IRecentFilesService _recentFilesService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
 
     [ObservableProperty]
@@ -40,7 +41,8 @@ public partial class MainViewModel : ObservableObject
         ISrtCorrectionService srtCorrectionService,
         IMultiPassCorrectionService multiPassCorrectionService,
         ISettingsService settingsService,
-        INetworkDetectionService networkDetectionService)
+        INetworkDetectionService networkDetectionService,
+        IRecentFilesService recentFilesService)
     {
         _loggingService = loggingService;
         _toolDetectionService = toolDetectionService;
@@ -52,6 +54,7 @@ public partial class MainViewModel : ObservableObject
         _multiPassCorrectionService = multiPassCorrectionService;
         _settingsService = settingsService;
         _networkDetectionService = networkDetectionService;
+        _recentFilesService = recentFilesService;
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
@@ -74,6 +77,7 @@ public partial class MainViewModel : ObservableObject
         // Menu commands
         ToggleBatchModeCommand = new RelayCommand(ToggleBatchMode);
         ShowHelpCommand = new RelayCommand(ShowHelp);
+        OpenRecentFileCommand = new RelayCommand<string>(OpenRecentFile);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -127,6 +131,7 @@ public partial class MainViewModel : ObservableObject
     // Menu commands
     public IRelayCommand ToggleBatchModeCommand { get; }
     public IRelayCommand ShowHelpCommand { get; }
+    public IRelayCommand<string> OpenRecentFileCommand { get; }
 
     #endregion
 
@@ -338,6 +343,10 @@ public partial class MainViewModel : ObservableObject
 
             State.AddLogMessage("Subtitle extraction completed successfully!");
             
+            // Add to recent files
+            await _recentFilesService.AddFileAsync(State.MkvPath).ConfigureAwait(false);
+            await LoadRecentFilesAsync().ConfigureAwait(false); // Refresh the UI list
+            
             // Only show success dialog in single file mode, not batch mode
             if (!State.IsBatchMode)
             {
@@ -459,6 +468,9 @@ public partial class MainViewModel : ObservableObject
                 State.PreferClosedCaptions = settings.PreferClosedCaptions;
                 State.OcrLanguage = settings.DefaultOcrLanguage;
                 State.FileNamePattern = settings.FileNamePattern;
+
+            // Load recent files
+            await LoadRecentFilesAsync();
 
             // Detect tools
             await DetectToolsAsync();
@@ -1256,6 +1268,48 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Error showing help", ex);
+        }
+    }
+
+    private void OpenRecentFile(string? filePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return;
+
+            _loggingService.LogInfo($"User selected recent file: {filePath}");
+            State.MkvPath = filePath;
+            State.AddLogMessage($"Opened recent file: {Path.GetFileName(filePath)}");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError($"Error opening recent file: {filePath}", ex);
+            MessageBox.Show($"Failed to open recent file:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async Task LoadRecentFilesAsync()
+    {
+        try
+        {
+            var recentFiles = await _recentFilesService.GetRecentFilesAsync().ConfigureAwait(false);
+            
+            // Update UI on UI thread
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                State.RecentFiles.Clear();
+                foreach (var file in recentFiles)
+                {
+                    State.RecentFiles.Add(file);
+                }
+            });
+            
+            _loggingService.LogInfo($"Loaded {recentFiles.Count} recent files");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to load recent files", ex);
         }
     }
 

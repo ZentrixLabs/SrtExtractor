@@ -100,6 +100,10 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private bool _showSettingsOnStartup;
 
+    // Recent Files
+    [ObservableProperty]
+    private ObservableCollection<string> _recentFiles = new();
+
     // Events
     public event EventHandler? PreferencesChanged;
 

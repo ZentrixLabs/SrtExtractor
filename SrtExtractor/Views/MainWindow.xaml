@@ -72,8 +72,11 @@
                       ToolTip="Select a video file to extract subtitles from"/>
             <Separator/>
             <MenuItem Header="_Recent Files"
+                      Name="RecentFilesMenuItem"
                       ToolTip="Quick access to recently processed video files">
-                <!-- Recent files will be populated dynamically -->
+                <MenuItem Header="No recent files"
+                          Name="NoRecentFilesMenuItem"
+                          IsEnabled="False"/>
             </MenuItem>
             <Separator/>
             <MenuItem Header="E_xit" 
