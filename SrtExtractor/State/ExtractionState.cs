@@ -46,6 +46,44 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
 
+    // Network Detection
+    [ObservableProperty]
+    private bool _isNetworkFile;
+
+    [ObservableProperty]
+    private string _networkWarningMessage = "";
+
+    [ObservableProperty]
+    private double _estimatedProcessingTimeMinutes;
+
+    [ObservableProperty]
+    private string _formattedFileSize = "";
+
+    [ObservableProperty]
+    private string _networkDriveInfo = "";
+
+    // Batch Mode
+    [ObservableProperty]
+    private bool _isBatchMode;
+
+    [ObservableProperty]
+    private double _queueColumnWidth = 0;
+
+    [ObservableProperty]
+    private ObservableCollection<BatchFile> _batchQueue = new();
+
+    [ObservableProperty]
+    private int _currentBatchIndex;
+
+    [ObservableProperty]
+    private int _totalBatchFiles;
+
+    [ObservableProperty]
+    private string _batchProgressMessage = "";
+
+    [ObservableProperty]
+    private double _batchProgressPercentage;
+
     // Events
     public event EventHandler? PreferencesChanged;
 
@@ -69,6 +107,13 @@ public partial class ExtractionState : ObservableObject
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    partial void OnIsBatchModeChanged(bool value)
+    {
+        // Notify computed properties that depend on IsBatchMode
+        OnPropertyChanged(nameof(ShowBatchMode));
+        OnPropertyChanged(nameof(ShowSingleFileMode));
+    }
+
     partial void OnMkvPathChanged(string? value)
     {
         OnPropertyChanged(nameof(CanProbe));
@@ -79,6 +124,7 @@ public partial class ExtractionState : ObservableObject
     {
         OnPropertyChanged(nameof(CanProbe));
         OnPropertyChanged(nameof(CanExtract));
+        OnPropertyChanged(nameof(CanProcessBatch));
     }
 
     partial void OnSelectedTrackChanged(SubtitleTrack? value)
@@ -105,6 +151,19 @@ public partial class ExtractionState : ObservableObject
     public bool CanProbe => !string.IsNullOrEmpty(MkvPath) && AreToolsAvailable && !IsBusy;
     
     public bool CanExtract => SelectedTrack != null && AreToolsAvailable && !IsBusy;
+
+    // Batch Mode Computed Properties
+    public bool CanProcessBatch => BatchQueue.Any() && AreToolsAvailable && !IsBusy;
+
+    public bool HasBatchQueue => BatchQueue.Any();
+
+    public string BatchProgressText => $"Processing {CurrentBatchIndex + 1} of {TotalBatchFiles} files";
+
+    public bool ShowNetworkWarning => IsNetworkFile && !string.IsNullOrEmpty(MkvPath);
+
+    public bool ShowBatchMode => IsBatchMode;
+
+    public bool ShowSingleFileMode => !IsBatchMode;
 
     // Available OCR languages
     public string[] AvailableLanguages { get; } = { "eng", "spa", "fra", "deu", "ita", "por", "rus", "jpn", "kor", "chi" };
@@ -160,6 +219,7 @@ public partial class ExtractionState : ObservableObject
         OnPropertyChanged(nameof(AreToolsAvailable));
         OnPropertyChanged(nameof(CanProbe));
         OnPropertyChanged(nameof(CanExtract));
+        OnPropertyChanged(nameof(CanProcessBatch));
     }
 
     /// <summary>
@@ -211,6 +271,123 @@ public partial class ExtractionState : ObservableObject
     }
 
     /// <summary>
+    /// Update network detection properties for the current file.
+    /// </summary>
+    /// <param name="isNetwork">Whether the file is on a network drive</param>
+    /// <param name="estimatedMinutes">Estimated processing time in minutes</param>
+    /// <param name="formattedSize">Formatted file size string</param>
+    /// <param name="networkDriveInfo">Network drive information</param>
+    public void UpdateNetworkDetection(bool isNetwork, double estimatedMinutes, string formattedSize, string networkDriveInfo)
+    {
+        IsNetworkFile = isNetwork;
+        EstimatedProcessingTimeMinutes = estimatedMinutes;
+        FormattedFileSize = formattedSize;
+        NetworkDriveInfo = networkDriveInfo;
+
+        if (isNetwork)
+        {
+            NetworkWarningMessage = $"File is on network drive {networkDriveInfo}\n" +
+                                  $"File size: {formattedSize}\n" +
+                                  $"Estimated processing time: ~{FormatEstimatedTime(estimatedMinutes)}";
+        }
+        else
+        {
+            NetworkWarningMessage = "";
+        }
+
+        // Notify computed properties
+        OnPropertyChanged(nameof(ShowNetworkWarning));
+    }
+
+    /// <summary>
+    /// Add a file to the batch queue.
+    /// </summary>
+    /// <param name="filePath">Path to the file to add</param>
+    /// <returns>True if file was added, false if already exists</returns>
+    public bool AddToBatchQueue(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || BatchQueue.Any(f => f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        var batchFile = new BatchFile { FilePath = filePath };
+        batchFile.UpdateFromFileSystem();
+        BatchQueue.Add(batchFile);
+
+        TotalBatchFiles = BatchQueue.Count;
+        
+        OnPropertyChanged(nameof(CanProcessBatch));
+        OnPropertyChanged(nameof(HasBatchQueue));
+
+        return true;
+    }
+
+    /// <summary>
+    /// Remove a file from the batch queue.
+    /// </summary>
+    /// <param name="batchFile">The batch file to remove</param>
+    public void RemoveFromBatchQueue(BatchFile batchFile)
+    {
+        if (BatchQueue.Remove(batchFile))
+        {
+            TotalBatchFiles = BatchQueue.Count;
+            OnPropertyChanged(nameof(CanProcessBatch));
+            OnPropertyChanged(nameof(HasBatchQueue));
+        }
+    }
+
+    /// <summary>
+    /// Clear all files from the batch queue.
+    /// </summary>
+    public void ClearBatchQueue()
+    {
+        BatchQueue.Clear();
+        TotalBatchFiles = 0;
+        CurrentBatchIndex = 0;
+        BatchProgressMessage = "";
+        BatchProgressPercentage = 0;
+        
+        OnPropertyChanged(nameof(CanProcessBatch));
+        OnPropertyChanged(nameof(HasBatchQueue));
+    }
+
+    /// <summary>
+    /// Update batch progress.
+    /// </summary>
+    /// <param name="currentIndex">Current file index</param>
+    /// <param name="totalFiles">Total number of files</param>
+    /// <param name="message">Progress message</param>
+    public void UpdateBatchProgress(int currentIndex, int totalFiles, string message)
+    {
+        CurrentBatchIndex = currentIndex;
+        TotalBatchFiles = totalFiles;
+        BatchProgressMessage = message;
+        BatchProgressPercentage = totalFiles > 0 ? (currentIndex / (double)totalFiles) * 100 : 0;
+        
+        OnPropertyChanged(nameof(BatchProgressText));
+    }
+
+    /// <summary>
+    /// Format estimated time as a human-readable string.
+    /// </summary>
+    /// <param name="minutes">Time in minutes</param>
+    /// <returns>Formatted time string</returns>
+    private static string FormatEstimatedTime(double minutes)
+    {
+        if (minutes < 1)
+            return "< 1 min";
+        else if (minutes < 60)
+            return $"{minutes:F1} min";
+        else
+        {
+            var hours = (int)(minutes / 60);
+            var minutesRemainder = (int)(minutes % 60);
+            return $"{hours}h {minutesRemainder}m";
+        }
+    }
+
+    /// <summary>
     /// Reset the state to initial values.
     /// </summary>
     public void Reset()
@@ -221,6 +398,14 @@ public partial class ExtractionState : ObservableObject
         IsBusy = false;
         IsProcessing = false;
         ProcessingMessage = "";
+        
+        // Reset network detection
+        IsNetworkFile = false;
+        NetworkWarningMessage = "";
+        EstimatedProcessingTimeMinutes = 0;
+        FormattedFileSize = "";
+        NetworkDriveInfo = "";
+        
         ClearLog();
     }
 

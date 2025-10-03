@@ -85,6 +85,12 @@ public class ProcessRunner : IProcessRunner
                 process.Kill();
                 throw new TimeoutException($"Process timed out: {exe}");
             }
+            catch (OperationCanceledException)
+            {
+                _loggingService.LogWarning("Process execution was cancelled, killing process");
+                process.Kill();
+                throw;
+            }
 
             var stdout = outputBuilder.ToString().Trim();
             var stderr = errorBuilder.ToString().Trim();

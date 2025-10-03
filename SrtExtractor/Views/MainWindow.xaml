@@ -7,13 +7,14 @@
             xmlns:converters="clr-namespace:SrtExtractor.Converters"
             mc:Ignorable="d"
             Title="SrtExtractor - MKV/MP4 Subtitle Extractor"
-            Height="850" Width="1000"
-            MinHeight="750" MinWidth="900"
+            Height="700" Width="1200"
+            MinHeight="600" MinWidth="1000"
             Background="White">
     
     <Window.Resources>
         <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <converters:DoubleToVisibilityConverter x:Key="DoubleToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <Style TargetType="Button">
@@ -47,18 +48,27 @@
     </Window.Resources>
 
     <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="{Binding State.QueueColumnWidth}" x:Name="QueueColumn" MinWidth="0"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Main Content Area -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
         <!-- File Selection Row -->
-        <GroupBox Header="Video File" Grid.Row="0">
+        <GroupBox Header="Video File" Grid.Row="0" Grid.ColumnSpan="2">
             <StackPanel Orientation="Horizontal">
                 <Button Content="Pick Video..." 
                         Command="{Binding PickMkvCommand}"
@@ -72,7 +82,7 @@
         </GroupBox>
 
         <!-- Tool Status Panel -->
-        <GroupBox Header="Tool Status" Grid.Row="1">
+        <GroupBox Header="Tool Status" Grid.Row="1" Grid.Column="0">
             <StackPanel>
                 <Grid>
                 <Grid.RowDefinitions>
@@ -158,13 +168,27 @@
                         Margin="0,4,0,0"
                         Padding="8,4"
                         HorizontalAlignment="Center"/>
+                
+                <!-- Cleanup Temp Files Button -->
+                <Button Content="🧹 Cleanup Temp Files" 
+                        Command="{Binding CleanupTempFilesCommand}"
+                        Background="LightYellow" 
+                        Margin="0,4,0,0"
+                        Padding="8,4"
+                        HorizontalAlignment="Center"/>
             </StackPanel>
         </GroupBox>
 
         <!-- Settings Row -->
-        <GroupBox Header="Settings" Grid.Row="2">
+        <GroupBox Header="Settings" Grid.Row="1" Grid.Column="1">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,5">
+                    <CheckBox Content="🎬 Enable Batch Mode (Process Multiple Files)" 
+                              IsChecked="{Binding State.IsBatchMode}"
+                              VerticalAlignment="Center"
+                              FontWeight="Bold"
+                              Foreground="DarkBlue"
+                              Margin="0,0,20,0"/>
                     <RadioButton Content="Prefer forced subtitles" 
                                  IsChecked="{Binding State.PreferForced}"
                                  GroupName="SubtitlePreference"
@@ -177,6 +201,47 @@
                                  Margin="0,0,20,0"/>
                 </StackPanel>
                 
+                <!-- Batch Mode Instructions -->
+                <Border Background="#E3F2FD" 
+                        BorderBrush="#2196F3" 
+                        BorderThickness="1" 
+                        CornerRadius="6" 
+                        Padding="12" 
+                        Margin="0,10,0,0"
+                        Visibility="{Binding State.IsBatchMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="📋 How to use Batch Mode:" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="13" 
+                                   Foreground="#1976D2"
+                                   Margin="0,0,0,6"/>
+                        <TextBlock Text="1. Enable Batch Mode above ✓" 
+                                   FontSize="12" 
+                                   Foreground="#1976D2"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="2. Drag &amp; drop MKV/MP4 files anywhere on this window" 
+                                   FontSize="12" 
+                                   Foreground="#1976D2"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock Text="3. Click 'Process Batch' to extract subtitles from all files" 
+                                   FontSize="12" 
+                                   Foreground="#1976D2"
+                                   Margin="0,2,0,0"/>
+                        <TextBlock FontSize="11" 
+                                   FontStyle="Italic" 
+                                   Foreground="#666666"
+                                   Margin="0,6,0,0"
+                                   TextWrapping="Wrap">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="💡 All files will use your preferred settings: {0} subtitles, {1} language">
+                                    <Binding Path="State.PreferForced" Converter="{StaticResource BoolToStatusConverter}"/>
+                                    <Binding Path="State.OcrLanguage"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                
                 <StackPanel Orientation="Horizontal" Margin="0,10">
                     <TextBlock Text="OCR Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
@@ -188,38 +253,86 @@
                              Width="200"
                              ToolTip="Pattern: {basename}.{lang}{forced}{cc}.srt"/>
                 </StackPanel>
+
+                <!-- Network Warning -->
+                <Border Background="LightYellow" 
+                        BorderBrush="Orange" 
+                        BorderThickness="1" 
+                        CornerRadius="4" 
+                        Padding="8" 
+                        Margin="0,10,0,0"
+                        Visibility="{Binding State.ShowNetworkWarning, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="⚠️ Network File Detected" 
+                                   FontWeight="Bold" 
+                                   Foreground="DarkOrange"/>
+                        <TextBlock Text="{Binding State.NetworkWarningMessage}" 
+                                   TextWrapping="Wrap" 
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
                 
             </StackPanel>
         </GroupBox>
 
         <!-- Action Buttons -->
-        <GroupBox Header="Actions" Grid.Row="3">
-            <StackPanel Orientation="Horizontal">
-                <Button Content="Probe Tracks" 
-                        Command="{Binding ProbeCommand}"
-                        IsEnabled="{Binding State.CanProbe}"
-                        Background="LightBlue"/>
-                <Button Content="Extract Selected → SRT" 
-                        Command="{Binding ExtractCommand}"
-                        IsEnabled="{Binding State.CanExtract}"
-                        Background="LightCoral"/>
-                <Button Content="Cancel" 
-                        Command="{Binding CancelCommand}"
-                        IsEnabled="{Binding State.IsProcessing}"
-                        Background="Orange"
-                        Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                <Button Content="Clear Log" 
-                        Click="ClearLog_Click"
-                        Background="LightGray"/>
-                <Button Content="About" 
-                        Click="About_Click"
-                        Background="LightGreen"
-                        Margin="10,0,0,0"/>
+        <GroupBox Header="Actions" Grid.Row="2" Grid.Column="0">
+            <StackPanel>
+                <!-- Single File Mode Actions -->
+                <StackPanel Orientation="Horizontal" 
+                            Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Button Content="Probe Tracks" 
+                            Command="{Binding ProbeCommand}"
+                            IsEnabled="{Binding State.CanProbe}"
+                            Background="LightBlue"/>
+                    <Button Content="Extract Selected → SRT" 
+                            Command="{Binding ExtractCommand}"
+                            IsEnabled="{Binding State.CanExtract}"
+                            Background="LightCoral"/>
+                    <Button Content="Cancel" 
+                            Command="{Binding CancelCommand}"
+                            IsEnabled="{Binding State.IsProcessing}"
+                            Background="Orange"
+                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+                
+                <!-- Batch Mode Actions -->
+                <StackPanel Orientation="Horizontal" 
+                            Visibility="{Binding State.ShowBatchMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Button Content="🚀 Process Batch" 
+                            Command="{Binding ProcessBatchCommand}"
+                            IsEnabled="{Binding State.HasBatchQueue}"
+                            Background="#4CAF50"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            FontSize="14"
+                            Padding="16,8"
+                            Margin="0,0,10,0"/>
+                    <Button Content="Cancel Batch" 
+                            Command="{Binding CancelCommand}"
+                            IsEnabled="{Binding State.IsProcessing}"
+                            Background="#FF9800"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            Padding="16,8"
+                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+                
+                <!-- Common Actions -->
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Content="Clear Log" 
+                            Click="ClearLog_Click"
+                            Background="LightGray"/>
+                    <Button Content="About" 
+                            Click="About_Click"
+                            Background="LightGreen"
+                            Margin="10,0,0,0"/>
+                </StackPanel>
             </StackPanel>
         </GroupBox>
 
         <!-- Processing Indicator -->
-        <GroupBox Header="Processing" Grid.Row="4" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+        <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" 
                             Width="20" 
@@ -232,7 +345,8 @@
         </GroupBox>
 
         <!-- Track List -->
-        <GroupBox Header="Subtitle Tracks" Grid.Row="5">
+        <GroupBox Header="Subtitle Tracks" Grid.Row="3" Grid.ColumnSpan="2"
+                  Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
             <DataGrid ItemsSource="{Binding State.Tracks}" 
                       SelectedItem="{Binding State.SelectedTrack}"
                       AutoGenerateColumns="False" 
@@ -293,7 +407,7 @@
         </GroupBox>
 
         <!-- Log Display -->
-        <GroupBox Header="Log" Grid.Row="6">
+        <GroupBox Header="Log" Grid.Row="4" Grid.ColumnSpan="2">
             <ScrollViewer Height="150" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 
@@ -304,6 +418,180 @@
                          FontFamily="Consolas"
                          FontSize="11"/>
             </ScrollViewer>
+        </GroupBox>
+
+        <!-- Drag and Drop Overlay - Must be last to appear on top -->
+        <Border x:Name="DragOverlay" 
+                Background="#E3F2FD" 
+                BorderBrush="#2196F3" 
+                BorderThickness="2" 
+                CornerRadius="8"
+                Opacity="0.95"
+                Visibility="Collapsed"
+                Margin="20"
+                Grid.RowSpan="7">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
+                <TextBlock Text="📁" 
+                           FontSize="48" 
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,10"/>
+                <TextBlock Text="Drop video files here" 
+                           FontSize="18" 
+                           FontWeight="SemiBold" 
+                           Foreground="#1976D2"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="to add to batch queue" 
+                           FontSize="16" 
+                           FontWeight="Normal" 
+                           Foreground="#1976D2"
+                           HorizontalAlignment="Center"
+                           Margin="0,2,0,0"/>
+                <TextBlock Text="Supports: MKV, MP4" 
+                           FontSize="12" 
+                           Foreground="#666666"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+        </Grid>
+
+        <!-- Queue Panel -->
+        <GroupBox Header="🎬 Batch Queue" Grid.Column="1" 
+                  Visibility="{Binding State.QueueColumnWidth, Converter={StaticResource DoubleToVisibilityConverter}}"
+                  Background="#F8FAFC"
+                  BorderBrush="#E2E8F0"
+                  BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Queue Instructions -->
+                <Border Grid.Row="0" Background="#F3F4F6" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="📁 Drag &amp; drop video files here" FontWeight="SemiBold" FontSize="13" Foreground="#374151" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Supports: MKV, MP4" FontSize="11" Foreground="#6B7280" Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Queue Header -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
+                               FontWeight="Bold" 
+                               Foreground="Blue"
+                               VerticalAlignment="Center"
+                               Margin="4,0,0,0"/>
+                    <Button Content="Clear All" 
+                            Command="{Binding ClearBatchQueueCommand}"
+                            Background="LightCoral"
+                            Margin="10,0,0,0"
+                            Padding="4,2"
+                            FontSize="10"
+                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+                
+                <!-- Queue List -->
+                <Grid Grid.Row="2">
+                    <ListBox ItemsSource="{Binding State.BatchQueue}"
+                             Background="White"
+                             BorderBrush="Gray"
+                             BorderThickness="1"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Margin="2" Padding="8">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Row="0" Grid.Column="0" 
+                                                   Text="{Binding FileName}" 
+                                                   FontWeight="Bold" 
+                                                   TextWrapping="Wrap"
+                                                   MaxWidth="200"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" 
+                                                   Text="{Binding FormattedFileSize}" 
+                                                   FontSize="10" 
+                                                   Foreground="Gray"
+                                                   Margin="0,2,0,0"/>
+                                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,2,0,0">
+                                            <TextBlock Text="{Binding NetworkIndicator}" FontSize="12"/>
+                                            <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="10" Foreground="Blue" Margin="4,0,0,0"/>
+                                        </StackPanel>
+                                        
+                                        <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" 
+                                                Content="×" 
+                                                Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Background="LightCoral"
+                                                Foreground="White"
+                                                FontWeight="Bold"
+                                                Width="20" Height="20"
+                                                Margin="4,0,0,0"
+                                                Padding="0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    
+                    <!-- Empty Queue Placeholder -->
+                    <Border Background="#F9FAFB" 
+                            BorderBrush="#E5E7EB" 
+                            BorderThickness="1" 
+                            CornerRadius="6" 
+                            Padding="20"
+                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="📂" 
+                                       FontSize="32" 
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,8"/>
+                            <TextBlock Text="No files in queue" 
+                                       FontSize="14" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#374151"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Drag &amp; drop video files here to add them to the queue" 
+                                       FontSize="12" 
+                                       FontStyle="Italic" 
+                                       Foreground="#6B7280" 
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,0"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                
+                <!-- Queue Progress -->
+                <StackPanel Grid.Row="3" Margin="0,8,0,0" 
+                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="{Binding State.BatchProgressText}" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center"
+                               FontSize="11"/>
+                    <ProgressBar Value="{Binding State.BatchProgressPercentage}" 
+                                 Height="15" 
+                                 Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding State.BatchProgressMessage}" 
+                               HorizontalAlignment="Center" 
+                               FontStyle="Italic" 
+                               FontSize="10"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
         </GroupBox>
     </Grid>
 </Window>

@@ -23,6 +23,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISubtitleOcrService _ocrService;
     private readonly ISrtCorrectionService _srtCorrectionService;
     private readonly ISettingsService _settingsService;
+    private readonly INetworkDetectionService _networkDetectionService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
 
     [ObservableProperty]
@@ -36,7 +37,8 @@ public partial class MainViewModel : ObservableObject
         IFfmpegService ffmpegService,
         ISubtitleOcrService ocrService,
         ISrtCorrectionService srtCorrectionService,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        INetworkDetectionService networkDetectionService)
     {
         _loggingService = loggingService;
         _toolDetectionService = toolDetectionService;
@@ -46,6 +48,7 @@ public partial class MainViewModel : ObservableObject
         _ocrService = ocrService;
         _srtCorrectionService = srtCorrectionService;
         _settingsService = settingsService;
+        _networkDetectionService = networkDetectionService;
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
@@ -53,12 +56,18 @@ public partial class MainViewModel : ObservableObject
         // Initialize commands
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
         ProbeCommand = new AsyncRelayCommand(ProbeTracksAsync, () => State.CanProbe);
-        ExtractCommand = new AsyncRelayCommand(ExtractSubtitlesAsync, () => State.CanExtract);
+        ExtractCommand = new AsyncRelayCommand(async () => await ExtractSubtitlesAsync(), () => State.CanExtract);
         CancelCommand = new RelayCommand(CancelExtraction, () => State.IsProcessing);
         InstallMkvToolNixCommand = new AsyncRelayCommand(InstallMkvToolNixAsync);
         BrowseMkvToolNixCommand = new RelayCommand(BrowseMkvToolNix);
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
         CorrectSrtCommand = new AsyncRelayCommand(CorrectSrtAsync);
+        
+        // Batch mode commands
+        ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
+        ClearBatchQueueCommand = new RelayCommand(ClearBatchQueue);
+        RemoveFromBatchCommand = new RelayCommand<BatchFile>(RemoveFromBatch);
+        CleanupTempFilesCommand = new AsyncRelayCommand(CleanupTempFiles);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -72,6 +81,18 @@ public partial class MainViewModel : ObservableObject
                     ExtractCommand.NotifyCanExecuteChanged();
                     CancelCommand.NotifyCanExecuteChanged();
                 });
+            }
+            else if (e.PropertyName == nameof(State.HasBatchQueue))
+            {
+                // Use Dispatcher to ensure UI thread access
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ProcessBatchCommand.NotifyCanExecuteChanged();
+                });
+            }
+            else if (e.PropertyName == nameof(State.IsBatchMode))
+            {
+                OnBatchModeChanged(State.IsBatchMode);
             }
             // Note: Settings are saved manually when user changes them
             // Automatic saving was removed to prevent infinite loops
@@ -91,6 +112,12 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand BrowseMkvToolNixCommand { get; }
     public IAsyncRelayCommand ReDetectToolsCommand { get; }
     public IAsyncRelayCommand CorrectSrtCommand { get; }
+    
+    // Batch mode commands
+    public IAsyncRelayCommand ProcessBatchCommand { get; }
+    public IRelayCommand ClearBatchQueueCommand { get; }
+    public IRelayCommand<BatchFile> RemoveFromBatchCommand { get; }
+    public IAsyncRelayCommand CleanupTempFilesCommand { get; }
 
     #endregion
 
@@ -112,6 +139,10 @@ public partial class MainViewModel : ObservableObject
                 State.MkvPath = openFileDialog.FileName;
                 State.Tracks.Clear();
                 State.SelectedTrack = null;
+                
+                // Update network detection
+                UpdateNetworkDetection(State.MkvPath);
+                
                 _loggingService.LogInfo($"Selected MKV file: {State.MkvPath}");
             }
         }
@@ -211,14 +242,23 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task ExtractSubtitlesAsync()
+    private async Task ExtractSubtitlesAsync(CancellationToken? cancellationToken = null)
     {
         if (State.SelectedTrack == null || string.IsNullOrEmpty(State.MkvPath))
             return;
 
-        // Create cancellation token source for this extraction
-        _extractionCancellationTokenSource = new CancellationTokenSource();
-        var cancellationToken = _extractionCancellationTokenSource.Token;
+        // Use provided cancellation token or create a new one
+        if (cancellationToken.HasValue)
+        {
+            // Use the provided cancellation token (from batch processing)
+            _extractionCancellationTokenSource = null;
+        }
+        else
+        {
+            // Create cancellation token source for single file extraction
+            _extractionCancellationTokenSource = new CancellationTokenSource();
+            cancellationToken = _extractionCancellationTokenSource.Token;
+        }
 
         try
         {
@@ -234,7 +274,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Use FFmpeg for MP4 files
                 State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
-                await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken);
+                await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("MP4 extraction completed!");
                 State.AddLogMessage($"Subtitles extracted to: {outputPath}");
             }
@@ -242,7 +282,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Direct text extraction
                 State.UpdateProcessingMessage("Extracting text subtitles...");
-                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken);
+                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
             }
@@ -252,19 +292,19 @@ public partial class MainViewModel : ObservableObject
                 var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
                 
                 State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
-                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath, cancellationToken);
+                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath, cancellationToken ?? CancellationToken.None);
                 State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
                 State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
                 State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
-                await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken);
+                await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("OCR conversion completed!");
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
                 // Correct common OCR errors
                 State.UpdateProcessingMessage("Correcting common OCR errors...");
                 State.AddLogMessage("Correcting common OCR errors...");
-                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(outputPath, cancellationToken);
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("OCR correction completed!");
                 State.AddLogMessage($"🎯 OCR correction completed! Applied {correctionCount} corrections.");
 
@@ -286,19 +326,36 @@ public partial class MainViewModel : ObservableObject
             }
 
             State.AddLogMessage("Subtitle extraction completed successfully!");
-            MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            
+            // Only show success dialog in single file mode, not batch mode
+            if (!State.IsBatchMode)
+            {
+                MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
         catch (OperationCanceledException)
         {
             _loggingService.LogInfo("Subtitle extraction was cancelled by user");
             State.AddLogMessage("Extraction cancelled by user");
+            
+            // Clean up any temporary files that might have been created
+            await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
+            
             // Don't show error message for user cancellation
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to extract subtitles", ex);
             State.AddLogMessage($"Error extracting subtitles: {ex.Message}");
-            MessageBox.Show($"Failed to extract subtitles: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            
+            // Clean up any temporary files that might have been created
+            await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
+            
+            // Only show error dialog in single file mode, not batch mode
+            if (!State.IsBatchMode)
+            {
+                MessageBox.Show($"Failed to extract subtitles: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         finally
         {
@@ -726,6 +783,463 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to save settings", ex);
+        }
+    }
+
+    /// <summary>
+    /// Updates network detection for the given file path.
+    /// </summary>
+    /// <param name="filePath">The file path to analyze</param>
+    private void UpdateNetworkDetection(string filePath)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                State.UpdateNetworkDetection(false, 0, "", "");
+                return;
+            }
+
+            var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
+            var estimatedMinutes = _networkDetectionService.GetEstimatedProcessingTime(filePath);
+            var formattedSize = _networkDetectionService.GetFormattedFileSize(filePath);
+            
+            // Get network drive info
+            var networkDriveInfo = "";
+            if (isNetwork)
+            {
+                var root = Path.GetPathRoot(filePath);
+                if (!string.IsNullOrEmpty(root))
+                {
+                    networkDriveInfo = root.TrimEnd('\\');
+                }
+            }
+
+            State.UpdateNetworkDetection(isNetwork, estimatedMinutes, formattedSize, networkDriveInfo);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to update network detection", ex);
+        }
+    }
+
+    /// <summary>
+    /// Clean up temporary files that might have been created during extraction.
+    /// </summary>
+    private async Task CleanupTemporaryFiles(string mkvPath, SubtitleTrack? selectedTrack)
+    {
+        if (selectedTrack == null || string.IsNullOrEmpty(mkvPath))
+            return;
+
+        try
+        {
+            var outputPath = State.GenerateOutputFilename(mkvPath, selectedTrack);
+            
+            // Check if this was a PGS extraction (which creates a .sup file)
+            if (selectedTrack.Codec.Contains("PGS") || selectedTrack.Codec.Contains("S_HDMV/PGS"))
+            {
+                var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
+                
+                if (File.Exists(tempSupPath))
+                {
+                    _loggingService.LogInfo($"Cleaning up temporary SUP file: {tempSupPath}");
+                    
+                    // Give the process a moment to release the file handle
+                    await Task.Delay(1000);
+                    
+                    // Try to delete the file, with retry logic for file handle issues
+                    var maxRetries = 3;
+                    for (int i = 0; i < maxRetries; i++)
+                    {
+                        try
+                        {
+                            File.Delete(tempSupPath);
+                            State.AddLogMessage($"🧹 Cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
+                            break;
+                        }
+                        catch (IOException) when (i < maxRetries - 1)
+                        {
+                            _loggingService.LogInfo($"File still in use, retrying in 1 second... (attempt {i + 1}/{maxRetries})");
+                            await Task.Delay(1000);
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to clean up temporary files", ex);
+            State.AddLogMessage($"Warning: Could not clean up temporary files: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Clean up temporary files manually (for user-initiated cleanup).
+    /// </summary>
+    private async Task CleanupTempFiles()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(State.MkvPath) || State.SelectedTrack == null)
+            {
+                State.AddLogMessage("No file selected for cleanup");
+                return;
+            }
+
+            var outputPath = State.GenerateOutputFilename(State.MkvPath, State.SelectedTrack);
+            var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
+            
+            if (File.Exists(tempSupPath))
+            {
+                // Try to delete the file, with retry logic for file handle issues
+                var maxRetries = 3;
+                for (int i = 0; i < maxRetries; i++)
+                {
+                    try
+                    {
+                        File.Delete(tempSupPath);
+                        State.AddLogMessage($"🧹 Cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
+                        break;
+                    }
+                    catch (IOException) when (i < maxRetries - 1)
+                    {
+                        _loggingService.LogInfo($"File still in use, retrying in 1 second... (attempt {i + 1}/{maxRetries})");
+                        await Task.Delay(1000);
+                    }
+                }
+            }
+            else
+            {
+                State.AddLogMessage("No temporary files found to clean up");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to clean up temporary files", ex);
+            State.AddLogMessage($"Error cleaning up temporary files: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Process all files in the batch queue.
+    /// </summary>
+    private async Task ProcessBatchAsync()
+    {
+        if (!State.BatchQueue.Any())
+            return;
+
+        try
+        {
+            State.IsBusy = true;
+            State.StartProcessing("Starting batch processing...");
+            State.AddLogMessage($"Starting batch processing of {State.BatchQueue.Count} files");
+
+            var totalFiles = State.BatchQueue.Count;
+            var processedCount = 0;
+            var successCount = 0;
+            var errorCount = 0;
+
+            foreach (var batchFile in State.BatchQueue.ToList())
+            {
+                // Check for cancellation before processing each file
+                if (_extractionCancellationTokenSource?.Token.IsCancellationRequested == true)
+                {
+                    State.AddLogMessage("Batch processing cancelled by user");
+                    break;
+                }
+
+                try
+                {
+                    State.UpdateBatchProgress(processedCount, totalFiles, $"Processing {batchFile.FileName}...");
+                    batchFile.Status = BatchFileStatus.Processing;
+                    batchFile.StatusMessage = "Processing...";
+
+                    // Set the current file as the active file for processing
+                    State.MkvPath = batchFile.FilePath;
+                    State.Tracks.Clear();
+                    State.SelectedTrack = null;
+
+                    // Update network detection for this file
+                    UpdateNetworkDetection(batchFile.FilePath);
+                    batchFile.UpdateNetworkStatus(State.IsNetworkFile, State.EstimatedProcessingTimeMinutes);
+
+                    // Probe tracks
+                    await ProbeTracksAsync();
+                    
+                    if (State.SelectedTrack == null)
+                    {
+                        throw new InvalidOperationException("No suitable track found for extraction");
+                    }
+
+                    // Extract subtitles with cancellation token
+                    await ExtractSubtitlesAsync(_extractionCancellationTokenSource?.Token);
+
+                    // Check for cancellation after extraction
+                    if (_extractionCancellationTokenSource?.Token.IsCancellationRequested == true)
+                    {
+                        batchFile.Status = BatchFileStatus.Cancelled;
+                        batchFile.StatusMessage = "Cancelled";
+                        State.AddLogMessage($"⏹️ Cancelled: {batchFile.FileName}");
+                        break; // Exit the loop when cancelled
+                    }
+
+                    // Only increment success count after extraction is actually complete
+                    batchFile.Status = BatchFileStatus.Completed;
+                    batchFile.StatusMessage = "Completed successfully";
+                    batchFile.OutputPath = State.GenerateOutputFilename(batchFile.FilePath, State.SelectedTrack);
+                    
+                    successCount++;
+                    State.AddLogMessage($"✅ Completed: {batchFile.FileName}");
+                }
+                catch (OperationCanceledException)
+                {
+                    batchFile.Status = BatchFileStatus.Cancelled;
+                    batchFile.StatusMessage = "Cancelled";
+                    State.AddLogMessage($"⏹️ Cancelled: {batchFile.FileName}");
+                    
+                    // Clean up any temporary files that might have been created
+                    await CleanupTemporaryFiles(batchFile.FilePath, State.SelectedTrack);
+                    
+                    break; // Exit the loop when cancelled
+                }
+                catch (Exception ex)
+                {
+                    batchFile.Status = BatchFileStatus.Error;
+                    batchFile.StatusMessage = $"Error: {ex.Message}";
+                    errorCount++;
+                    
+                    _loggingService.LogError($"Failed to process batch file {batchFile.FileName}", ex);
+                    State.AddLogMessage($"❌ Failed: {batchFile.FileName} - {ex.Message}");
+                }
+
+                processedCount++;
+            }
+
+            State.StopProcessing();
+            
+            // Create detailed summary
+            var successfulFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Completed).ToList();
+            var errorFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Error).ToList();
+            var cancelledFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Cancelled).ToList();
+            
+            // Log detailed summary
+            State.AddLogMessage($"🎯 Batch processing completed! Success: {successCount}, Errors: {errorCount}, Cancelled: {cancelledFiles.Count}");
+            
+            if (successfulFiles.Any())
+            {
+                State.AddLogMessage("✅ Successful files:");
+                foreach (var file in successfulFiles)
+                {
+                    State.AddLogMessage($"   • {file.FileName}");
+                }
+            }
+            
+            if (errorFiles.Any())
+            {
+                State.AddLogMessage("❌ Failed files:");
+                foreach (var file in errorFiles)
+                {
+                    State.AddLogMessage($"   • {file.FileName} - {file.StatusMessage}");
+                }
+            }
+            
+            if (cancelledFiles.Any())
+            {
+                State.AddLogMessage("⏹️ Cancelled files:");
+                foreach (var file in cancelledFiles)
+                {
+                    State.AddLogMessage($"   • {file.FileName}");
+                }
+            }
+
+            // Create detailed message box
+            var message = $"Batch processing completed!\n\n" +
+                         $"Total files: {totalFiles}\n" +
+                         $"Successful: {successCount}\n" +
+                         $"Errors: {errorCount}\n" +
+                         $"Cancelled: {cancelledFiles.Count}\n\n";
+            
+            if (successfulFiles.Any())
+            {
+                message += "✅ Successful files:\n";
+                foreach (var file in successfulFiles)
+                {
+                    message += $"   • {file.FileName}\n";
+                }
+                message += "\n";
+            }
+            
+            if (errorFiles.Any())
+            {
+                message += "❌ Failed files:\n";
+                foreach (var file in errorFiles)
+                {
+                    message += $"   • {file.FileName} - {file.StatusMessage}\n";
+                }
+                message += "\n";
+            }
+            
+            if (cancelledFiles.Any())
+            {
+                message += "⏹️ Cancelled files:\n";
+                foreach (var file in cancelledFiles)
+                {
+                    message += $"   • {file.FileName}\n";
+                }
+            }
+
+            MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, 
+                           errorCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Batch processing failed", ex);
+            State.AddLogMessage($"Batch processing failed: {ex.Message}");
+            MessageBox.Show($"Batch processing failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            State.IsBusy = false;
+            State.StopProcessing();
+        }
+    }
+
+    /// <summary>
+    /// Clear the batch queue.
+    /// </summary>
+    private void ClearBatchQueue()
+    {
+        try
+        {
+            State.ClearBatchQueue();
+            State.AddLogMessage("Batch queue cleared");
+            _loggingService.LogInfo("User cleared batch queue");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to clear batch queue", ex);
+        }
+    }
+
+    /// <summary>
+    /// Remove a file from the batch queue.
+    /// </summary>
+    /// <param name="batchFile">The batch file to remove</param>
+    private void RemoveFromBatch(BatchFile? batchFile)
+    {
+        try
+        {
+            if (batchFile != null)
+            {
+                State.RemoveFromBatchQueue(batchFile);
+                State.AddLogMessage($"Removed from queue: {batchFile.FileName}");
+                _loggingService.LogInfo($"User removed file from batch queue: {batchFile.FileName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to remove file from batch queue", ex);
+        }
+    }
+
+    /// <summary>
+    /// Add files to batch queue from drag and drop.
+    /// </summary>
+    /// <param name="filePaths">Array of file paths to add</param>
+    public void AddFilesToBatchQueue(string[] filePaths)
+    {
+        try
+        {
+            var addedCount = 0;
+            var skippedCount = 0;
+
+            foreach (var filePath in filePaths)
+            {
+                if (State.AddToBatchQueue(filePath))
+                {
+                    addedCount++;
+                    
+                    // Update network detection for the batch file
+                    var batchFile = State.BatchQueue.FirstOrDefault(f => f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+                    if (batchFile != null)
+                    {
+                        var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
+                        var estimatedMinutes = _networkDetectionService.GetEstimatedProcessingTime(filePath);
+                        batchFile.UpdateNetworkStatus(isNetwork, estimatedMinutes);
+                    }
+                }
+                else
+                {
+                    skippedCount++;
+                }
+            }
+
+            if (addedCount > 0)
+            {
+                State.AddLogMessage($"Added {addedCount} files to batch queue");
+                _loggingService.LogInfo($"Added {addedCount} files to batch queue via drag and drop");
+            }
+
+            if (skippedCount > 0)
+            {
+                State.AddLogMessage($"Skipped {skippedCount} duplicate files");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to add files to batch queue", ex);
+            State.AddLogMessage($"Error adding files to batch queue: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handles batch mode changes and provides user feedback.
+    /// </summary>
+    /// <param name="isBatchMode">Whether batch mode is enabled</param>
+    private void OnBatchModeChanged(bool isBatchMode)
+    {
+        try
+        {
+            // Update queue column width
+            State.QueueColumnWidth = isBatchMode ? 350 : 0;
+            
+            if (isBatchMode)
+            {
+                // Show confirmation dialog about using preferred settings
+                var preferenceText = State.PreferForced ? "forced subtitles" : 
+                                   State.PreferClosedCaptions ? "closed captions" : "full subtitles";
+                
+                var message = $"🎬 Batch Mode will use your preferred settings:\n\n" +
+                             $"• Subtitle preference: {preferenceText}\n" +
+                             $"• OCR language: {State.OcrLanguage}\n" +
+                             $"• File pattern: {State.FileNamePattern}\n\n" +
+                             $"All files in the batch will be processed with these settings.\n\n" +
+                             $"Do you want to continue?";
+                
+                var result = MessageBox.Show(message, "Batch Mode Settings Confirmation", 
+                                           MessageBoxButton.YesNo, MessageBoxImage.Question);
+                
+                if (result == MessageBoxResult.No)
+                {
+                    // User declined, disable batch mode
+                    State.IsBatchMode = false;
+                    return;
+                }
+                
+                State.AddLogMessage("🎬 Batch Mode enabled! Drag & drop video files anywhere on this window to add them to the queue.");
+                State.AddLogMessage("💡 Tip: Files with 🌐 are on network drives and may take longer to process.");
+                State.AddLogMessage($"⚙️ Using settings: {preferenceText}, {State.OcrLanguage} language");
+            }
+            else
+            {
+                State.AddLogMessage("📁 Batch Mode disabled. Switch back to single file processing mode.");
+                // Clear the batch queue when disabling batch mode
+                ClearBatchQueue();
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error handling batch mode change", ex);
         }
     }
 
