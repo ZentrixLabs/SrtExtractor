@@ -1090,6 +1090,9 @@ public partial class MainViewModel : ObservableObject
 
             MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, 
                            errorCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+            
+            // Clear the batch queue and reset progress after completion
+            State.ClearBatchQueue();
         }
         catch (Exception ex)
         {
