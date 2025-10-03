@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using SrtExtractor.Services.Interfaces;
 using SrtExtractor.ViewModels;
 
 namespace SrtExtractor.Views
@@ -13,23 +14,31 @@ namespace SrtExtractor.Views
     public partial class MainWindow : Window
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly IWindowStateService _windowStateService;
+        private readonly ILoggingService _loggingService;
 
-        public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider)
+        public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider, IWindowStateService windowStateService, ILoggingService loggingService)
         {
             _serviceProvider = serviceProvider;
+            _windowStateService = windowStateService;
+            _loggingService = loggingService;
             InitializeComponent();
             DataContext = viewModel;
             
             // Note: Drag and drop is now handled by the queue panel specifically
-            
-            // Check if settings should be opened on startup
-            Loaded += MainWindow_Loaded;
             
             // Subscribe to recent files changes
             if (viewModel.State != null)
             {
                 viewModel.State.PropertyChanged += State_PropertyChanged;
             }
+            
+            // Subscribe to window events for state persistence
+            Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
+            LocationChanged += MainWindow_LocationChanged;
+            SizeChanged += MainWindow_SizeChanged;
+            StateChanged += MainWindow_StateChanged;
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -246,8 +255,11 @@ namespace SrtExtractor.Views
             }
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Load window state first
+            await LoadWindowStateAsync();
+            
             if (DataContext is MainViewModel viewModel)
             {
                 // Populate recent files menu
@@ -274,11 +286,24 @@ namespace SrtExtractor.Views
             }
         }
 
-        private void State_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private async void State_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(MainViewModel.State.RecentFiles))
             {
                 Dispatcher.Invoke(PopulateRecentFilesMenu);
+            }
+            else if (e.PropertyName == nameof(MainViewModel.State.IsBatchMode) || 
+                     e.PropertyName == nameof(MainViewModel.State.QueueColumnWidth))
+            {
+                // Save window state when batch mode or queue column width changes
+                try
+                {
+                    await SaveWindowStateAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error saving window state on property change", ex);
+                }
             }
         }
 
@@ -317,5 +342,165 @@ namespace SrtExtractor.Views
                 RecentFilesMenuItem.Items.Insert(RecentFilesMenuItem.Items.Count - 1, menuItem);
             }
         }
+
+        #region Window State Persistence
+
+        /// <summary>
+        /// Loads the window state from persistent storage and applies it to the window.
+        /// </summary>
+        private async Task LoadWindowStateAsync()
+        {
+            try
+            {
+                var windowState = await _windowStateService.LoadWindowStateAsync().ConfigureAwait(false);
+                
+                // Check if this is the first run (default values)
+                var isFirstRun = windowState.Width == 1250 && windowState.Height == 900 && 
+                                windowState.Left == 100 && windowState.Top == 100;
+                
+                // Apply window state on UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    // Apply window state
+                    Width = windowState.Width;
+                    Height = windowState.Height;
+                    
+                    if (isFirstRun)
+                    {
+                        // Center window on first run
+                        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    }
+                    else
+                    {
+                        // Use saved position
+                        Left = windowState.Left;
+                        Top = windowState.Top;
+                        WindowStartupLocation = WindowStartupLocation.Manual;
+                    }
+                    
+                    WindowState = windowState.WindowStateEnum;
+                });
+                
+                // Apply batch mode state if available (this can be done on any thread)
+                if (DataContext is MainViewModel viewModel)
+                {
+                    viewModel.State.IsBatchMode = windowState.IsBatchMode;
+                    viewModel.State.QueueColumnWidth = windowState.QueueColumnWidth;
+                }
+                
+                if (isFirstRun)
+                {
+                    _loggingService.LogInfo("First run detected - centering window on screen");
+                }
+                _loggingService.LogInfo($"Window state loaded and applied: {windowState.Width}x{windowState.Height}");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Failed to load window state", ex);
+                
+                // Fallback: center window on error (on UI thread)
+                Dispatcher.Invoke(() =>
+                {
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                });
+            }
+        }
+
+        /// <summary>
+        /// Saves the current window state to persistent storage.
+        /// </summary>
+        private async Task SaveWindowStateAsync()
+        {
+            try
+            {
+                var windowState = new Services.Interfaces.WindowState
+                {
+                    Width = Width,
+                    Height = Height,
+                    Left = Left,
+                    Top = Top,
+                    WindowStateEnum = WindowState,
+                    QueueColumnWidth = DataContext is MainViewModel viewModel ? viewModel.State.QueueColumnWidth : 0,
+                    IsBatchMode = DataContext is MainViewModel vm ? vm.State.IsBatchMode : false
+                };
+                
+                await _windowStateService.SaveWindowStateAsync(windowState).ConfigureAwait(false);
+                _loggingService.LogInfo("Window state saved");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Failed to save window state", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handles window closing event to save state.
+        /// </summary>
+        private async void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            try
+            {
+                await SaveWindowStateAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error saving window state on close", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handles window location changes to save state.
+        /// </summary>
+        private async void MainWindow_LocationChanged(object? sender, EventArgs e)
+        {
+            try
+            {
+                // Only save if window is not minimized or maximized
+                if (WindowState == System.Windows.WindowState.Normal)
+                {
+                    await SaveWindowStateAsync().ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error saving window state on location change", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handles window size changes to save state.
+        /// </summary>
+        private async void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            try
+            {
+                // Only save if window is not minimized or maximized
+                if (WindowState == System.Windows.WindowState.Normal)
+                {
+                    await SaveWindowStateAsync().ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error saving window state on size change", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handles window state changes (normal, minimized, maximized) to save state.
+        /// </summary>
+        private async void MainWindow_StateChanged(object? sender, EventArgs e)
+        {
+            try
+            {
+                await SaveWindowStateAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error saving window state on state change", ex);
+            }
+        }
+
+        #endregion
     }
 }

@@ -182,6 +182,37 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _logText = string.Empty;
 
+    // Enhanced Progress Information
+    [ObservableProperty]
+    private double _progressPercentage = 0;
+
+    [ObservableProperty]
+    private string _currentOperation = "";
+
+    [ObservableProperty]
+    private string _currentFile = "";
+
+    [ObservableProperty]
+    private string _processingSpeed = "";
+
+    [ObservableProperty]
+    private string _estimatedTimeRemaining = "";
+
+    [ObservableProperty]
+    private string _memoryUsage = "";
+
+    [ObservableProperty]
+    private DateTime _operationStartTime;
+
+    [ObservableProperty]
+    private long _bytesProcessed = 0;
+
+    [ObservableProperty]
+    private long _totalBytes = 0;
+
+    [ObservableProperty]
+    private string _detailedProgressMessage = "";
+
     // Computed Properties
     public bool AreToolsAvailable => MkvToolNixStatus.IsInstalled && SubtitleEditStatus.IsInstalled && FfmpegStatus.IsInstalled;
     
@@ -201,6 +232,17 @@ public partial class ExtractionState : ObservableObject
     public bool ShowBatchMode => IsBatchMode;
 
     public bool ShowSingleFileMode => !IsBatchMode;
+
+    // Enhanced Progress Computed Properties
+    public string FormattedBytesProcessed => FormatBytes(BytesProcessed);
+
+    public string FormattedTotalBytes => FormatBytes(TotalBytes);
+
+    public string ProgressDetails => $"({FormattedBytesProcessed} / {FormattedTotalBytes})";
+
+    public string ElapsedTime => IsProcessing ? FormatTimeSpan(DateTime.Now - OperationStartTime) : "00:00:00";
+
+    public string FormattedProgressPercentage => $"{ProgressPercentage:F1}%";
 
     // Available OCR languages
     public string[] AvailableLanguages { get; } = { "eng", "spa", "fra", "deu", "ita", "por", "rus", "jpn", "kor", "chi" };
@@ -428,6 +470,176 @@ public partial class ExtractionState : ObservableObject
     }
 
     /// <summary>
+    /// Format bytes as a human-readable string.
+    /// </summary>
+    /// <param name="bytes">Number of bytes</param>
+    /// <returns>Formatted byte string</returns>
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes == 0) return "0 B";
+        
+        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+        int suffixIndex = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && suffixIndex < suffixes.Length - 1)
+        {
+            size /= 1024;
+            suffixIndex++;
+        }
+        
+        return $"{size:F1} {suffixes[suffixIndex]}";
+    }
+
+    /// <summary>
+    /// Format a TimeSpan as a human-readable string.
+    /// </summary>
+    /// <param name="timeSpan">TimeSpan to format</param>
+    /// <returns>Formatted time string (HH:mm:ss)</returns>
+    private static string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        return $"{(int)timeSpan.TotalHours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+    }
+
+    /// <summary>
+    /// Start processing with enhanced progress tracking.
+    /// </summary>
+    /// <param name="operation">Operation description</param>
+    /// <param name="totalBytes">Total bytes to process (0 if unknown)</param>
+    public void StartProcessingWithProgress(string operation, long totalBytes = 0)
+    {
+        IsProcessing = true;
+        OperationStartTime = DateTime.Now;
+        CurrentOperation = operation;
+        TotalBytes = totalBytes;
+        BytesProcessed = 0;
+        ProgressPercentage = 0;
+        ProcessingSpeed = "";
+        EstimatedTimeRemaining = "";
+        MemoryUsage = GetCurrentMemoryUsage();
+        
+        UpdateProcessingMessage(operation);
+        
+        // Notify computed properties
+        OnPropertyChanged(nameof(ElapsedTime));
+    }
+
+    /// <summary>
+    /// Update progress information.
+    /// </summary>
+    /// <param name="bytesProcessed">Bytes processed so far</param>
+    /// <param name="currentFile">Current file being processed (optional)</param>
+    public void UpdateProgress(long bytesProcessed, string? currentFile = null)
+    {
+        BytesProcessed = bytesProcessed;
+        
+        if (!string.IsNullOrEmpty(currentFile))
+        {
+            CurrentFile = currentFile;
+        }
+        
+        // Calculate progress percentage
+        if (TotalBytes > 0)
+        {
+            ProgressPercentage = Math.Min(100.0, (double)bytesProcessed / TotalBytes * 100);
+        }
+        
+        // Calculate processing speed
+        var elapsed = DateTime.Now - OperationStartTime;
+        if (elapsed.TotalSeconds > 0)
+        {
+            var speedBytesPerSecond = bytesProcessed / elapsed.TotalSeconds;
+            ProcessingSpeed = FormatBytes((long)speedBytesPerSecond) + "/s";
+            
+            // Estimate time remaining
+            if (TotalBytes > 0 && speedBytesPerSecond > 0)
+            {
+                var remainingBytes = TotalBytes - bytesProcessed;
+                var remainingSeconds = remainingBytes / speedBytesPerSecond;
+                EstimatedTimeRemaining = FormatEstimatedTime(remainingSeconds / 60.0);
+            }
+        }
+        
+        // Update memory usage
+        MemoryUsage = GetCurrentMemoryUsage();
+        
+        // Create detailed progress message
+        UpdateDetailedProgressMessage();
+        
+        // Notify computed properties
+        OnPropertyChanged(nameof(FormattedBytesProcessed));
+        OnPropertyChanged(nameof(FormattedTotalBytes));
+        OnPropertyChanged(nameof(ProgressDetails));
+        OnPropertyChanged(nameof(FormattedProgressPercentage));
+        OnPropertyChanged(nameof(ElapsedTime));
+    }
+
+    /// <summary>
+    /// Stop processing and reset progress information.
+    /// </summary>
+    public void StopProcessingWithProgress()
+    {
+        IsProcessing = false;
+        ProgressPercentage = 100;
+        ProcessingSpeed = "";
+        EstimatedTimeRemaining = "";
+        CurrentOperation = "";
+        CurrentFile = "";
+        DetailedProgressMessage = "";
+        
+        UpdateProcessingMessage("Operation completed");
+        
+        // Notify computed properties
+        OnPropertyChanged(nameof(ElapsedTime));
+    }
+
+    /// <summary>
+    /// Get current memory usage as a formatted string.
+    /// </summary>
+    /// <returns>Formatted memory usage string</returns>
+    private static string GetCurrentMemoryUsage()
+    {
+        try
+        {
+            var process = System.Diagnostics.Process.GetCurrentProcess();
+            var memoryBytes = process.WorkingSet64;
+            return FormatBytes(memoryBytes);
+        }
+        catch
+        {
+            return "Unknown";
+        }
+    }
+
+    /// <summary>
+    /// Update the detailed progress message.
+    /// </summary>
+    private void UpdateDetailedProgressMessage()
+    {
+        var parts = new List<string>();
+        
+        if (!string.IsNullOrEmpty(CurrentOperation))
+            parts.Add(CurrentOperation);
+            
+        if (TotalBytes > 0)
+            parts.Add($"{FormattedProgressPercentage} ({ProgressDetails})");
+            
+        if (!string.IsNullOrEmpty(ProcessingSpeed))
+            parts.Add($"Speed: {ProcessingSpeed}");
+            
+        if (!string.IsNullOrEmpty(EstimatedTimeRemaining) && EstimatedTimeRemaining != "0.0 min")
+            parts.Add($"ETA: {EstimatedTimeRemaining}");
+            
+        if (!string.IsNullOrEmpty(ElapsedTime) && ElapsedTime != "00:00:00")
+            parts.Add($"Elapsed: {ElapsedTime}");
+            
+        if (!string.IsNullOrEmpty(MemoryUsage))
+            parts.Add($"Memory: {MemoryUsage}");
+        
+        DetailedProgressMessage = string.Join(" • ", parts);
+    }
+
+    /// <summary>
     /// Reset the state to initial values.
     /// </summary>
     public void Reset()
@@ -438,6 +650,17 @@ public partial class ExtractionState : ObservableObject
         IsBusy = false;
         IsProcessing = false;
         ProcessingMessage = "";
+        
+        // Reset enhanced progress information
+        ProgressPercentage = 0;
+        CurrentOperation = "";
+        CurrentFile = "";
+        ProcessingSpeed = "";
+        EstimatedTimeRemaining = "";
+        MemoryUsage = "";
+        BytesProcessed = 0;
+        TotalBytes = 0;
+        DetailedProgressMessage = "";
         
         // Reset network detection
         IsNetworkFile = false;

@@ -41,8 +41,9 @@ namespace SrtExtractor
         services.AddSingleton<ISubtitleOcrService, SubtitleOcrService>();
         services.AddSingleton<ISrtCorrectionService, SrtCorrectionService>();
         services.AddSingleton<IMultiPassCorrectionService, MultiPassCorrectionService>();
-        services.AddSingleton<INetworkDetectionService, NetworkDetectionService>();
-        services.AddSingleton<IRecentFilesService, RecentFilesService>();
+            services.AddSingleton<INetworkDetectionService, NetworkDetectionService>();
+            services.AddSingleton<IRecentFilesService, RecentFilesService>();
+            services.AddSingleton<IWindowStateService, WindowStateService>();
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();

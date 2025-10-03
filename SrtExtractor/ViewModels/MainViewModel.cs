@@ -177,7 +177,10 @@ public partial class MainViewModel : ObservableObject
         try
         {
             State.IsBusy = true;
-            State.StartProcessing("Analyzing video file...");
+            
+            // Get file size for progress tracking
+            var fileInfo = new FileInfo(State.MkvPath);
+            State.StartProcessingWithProgress("Analyzing video file...", fileInfo.Length);
             State.AddLogMessage("Probing video file for subtitle tracks...");
 
             State.UpdateProcessingMessage("Reading subtitle tracks...");
@@ -233,7 +236,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
-            State.StopProcessing();
+            State.StopProcessingWithProgress();
         }
     }
 
@@ -246,7 +249,7 @@ public partial class MainViewModel : ObservableObject
             
             _extractionCancellationTokenSource?.Cancel();
             
-            State.StopProcessing();
+            State.StopProcessingWithProgress();
             State.AddLogMessage("Extraction cancelled by user");
         }
         catch (Exception ex)
@@ -277,7 +280,10 @@ public partial class MainViewModel : ObservableObject
         try
         {
             State.IsBusy = true;
-            State.StartProcessing("Preparing extraction...");
+            
+            // Get file size for progress tracking
+            var fileInfo = new FileInfo(State.MkvPath);
+            State.StartProcessingWithProgress("Preparing extraction...", fileInfo.Length);
             State.AddLogMessage($"Extracting subtitle track {State.SelectedTrack.Id}...");
 
             var outputPath = State.GenerateOutputFilename(State.MkvPath, State.SelectedTrack);
@@ -299,7 +305,12 @@ public partial class MainViewModel : ObservableObject
             {
                 // Direct text extraction
                 State.UpdateProcessingMessage("Extracting text subtitles...");
+                
+                // Simulate progress for text extraction (this is typically very fast)
+                State.UpdateProgress(State.TotalBytes * 50 / 100, "Extracting text subtitles");
                 await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
+                State.UpdateProgress(State.TotalBytes * 80 / 100, "Text extraction completed");
+                
                 State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
 
@@ -312,12 +323,15 @@ public partial class MainViewModel : ObservableObject
                 var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
                 
                 State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
+                State.UpdateProgress(State.TotalBytes * 30 / 100, "Extracting PGS subtitles");
                 await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath, cancellationToken ?? CancellationToken.None);
                 State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
                 State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
                 State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
+                State.UpdateProgress(State.TotalBytes * 50 / 100, "Starting OCR conversion");
                 await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken ?? CancellationToken.None);
+                State.UpdateProgress(State.TotalBytes * 90 / 100, "OCR conversion completed");
                 State.UpdateProcessingMessage("OCR conversion completed!");
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
@@ -342,6 +356,9 @@ public partial class MainViewModel : ObservableObject
             }
 
             State.AddLogMessage("Subtitle extraction completed successfully!");
+            
+            // Complete progress tracking
+            State.UpdateProgress(State.TotalBytes, "Extraction completed successfully");
             
             // Add to recent files
             await _recentFilesService.AddFileAsync(State.MkvPath).ConfigureAwait(false);
@@ -380,7 +397,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
-            State.StopProcessing();
+            State.StopProcessingWithProgress();
             _extractionCancellationTokenSource?.Dispose();
             _extractionCancellationTokenSource = null;
         }
@@ -999,7 +1016,7 @@ public partial class MainViewModel : ObservableObject
                 processedCount++;
             }
 
-            State.StopProcessing();
+            State.StopProcessingWithProgress();
             
             // Create detailed summary
             var successfulFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Completed).ToList();
@@ -1087,7 +1104,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
-            State.StopProcessing();
+            State.StopProcessingWithProgress();
         }
     }
 

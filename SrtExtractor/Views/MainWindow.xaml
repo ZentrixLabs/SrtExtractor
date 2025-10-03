@@ -29,6 +29,7 @@
         <converters:DoubleToVisibilityConverter x:Key="DoubleToVisibilityConverter"/>
         <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
         <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <Style TargetType="Button">
@@ -354,17 +355,76 @@
             </StackPanel>
         </GroupBox>
 
-        <!-- Processing Indicator -->
+        <!-- Enhanced Processing Indicator -->
         <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" 
-                            Width="20" 
-                            Height="20" 
-                            Margin="0,0,10,0"
-                            ToolTip="Processing operation in progress"/>
-                <TextBlock Text="{Binding State.ProcessingMessage}" 
-                           FontWeight="Bold" 
-                           VerticalAlignment="Center"/>
+            <StackPanel>
+                <!-- Main Progress Bar -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <ProgressBar Grid.Column="0" 
+                                 Value="{Binding State.ProgressPercentage}" 
+                                 Height="20"
+                                 ToolTip="{Binding State.DetailedProgressMessage}"/>
+                    <TextBlock Grid.Column="1" 
+                               Text="{Binding State.FormattedProgressPercentage}" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0"
+                               MinWidth="50"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+                
+                <!-- Progress Details -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock Text="{Binding State.CurrentOperation}" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding State.ProgressDetails}" 
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0"
+                               Foreground="Gray"/>
+                </StackPanel>
+                
+                <!-- Speed and Time Information -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding State.ProcessingSpeed}" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"
+                               FontSize="11"
+                               Foreground="DarkBlue"/>
+                    <TextBlock Text="{Binding State.EstimatedTimeRemaining}" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"
+                               FontSize="11"
+                               Foreground="DarkGreen"/>
+                    <TextBlock Text="{Binding State.ElapsedTime}" 
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="DarkOrange"/>
+                </StackPanel>
+                
+                <!-- Current File (if available) -->
+                <TextBlock Text="{Binding State.CurrentFile}" 
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           FontSize="10"
+                           Foreground="Gray"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="300"
+                           Margin="0,4,0,0"
+                           Visibility="{Binding State.CurrentFile, Converter={StaticResource StringToVisibilityConverter}}"/>
+                
+                <!-- Memory Usage -->
+                <TextBlock Text="{Binding State.MemoryUsage, StringFormat='Memory: {0}'}" 
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           FontSize="10"
+                           Foreground="Purple"
+                           Margin="0,2,0,0"/>
             </StackPanel>
         </GroupBox>
 
