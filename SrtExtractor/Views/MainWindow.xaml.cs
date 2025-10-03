@@ -4,7 +4,10 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using SrtExtractor.Services.Interfaces;
+using SrtExtractor.Services.Implementations;
 using SrtExtractor.ViewModels;
+using System.Diagnostics;
+using Microsoft.Win32;
 
 namespace SrtExtractor.Views
 {
@@ -498,6 +501,282 @@ namespace SrtExtractor.Views
             catch (Exception ex)
             {
                 _loggingService.LogError("Error saving window state on state change", ex);
+            }
+        }
+
+        #endregion
+
+        #region Context Menu Event Handlers
+
+        /// <summary>
+        /// Shows detailed information about the selected subtitle track.
+        /// </summary>
+        private void ShowTrackDetails_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel && viewModel.State.SelectedTrack != null)
+            {
+                var track = viewModel.State.SelectedTrack;
+                var details = $"Track Details:\n\n" +
+                             $"ID: {track.Id}\n" +
+                             $"Codec: {track.Codec}\n" +
+                             $"Language: {track.Language}\n" +
+                             $"Type: {track.TrackType}\n" +
+                             $"Forced: {(track.Forced ? "Yes" : "No")}\n" +
+                             $"Bitrate: {track.Bitrate:N0} bps\n" +
+                             $"Frames: {track.FrameCount}\n" +
+                             $"Duration: {track.Duration}\n" +
+                             $"Name: {track.Name ?? "N/A"}";
+
+                MessageBox.Show(details, "Track Details", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        /// <summary>
+        /// Copies track information to clipboard.
+        /// </summary>
+        private void CopyTrackInfo_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel && viewModel.State.SelectedTrack != null)
+            {
+                var track = viewModel.State.SelectedTrack;
+                var info = $"ID: {track.Id}, Codec: {track.Codec}, Language: {track.Language}, " +
+                          $"Type: {track.TrackType}, Forced: {(track.Forced ? "Yes" : "No")}, " +
+                          $"Bitrate: {track.Bitrate:N0} bps, Frames: {track.FrameCount}, " +
+                          $"Duration: {track.Duration}";
+
+                System.Windows.Clipboard.SetText(info);
+                _loggingService.LogInfo("Track information copied to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copies the full file path to clipboard.
+        /// </summary>
+        private void CopyFilePath_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel && !string.IsNullOrEmpty(viewModel.State.MkvPath))
+            {
+                System.Windows.Clipboard.SetText(viewModel.State.MkvPath);
+                _loggingService.LogInfo("File path copied to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copies just the file name to clipboard.
+        /// </summary>
+        private void CopyFileName_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel && !string.IsNullOrEmpty(viewModel.State.MkvPath))
+            {
+                var fileName = Path.GetFileName(viewModel.State.MkvPath);
+                System.Windows.Clipboard.SetText(fileName);
+                _loggingService.LogInfo("File name copied to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Opens the folder containing the current video file.
+        /// </summary>
+        private void OpenFileLocation_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel && !string.IsNullOrEmpty(viewModel.State.MkvPath))
+            {
+                try
+                {
+                    var folderPath = Path.GetDirectoryName(viewModel.State.MkvPath);
+                    if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+                    {
+                        Process.Start("explorer.exe", folderPath);
+                        _loggingService.LogInfo($"Opened file location: {folderPath}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error opening file location", ex);
+                    MessageBox.Show($"Error opening file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Shows file properties dialog for the current video file.
+        /// </summary>
+        private void ShowFileProperties_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel && !string.IsNullOrEmpty(viewModel.State.MkvPath))
+            {
+                try
+                {
+                    if (File.Exists(viewModel.State.MkvPath))
+                    {
+                        Process.Start("explorer.exe", $"/select,\"{viewModel.State.MkvPath}\"");
+                        _loggingService.LogInfo($"Opened file properties for: {viewModel.State.MkvPath}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error opening file properties", ex);
+                    MessageBox.Show($"Error opening file properties: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Copies all log text to clipboard.
+        /// </summary>
+        private void CopyLogText_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                System.Windows.Clipboard.SetText(viewModel.State.LogText);
+                _loggingService.LogInfo("Log text copied to clipboard");
+            }
+        }
+
+        /// <summary>
+        /// Copies selected log text to clipboard.
+        /// </summary>
+        private void CopyLogSelection_Click(object sender, RoutedEventArgs e)
+        {
+            // This would need to be implemented with a reference to the TextBox
+            // For now, just copy all text
+            CopyLogText_Click(sender, e);
+        }
+
+        /// <summary>
+        /// Saves log content to a text file.
+        /// </summary>
+        private void SaveLogToFile_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                try
+                {
+                    var saveDialog = new Microsoft.Win32.SaveFileDialog
+                    {
+                        Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                        DefaultExt = "txt",
+                        FileName = $"SrtExtractor_Log_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+                    };
+
+                    if (saveDialog.ShowDialog() == true)
+                    {
+                        File.WriteAllText(saveDialog.FileName, viewModel.State.LogText);
+                        _loggingService.LogInfo($"Log saved to: {saveDialog.FileName}");
+                        MessageBox.Show($"Log saved successfully to:\n{saveDialog.FileName}", "Log Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error saving log to file", ex);
+                    MessageBox.Show($"Error saving log: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Opens the folder containing log files.
+        /// </summary>
+        private void OpenLogFolder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Use the same log directory path as LoggingService
+                var logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), 
+                                               "ZentrixLabs", "SrtExtractor", "Logs");
+                
+                if (Directory.Exists(logDirectory))
+                {
+                    Process.Start("explorer.exe", logDirectory);
+                    _loggingService.LogInfo($"Opened log folder: {logDirectory}");
+                }
+                else
+                {
+                    MessageBox.Show("Log directory does not exist yet. Log files will be created when the application starts logging.", 
+                                  "Log Directory", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error opening log folder", ex);
+                MessageBox.Show($"Error opening log folder: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Moves a batch item to the top of the queue.
+        /// </summary>
+        private void MoveBatchItemToTop_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.DataContext is Models.BatchFile batchFile)
+            {
+                if (DataContext is MainViewModel viewModel)
+                {
+                    viewModel.MoveBatchItemToTop(batchFile);
+                    _loggingService.LogInfo($"Moved batch item to top: {batchFile.FileName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Moves a batch item to the bottom of the queue.
+        /// </summary>
+        private void MoveBatchItemToBottom_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.DataContext is Models.BatchFile batchFile)
+            {
+                if (DataContext is MainViewModel viewModel)
+                {
+                    viewModel.MoveBatchItemToBottom(batchFile);
+                    _loggingService.LogInfo($"Moved batch item to bottom: {batchFile.FileName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Opens the folder containing a batch file.
+        /// </summary>
+        private void OpenBatchFileLocation_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.DataContext is Models.BatchFile batchFile)
+            {
+                try
+                {
+                    var folderPath = Path.GetDirectoryName(batchFile.FilePath);
+                    if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+                    {
+                        Process.Start("explorer.exe", folderPath);
+                        _loggingService.LogInfo($"Opened batch file location: {folderPath}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error opening batch file location", ex);
+                    MessageBox.Show($"Error opening file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Shows file properties dialog for a batch file.
+        /// </summary>
+        private void ShowBatchFileProperties_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.DataContext is Models.BatchFile batchFile)
+            {
+                try
+                {
+                    if (File.Exists(batchFile.FilePath))
+                    {
+                        Process.Start("explorer.exe", $"/select,\"{batchFile.FilePath}\"");
+                        _loggingService.LogInfo($"Opened batch file properties for: {batchFile.FilePath}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error opening batch file properties", ex);
+                    MessageBox.Show($"Error opening file properties: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

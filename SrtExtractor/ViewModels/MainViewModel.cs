@@ -73,6 +73,7 @@ public partial class MainViewModel : ObservableObject
         ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
         ClearBatchQueueCommand = new RelayCommand(ClearBatchQueue);
         RemoveFromBatchCommand = new RelayCommand<BatchFile>(RemoveFromBatch);
+        ProcessSingleBatchFileCommand = new AsyncRelayCommand<BatchFile>(ProcessSingleBatchFileAsync);
 
         // Menu commands
         ToggleBatchModeCommand = new RelayCommand(ToggleBatchMode);
@@ -127,6 +128,7 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand ProcessBatchCommand { get; }
     public IRelayCommand ClearBatchQueueCommand { get; }
     public IRelayCommand<BatchFile> RemoveFromBatchCommand { get; }
+    public IAsyncRelayCommand<BatchFile> ProcessSingleBatchFileCommand { get; }
 
     // Menu commands
     public IRelayCommand ToggleBatchModeCommand { get; }
@@ -1193,6 +1195,105 @@ public partial class MainViewModel : ObservableObject
         {
             _loggingService.LogError("Failed to add files to batch queue", ex);
             State.AddLogMessage($"Error adding files to batch queue: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Move a batch item to the top of the queue.
+    /// </summary>
+    /// <param name="batchFile">The batch file to move</param>
+    public void MoveBatchItemToTop(BatchFile batchFile)
+    {
+        try
+        {
+            if (State.BatchQueue.Contains(batchFile))
+            {
+                State.BatchQueue.Remove(batchFile);
+                State.BatchQueue.Insert(0, batchFile);
+                State.AddLogMessage($"Moved to top of queue: {batchFile.FileName}");
+                _loggingService.LogInfo($"User moved batch item to top: {batchFile.FileName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError($"Error moving batch item to top: {batchFile.FileName}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Move a batch item to the bottom of the queue.
+    /// </summary>
+    /// <param name="batchFile">The batch file to move</param>
+    public void MoveBatchItemToBottom(BatchFile batchFile)
+    {
+        try
+        {
+            if (State.BatchQueue.Contains(batchFile))
+            {
+                State.BatchQueue.Remove(batchFile);
+                State.BatchQueue.Add(batchFile);
+                State.AddLogMessage($"Moved to bottom of queue: {batchFile.FileName}");
+                _loggingService.LogInfo($"User moved batch item to bottom: {batchFile.FileName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError($"Error moving batch item to bottom: {batchFile.FileName}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Process a single file from the batch queue.
+    /// </summary>
+    /// <param name="batchFile">The batch file to process</param>
+    public async Task ProcessSingleBatchFileAsync(BatchFile? batchFile)
+    {
+        if (batchFile == null)
+        {
+            _loggingService.LogWarning("ProcessSingleBatchFileAsync called with null batchFile");
+            return;
+        }
+
+        try
+        {
+            if (!State.AreToolsAvailable)
+            {
+                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", 
+                              "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            State.AddLogMessage($"Processing single file: {batchFile.FileName}");
+            _loggingService.LogInfo($"User requested single file processing: {batchFile.FilePath}");
+
+            // Set the current file path and probe tracks
+            State.MkvPath = batchFile.FilePath;
+            await ProbeTracksAsync(CancellationToken.None);
+
+            // If we found tracks, extract the best one
+            if (State.SelectedTrack != null)
+            {
+                await ExtractSubtitlesAsync(CancellationToken.None);
+                
+                // Mark this batch item as completed
+                batchFile.Status = BatchFileStatus.Completed;
+                batchFile.StatusMessage = "Processed successfully";
+                
+                State.AddLogMessage($"✅ Single file processing completed: {batchFile.FileName}");
+            }
+            else
+            {
+                batchFile.Status = BatchFileStatus.Error;
+                batchFile.StatusMessage = "No suitable tracks found";
+                State.AddLogMessage($"❌ No suitable tracks found in: {batchFile.FileName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError($"Error processing single batch file: {batchFile.FileName}", ex);
+            batchFile.Status = BatchFileStatus.Error;
+            batchFile.StatusMessage = ex.Message;
+            State.AddLogMessage($"❌ Error processing {batchFile.FileName}: {ex.Message}");
         }
     }
 

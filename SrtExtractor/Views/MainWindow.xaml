@@ -184,7 +184,49 @@
                          Margin="4,0"
                          VerticalAlignment="Center"
                          MinWidth="300"
-                         ToolTip="Path to the selected video file"/>
+                         ToolTip="Path to the selected video file">
+                    <TextBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Copy File Path" 
+                                      Click="CopyFilePath_Click"
+                                      ToolTip="Copy the full file path to clipboard">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="📋" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Copy File Name" 
+                                      Click="CopyFileName_Click"
+                                      ToolTip="Copy just the file name to clipboard">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="📄" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="Open File Location" 
+                                      Click="OpenFileLocation_Click"
+                                      ToolTip="Open the folder containing this file">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="📁" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Show File Properties" 
+                                      Click="ShowFileProperties_Click"
+                                      ToolTip="View detailed properties of this file">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="ℹ️" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="Change Video File..." 
+                                      Command="{Binding PickMkvCommand}"
+                                      ToolTip="Select a different video file (Ctrl+O)">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="🎬" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </TextBox.ContextMenu>
+                </TextBox>
             </StackPanel>
         </GroupBox>
 
@@ -441,6 +483,42 @@
                       HeadersVisibility="Column"
                       SelectionMode="Single"
                       MaxHeight="200">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Select Track" 
+                                  Command="{Binding ExtractCommand}"
+                                  IsEnabled="{Binding State.CanExtract}"
+                                  ToolTip="Extract this subtitle track to SRT format (Ctrl+E)">
+                            <MenuItem.Icon>
+                                <TextBlock Text="🎬" FontSize="14"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="Show Track Details" 
+                                  Click="ShowTrackDetails_Click"
+                                  ToolTip="View detailed information about this subtitle track">
+                            <MenuItem.Icon>
+                                <TextBlock Text="ℹ️" FontSize="14"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Copy Track Info" 
+                                  Click="CopyTrackInfo_Click"
+                                  ToolTip="Copy track information to clipboard">
+                            <MenuItem.Icon>
+                                <TextBlock Text="📋" FontSize="14"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="Refresh Tracks" 
+                                  Command="{Binding ProbeCommand}"
+                                  IsEnabled="{Binding State.CanProbe}"
+                                  ToolTip="Re-analyze the video file for subtitle tracks (Ctrl+P)">
+                            <MenuItem.Icon>
+                                <TextBlock Text="🔄" FontSize="14"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" 
                                         Binding="{Binding Id}" 
@@ -562,7 +640,49 @@
                          Background="Black" 
                          Foreground="LightGreen"
                          FontFamily="Consolas"
-                         FontSize="11"/>
+                         FontSize="11">
+                    <TextBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Copy All" 
+                                      Click="CopyLogText_Click"
+                                      ToolTip="Copy all log text to clipboard">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="📋" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Copy Selection" 
+                                      Click="CopyLogSelection_Click"
+                                      ToolTip="Copy selected text to clipboard">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="📝" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="Clear Log" 
+                                      Click="ClearLog_Click"
+                                      ToolTip="Clear the log display">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="🗑️" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="Save Log to File" 
+                                      Click="SaveLogToFile_Click"
+                                      ToolTip="Save log content to a text file">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="💾" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Open Log Folder" 
+                                      Click="OpenLogFolder_Click"
+                                      ToolTip="Open the folder containing log files">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="📁" FontSize="14"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </TextBox.ContextMenu>
+                </TextBox>
             </ScrollViewer>
         </GroupBox>
 
@@ -621,6 +741,54 @@
                              BorderThickness="1"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Process This File" 
+                                          Command="{Binding DataContext.ProcessSingleBatchFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          ToolTip="Process only this file from the batch queue">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="▶️" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Remove from Queue" 
+                                          Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          ToolTip="Remove this file from the batch queue">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="❌" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Move to Top" 
+                                          Click="MoveBatchItemToTop_Click"
+                                          ToolTip="Move this file to the top of the queue">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="⬆️" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Move to Bottom" 
+                                          Click="MoveBatchItemToBottom_Click"
+                                          ToolTip="Move this file to the bottom of the queue">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="⬇️" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Open File Location" 
+                                          Click="OpenBatchFileLocation_Click"
+                                          ToolTip="Open the folder containing this file">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="📁" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Show File Properties" 
+                                          Click="ShowBatchFileProperties_Click"
+                                          ToolTip="View detailed properties of this file">
+                                    <MenuItem.Icon>
+                                        <TextBlock Text="ℹ️" FontSize="14"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Margin="2" Padding="8">
