@@ -13,21 +13,39 @@ public class MkvToolService : IMkvToolService
     private readonly ILoggingService _loggingService;
     private readonly IProcessRunner _processRunner;
     private readonly IToolDetectionService _toolDetectionService;
+    private readonly IAsyncFileService _asyncFileService;
+    private readonly IFileLockDetectionService _fileLockDetectionService;
 
-    public MkvToolService(ILoggingService loggingService, IProcessRunner processRunner, IToolDetectionService toolDetectionService)
+    public MkvToolService(
+        ILoggingService loggingService, 
+        IProcessRunner processRunner, 
+        IToolDetectionService toolDetectionService,
+        IAsyncFileService asyncFileService,
+        IFileLockDetectionService fileLockDetectionService)
     {
         _loggingService = loggingService;
         _processRunner = processRunner;
         _toolDetectionService = toolDetectionService;
+        _asyncFileService = asyncFileService;
+        _fileLockDetectionService = fileLockDetectionService;
     }
 
-    public async Task<ProbeResult> ProbeAsync(string mkvPath)
+    public async Task<ProbeResult> ProbeAsync(string mkvPath, CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Probing MKV file: {mkvPath}");
 
-        if (!File.Exists(mkvPath))
+        // Check if file exists and is accessible
+        var fileExists = await _asyncFileService.FileExistsAsync(mkvPath, cancellationToken);
+        if (!fileExists)
         {
             throw new FileNotFoundException($"MKV file not found: {mkvPath}");
+        }
+
+        // Check if file is locked
+        var isLocked = await _fileLockDetectionService.IsFileLockedAsync(mkvPath, cancellationToken);
+        if (isLocked)
+        {
+            throw new IOException($"MKV file is locked or in use by another process: {mkvPath}");
         }
 
         try

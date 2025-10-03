@@ -34,17 +34,24 @@ namespace SrtExtractor
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
         services.AddSingleton<IWingetService, WingetService>();
+        services.AddSingleton<IAsyncFileService, AsyncFileService>();
+        services.AddSingleton<IFileLockDetectionService, FileLockDetectionService>();
         services.AddSingleton<IMkvToolService, MkvToolService>();
         services.AddSingleton<IFfmpegService, FfmpegService>();
         services.AddSingleton<ISubtitleOcrService, SubtitleOcrService>();
         services.AddSingleton<ISrtCorrectionService, SrtCorrectionService>();
+        services.AddSingleton<IMultiPassCorrectionService, MultiPassCorrectionService>();
         services.AddSingleton<INetworkDetectionService, NetworkDetectionService>();
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();
+            services.AddTransient<BatchSrtCorrectionViewModel>();
 
             // Register Views
             services.AddTransient<MainWindow>();
+            services.AddTransient<BatchSrtCorrectionWindow>();
+            services.AddTransient<SettingsWindow>();
+            services.AddTransient<SrtCorrectionWindow>();
         }
 
         protected override void OnExit(ExitEventArgs e)

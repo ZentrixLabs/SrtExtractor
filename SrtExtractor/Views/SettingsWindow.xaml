@@ -1,0 +1,345 @@
+<Window x:Class="SrtExtractor.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SrtExtractor.Views"
+        xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        mc:Ignorable="d"
+        Title="Settings - SrtExtractor" 
+        Height="600" Width="700"
+        MinHeight="500" MinWidth="600"
+        Background="White"
+        WindowStartupLocation="CenterOwner">
+    
+    <Window.Resources>
+        <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
+        <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="MinWidth" Value="100"/>
+        </Style>
+        
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        
+        <Style TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="SrtExtractor Settings" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   HorizontalAlignment="Center" 
+                   Margin="0,0,0,20"/>
+
+        <!-- Settings Content -->
+        <TabControl Grid.Row="1">
+            <!-- Tools Tab -->
+            <TabItem Header="🔧 Tools">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="External Tools Status" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Margin="0,0,0,15"/>
+                        
+                        <TextBlock Text="SrtExtractor requires these external tools to function properly. Install or configure them below:" 
+                                   TextWrapping="Wrap" 
+                                   Foreground="Gray" 
+                                   Margin="0,0,0,20"/>
+
+                        <!-- MKVToolNix Status -->
+                        <GroupBox Header="MKVToolNix" Margin="0,0,0,10">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Status:" FontWeight="Bold" Width="80"/>
+                                    <TextBlock Text="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
+                                               Margin="4,0"/>
+                                    <TextBlock Text="{Binding State.MkvToolNixStatus.Version, StringFormat='v{0}'}" 
+                                               FontStyle="Italic" 
+                                               Foreground="Gray" 
+                                               Margin="8,0"/>
+                                </StackPanel>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Path:" FontWeight="Bold" Width="80"/>
+                                    <TextBlock Text="{Binding State.MkvToolNixStatus.Path}" 
+                                               TextWrapping="Wrap" 
+                                               Foreground="Gray"/>
+                                </StackPanel>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button Content="Install via winget" 
+                                            Command="{Binding InstallMkvToolNixCommand}"
+                                            Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                                            Background="LightGreen"
+                                            Margin="0,0,10,0"/>
+                                    <Button Content="Browse..." 
+                                            Command="{Binding BrowseMkvToolNixCommand}"
+                                            Background="LightBlue"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Subtitle Edit Status -->
+                        <GroupBox Header="Subtitle Edit CLI" Margin="0,0,0,10">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Status:" FontWeight="Bold" Width="80"/>
+                                    <TextBlock Text="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
+                                               Margin="4,0"/>
+                                    <TextBlock Text="{Binding State.SubtitleEditStatus.Version, StringFormat='v{0}'}" 
+                                               FontStyle="Italic" 
+                                               Foreground="Gray" 
+                                               Margin="8,0"/>
+                                </StackPanel>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Path:" FontWeight="Bold" Width="80"/>
+                                    <TextBlock Text="{Binding State.SubtitleEditStatus.Path}" 
+                                               TextWrapping="Wrap" 
+                                               Foreground="Gray"/>
+                                </StackPanel>
+                                
+                                <TextBlock Text="(Auto-built during development)" 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- FFmpeg Status -->
+                        <GroupBox Header="FFmpeg" Margin="0,0,0,10">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Status:" FontWeight="Bold" Width="80"/>
+                                    <TextBlock Text="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
+                                               Margin="4,0"/>
+                                    <TextBlock Text="{Binding State.FfmpegStatus.Version, StringFormat='v{0}'}" 
+                                               FontStyle="Italic" 
+                                               Foreground="Gray" 
+                                               Margin="8,0"/>
+                                </StackPanel>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Path:" FontWeight="Bold" Width="80"/>
+                                    <TextBlock Text="{Binding State.FfmpegStatus.Path}" 
+                                               TextWrapping="Wrap" 
+                                               Foreground="Gray"/>
+                                </StackPanel>
+                                
+                                <TextBlock Text="(Auto-downloaded during development)" 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Tool Management Actions -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                            <Button Content="🔄 Re-detect Tools" 
+                                    Command="{Binding ReDetectToolsCommand}"
+                                    Background="LightBlue" 
+                                    FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Preferences Tab -->
+            <TabItem Header="⚙️ Preferences">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Subtitle Extraction Preferences" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Margin="0,0,0,15"/>
+                        
+                        <!-- Subtitle Preference -->
+                        <GroupBox Header="Subtitle Type Preference" Margin="0,0,0,15">
+                            <StackPanel>
+                                <RadioButton Content="Prefer forced subtitles (usually foreign dialogue)" 
+                                             IsChecked="{Binding State.PreferForced}"
+                                             GroupName="SubtitlePreference"
+                                             Margin="0,5"/>
+                                <RadioButton Content="Prefer closed captions (CC)" 
+                                             IsChecked="{Binding State.PreferClosedCaptions}"
+                                             GroupName="SubtitlePreference"
+                                             Margin="0,5"/>
+                                <TextBlock Text="Choose which type of subtitles to prioritize when multiple options are available." 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- OCR Language -->
+                        <GroupBox Header="OCR Language" Margin="0,0,0,15">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Language:" FontWeight="Bold" Width="80"/>
+                                    <TextBox Text="{Binding State.OcrLanguage}" 
+                                             Width="100" 
+                                             Margin="4,0"/>
+                                </StackPanel>
+                                <TextBlock Text="Language code for OCR processing (e.g., 'eng' for English, 'spa' for Spanish)" 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Multi-Pass Correction -->
+                        <GroupBox Header="Multi-Pass Correction" Margin="0,0,0,15">
+                            <StackPanel>
+                                <CheckBox Content="Enable multi-pass correction (recommended)" 
+                                          IsChecked="{Binding State.EnableMultiPassCorrection}"
+                                          FontWeight="Bold"
+                                          Margin="0,5"/>
+                                <TextBlock Text="Performs multiple correction passes to catch different OCR errors that may be missed in a single pass." 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,5,0,10"/>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Mode:" FontWeight="Bold" Width="80"/>
+                                    <ComboBox SelectedItem="{Binding State.CorrectionMode}" 
+                                              ItemsSource="{Binding State.AvailableCorrectionModes}"
+                                              Width="120" 
+                                              Margin="4,0"/>
+                                </StackPanel>
+                                
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Max Passes:" FontWeight="Bold" Width="80"/>
+                                    <TextBox Text="{Binding State.MaxCorrectionPasses}" 
+                                             Width="60" 
+                                             Margin="4,0"/>
+                                </StackPanel>
+                                
+                                <CheckBox Content="Use smart convergence (stop when no more changes detected)" 
+                                          IsChecked="{Binding State.UseSmartConvergence}"
+                                          Margin="0,5"/>
+                                
+                                <Border Background="#E3F2FD" 
+                                        BorderBrush="#2196F3" 
+                                        BorderThickness="1" 
+                                        CornerRadius="4" 
+                                        Padding="8" 
+                                        Margin="0,10,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="📊 Correction Modes:" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="#1976D2"/>
+                                        <TextBlock Text="• Quick: 1 pass (fastest)" 
+                                                   FontSize="11" 
+                                                   Foreground="#1976D2"
+                                                   Margin="0,2,0,0"/>
+                                        <TextBlock Text="• Standard: 3 passes with smart convergence (recommended)" 
+                                                   FontSize="11" 
+                                                   Foreground="#1976D2"
+                                                   Margin="0,2,0,0"/>
+                                        <TextBlock Text="• Thorough: 5 passes without convergence (best quality)" 
+                                                   FontSize="11" 
+                                                   Foreground="#1976D2"
+                                                   Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- File Naming Pattern -->
+                        <GroupBox Header="Output File Naming" Margin="0,0,0,15">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="Pattern:" FontWeight="Bold" Width="80"/>
+                                    <TextBox Text="{Binding State.FileNamePattern}" 
+                                             MinWidth="300" 
+                                             Margin="4,0"/>
+                                </StackPanel>
+                                <TextBlock Text="Available variables: {basename}, {lang}, {forced}, {cc}" 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,5,0,0"/>
+                                <TextBlock Text="Example: Movie.eng.forced.srt" 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Advanced Tab -->
+            <TabItem Header="🔧 Advanced">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Advanced Settings" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Margin="0,0,0,15"/>
+                        
+                        <!-- Batch Mode -->
+                        <GroupBox Header="Batch Processing" Margin="0,0,0,15">
+                            <StackPanel>
+                                <CheckBox Content="Enable batch mode by default" 
+                                          IsChecked="{Binding State.IsBatchMode}"
+                                          Margin="0,5"/>
+                                <TextBlock Text="When enabled, allows processing multiple files simultaneously with drag &amp; drop support." 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Logging -->
+                        <GroupBox Header="Logging" Margin="0,0,0,15">
+                            <StackPanel>
+                                <Button Content="🧹 Clear Application Log" 
+                                        Click="ClearLog_Click"
+                                        Background="LightGray" 
+                                        HorizontalAlignment="Left"/>
+                                <TextBlock Text="Clear the application log window." 
+                                           FontStyle="Italic" 
+                                           Foreground="Gray" 
+                                           Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- Bottom Actions -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="OK" 
+                    Click="OkButton_Click"
+                    Background="LightGreen"
+                    FontWeight="Bold"
+                    Padding="20,8"
+                    Margin="0,0,10,0"/>
+            <Button Content="Cancel" 
+                    Click="CancelButton_Click"
+                    Background="LightGray"
+                    Padding="20,8"/>
+        </StackPanel>
+    </Grid>
+</Window>

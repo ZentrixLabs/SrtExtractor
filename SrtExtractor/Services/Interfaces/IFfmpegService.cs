@@ -11,8 +11,9 @@ public interface IFfmpegService
     /// Probe an MP4 file to find subtitle tracks.
     /// </summary>
     /// <param name="mp4Path">Path to the MP4 file</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Probe result with subtitle tracks</returns>
-    Task<ProbeResult> ProbeAsync(string mp4Path);
+    Task<ProbeResult> ProbeAsync(string mp4Path, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extract a subtitle track from an MP4 file.

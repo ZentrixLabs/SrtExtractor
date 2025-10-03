@@ -13,27 +13,45 @@ public class FfmpegService : IFfmpegService
     private readonly ILoggingService _loggingService;
     private readonly IProcessRunner _processRunner;
     private readonly IToolDetectionService _toolDetectionService;
+    private readonly IAsyncFileService _asyncFileService;
+    private readonly IFileLockDetectionService _fileLockDetectionService;
 
-    public FfmpegService(ILoggingService loggingService, IProcessRunner processRunner, IToolDetectionService toolDetectionService)
+    public FfmpegService(
+        ILoggingService loggingService, 
+        IProcessRunner processRunner, 
+        IToolDetectionService toolDetectionService,
+        IAsyncFileService asyncFileService,
+        IFileLockDetectionService fileLockDetectionService)
     {
         _loggingService = loggingService;
         _processRunner = processRunner;
         _toolDetectionService = toolDetectionService;
+        _asyncFileService = asyncFileService;
+        _fileLockDetectionService = fileLockDetectionService;
     }
 
-    public async Task<ProbeResult> ProbeAsync(string mp4Path)
+    public async Task<ProbeResult> ProbeAsync(string mp4Path, CancellationToken cancellationToken = default)
     {
         _loggingService.LogInfo($"Probing MP4 file: {mp4Path}");
 
-        if (!File.Exists(mp4Path))
+        // Check if file exists and is accessible
+        var fileExists = await _asyncFileService.FileExistsAsync(mp4Path, cancellationToken);
+        if (!fileExists)
         {
             throw new FileNotFoundException($"MP4 file not found: {mp4Path}");
+        }
+
+        // Check if file is locked
+        var isLocked = await _fileLockDetectionService.IsFileLockedAsync(mp4Path, cancellationToken);
+        if (isLocked)
+        {
+            throw new IOException($"MP4 file is locked or in use by another process: {mp4Path}");
         }
 
         try
         {
             // Get FFmpeg path and construct ffprobe path
-            var ffmpegPath = await FindFfmpegPathAsync();
+            var ffmpegPath = await FindFfmpegPathAsync(cancellationToken);
             if (string.IsNullOrEmpty(ffmpegPath))
             {
                 throw new InvalidOperationException("FFmpeg not found");
@@ -41,13 +59,14 @@ public class FfmpegService : IFfmpegService
 
             // Use ffprobe for probing (ffprobe is usually in the same directory as ffmpeg)
             var ffprobePath = Path.Combine(Path.GetDirectoryName(ffmpegPath) ?? "", "ffprobe.exe");
-            if (!File.Exists(ffprobePath))
+            var ffprobeExists = await _asyncFileService.FileExistsAsync(ffprobePath, cancellationToken);
+            if (!ffprobeExists)
             {
                 throw new InvalidOperationException($"ffprobe.exe not found at {ffprobePath}");
             }
 
             // Run ffprobe to get stream information
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffprobePath, $"-v quiet -print_format json -show_streams \"{mp4Path}\"");
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffprobePath, $"-v quiet -print_format json -show_streams \"{mp4Path}\"", cancellationToken);
 
             if (exitCode != 0)
             {
@@ -160,7 +179,7 @@ public class FfmpegService : IFfmpegService
             var outputDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputDir))
             {
-                Directory.CreateDirectory(outputDir);
+                await _asyncFileService.EnsureDirectoryExistsAsync(outputDir, cancellationToken);
             }
 
             // Run ffmpeg to extract subtitle
@@ -172,7 +191,8 @@ public class FfmpegService : IFfmpegService
                 throw new InvalidOperationException($"ffmpeg failed with exit code {exitCode}: {stderr}");
             }
 
-            if (!File.Exists(outputPath))
+            var outputExists = await _asyncFileService.FileExistsAsync(outputPath, cancellationToken);
+            if (!outputExists)
             {
                 throw new InvalidOperationException($"Output file was not created: {outputPath}");
             }
@@ -187,7 +207,7 @@ public class FfmpegService : IFfmpegService
         }
     }
 
-    private async Task<string?> FindFfmpegPathAsync()
+    private async Task<string?> FindFfmpegPathAsync(CancellationToken cancellationToken = default)
     {
         // Common FFmpeg installation paths
         var commonPaths = new[]
@@ -201,6 +221,7 @@ public class FfmpegService : IFfmpegService
 
         foreach (var path in commonPaths)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (await _toolDetectionService.ValidateToolAsync(path))
             {
                 return path;

@@ -21,4 +21,11 @@ public interface ISrtCorrectionService
     /// <param name="content">SRT content to correct</param>
     /// <returns>Corrected SRT content</returns>
     string CorrectSrtContent(string content);
+
+    /// <summary>
+    /// Corrects common OCR errors in SRT content text and returns correction count.
+    /// </summary>
+    /// <param name="content">SRT content to correct</param>
+    /// <returns>Tuple containing corrected content and number of corrections applied</returns>
+    (string correctedContent, int correctionCount) CorrectSrtContentWithCount(string content);
 }

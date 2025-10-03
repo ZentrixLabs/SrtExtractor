@@ -11,8 +11,9 @@ public interface IMkvToolService
     /// Probe an MKV file to discover subtitle tracks.
     /// </summary>
     /// <param name="mkvPath">Path to the MKV file</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result containing discovered subtitle tracks</returns>
-    Task<ProbeResult> ProbeAsync(string mkvPath);
+    Task<ProbeResult> ProbeAsync(string mkvPath, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Extract a text subtitle track to SRT format.

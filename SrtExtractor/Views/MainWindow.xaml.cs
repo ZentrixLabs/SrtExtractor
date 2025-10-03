@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using SrtExtractor.ViewModels;
 
 namespace SrtExtractor.Views
@@ -10,8 +11,11 @@ namespace SrtExtractor.Views
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow(MainViewModel viewModel)
+        private readonly IServiceProvider _serviceProvider;
+
+        public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             InitializeComponent();
             DataContext = viewModel;
             
@@ -21,6 +25,9 @@ namespace SrtExtractor.Views
             DragOver += MainWindow_DragOver;
             DragLeave += MainWindow_DragLeave;
             Drop += MainWindow_Drop;
+            
+            // Check if settings should be opened on startup
+            Loaded += MainWindow_Loaded;
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -36,6 +43,91 @@ namespace SrtExtractor.Views
             var aboutWindow = new AboutWindow();
             aboutWindow.Owner = this;
             aboutWindow.ShowDialog();
+        }
+
+        private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            About_Click(sender, e);
+        }
+
+        private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
+                settingsWindow.Owner = this;
+                settingsWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening settings: {ex.Message}", 
+                              "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void KeyboardShortcuts_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                "SrtExtractor Keyboard Shortcuts\n\n" +
+                "File Operations:\n" +
+                "• Ctrl+O - Open Video File\n" +
+                "• Alt+F4 - Exit Application\n\n" +
+                "Processing:\n" +
+                "• Ctrl+P - Probe Tracks\n" +
+                "• Ctrl+E - Extract Subtitles\n" +
+                "• Ctrl+C - Cancel Operation\n" +
+                "• Escape - Cancel Operation\n\n" +
+                "Tools & Settings:\n" +
+                "• F5 - Re-detect Tools\n" +
+                "• Ctrl+B - Toggle Batch Mode\n\n" +
+                "Help:\n" +
+                "• F1 - Show Help",
+                "Keyboard Shortcuts",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        private void UserGuide_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("User Guide coming soon!\n\nFor now, please refer to the README file in the project repository:\nhttps://github.com/ZentrixLabs/SrtExtractor", 
+                          "User Guide", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void PreferForcedMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                viewModel.State.PreferForced = true;
+            }
+        }
+
+        private void PreferClosedCaptionsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                viewModel.State.PreferClosedCaptions = true;
+            }
+        }
+
+        private void SrtCorrection_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Create the unified SRT correction window with dependency injection
+                var srtCorrectionWindow = _serviceProvider.GetRequiredService<SrtCorrectionWindow>();
+                srtCorrectionWindow.Owner = this;
+                srtCorrectionWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening SRT correction: {ex.Message}", 
+                              "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void MainWindow_DragEnter(object sender, DragEventArgs e)
@@ -134,6 +226,31 @@ namespace SrtExtractor.Views
             {
                 MessageBox.Show($"Error processing dropped files: {ex.Message}", 
                               "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                // Check if settings should be opened on startup
+                if (viewModel.State.ShowSettingsOnStartup)
+                {
+                    viewModel.State.ShowSettingsOnStartup = false; // Reset the flag
+                    
+                    // Open settings window
+                    try
+                    {
+                        var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
+                        settingsWindow.Owner = this;
+                        settingsWindow.ShowDialog();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error opening settings: {ex.Message}", 
+                                      "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
             }
         }
     }

@@ -1,0 +1,301 @@
+<Window x:Class="SrtExtractor.Views.SrtCorrectionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SrtExtractor.Views"
+        xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        mc:Ignorable="d"
+        Title="SRT Correction - SrtExtractor" 
+        Height="700" Width="800"
+        MinHeight="600" MinWidth="700"
+        Background="White"
+        WindowStartupLocation="CenterOwner">
+    
+    <Window.Resources>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="MinWidth" Value="100"/>
+        </Style>
+        
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        
+        <Style TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="SRT Correction Tool" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   HorizontalAlignment="Center" 
+                   Margin="0,0,0,20"/>
+
+        <!-- Main Content -->
+        <TabControl Grid.Row="1">
+            <!-- Single File Tab -->
+            <TabItem Header="📄 Single File">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                    <TextBlock Text="Correct OCR errors in a single SRT file" 
+                               FontSize="16" 
+                               FontWeight="Bold" 
+                               Margin="0,0,0,15"/>
+                    
+                    <TextBlock Text="Select an SRT file to apply automatic corrections for common OCR errors like extra spaces, missing spaces, character substitutions, and more." 
+                               TextWrapping="Wrap" 
+                               Foreground="Gray" 
+                               Margin="0,0,0,20"/>
+
+                    <!-- File Selection -->
+                    <GroupBox Header="File Selection" Margin="0,0,0,15">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,10">
+                                <Button Content="Select SRT File..." 
+                                        Click="SelectSingleFile_Click"
+                                        Background="LightBlue"
+                                        FontWeight="Bold"
+                                        Margin="0,0,10,0"/>
+                                <TextBlock Text="No file selected" 
+                                           Name="SingleFileStatus"
+                                           VerticalAlignment="Center"
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                            
+                            <TextBlock Name="SingleFilePath" 
+                                       TextWrapping="Wrap" 
+                                       Foreground="DarkBlue" 
+                                       Margin="0,10,0,0"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Processing Options -->
+                    <GroupBox Header="Processing Options" Margin="0,0,0,15">
+                        <StackPanel>
+                            <CheckBox Content="Create backup before correction" 
+                                      IsChecked="True"
+                                      Name="CreateBackupCheckbox"
+                                      Margin="0,5"/>
+                            <TextBlock Text="Creates a .bak file before applying corrections" 
+                                       FontStyle="Italic" 
+                                       Foreground="Gray" 
+                                       Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Process Button -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                        <Button Content="🔧 Correct File" 
+                                Click="ProcessSingleFile_Click"
+                                Background="LightGreen"
+                                FontWeight="Bold"
+                                Padding="20,8"
+                                Name="ProcessSingleButton"
+                                IsEnabled="False"/>
+                    </StackPanel>
+
+                    <!-- Single File Results -->
+                    <GroupBox Header="Results" Margin="0,20,0,0" Visibility="Collapsed" Name="SingleFileResults">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="Corrections Applied:" FontWeight="Bold" Width="150"/>
+                                <TextBlock Name="SingleFileCorrections" Text="0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="Processing Time:" FontWeight="Bold" Width="150"/>
+                                <TextBlock Name="SingleFileTime" Text="0ms"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Batch Processing Tab -->
+            <TabItem Header="📁 Batch Processing">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                    <TextBlock Text="Correct OCR errors in multiple SRT files" 
+                               FontSize="16" 
+                               FontWeight="Bold" 
+                               Margin="0,0,0,15"/>
+                    
+                    <TextBlock Text="Select a folder to automatically find and correct all SRT files. This is perfect for processing large collections of subtitle files." 
+                               TextWrapping="Wrap" 
+                               Foreground="Gray" 
+                               Margin="0,0,0,20"/>
+
+                    <!-- Folder Selection -->
+                    <GroupBox Header="Folder Selection" Margin="0,0,0,15">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,10">
+                                <Button Content="Select Folder..." 
+                                        Click="SelectFolder_Click"
+                                        Background="LightBlue"
+                                        FontWeight="Bold"
+                                        Margin="0,0,10,0"/>
+                                <TextBlock Text="No folder selected" 
+                                           Name="FolderStatus"
+                                           VerticalAlignment="Center"
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                            
+                            <TextBlock Name="FolderPath" 
+                                       TextWrapping="Wrap" 
+                                       Foreground="DarkBlue" 
+                                       Margin="0,10,0,0"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Batch Options -->
+                    <GroupBox Header="Batch Options" Margin="0,0,0,15">
+                        <StackPanel>
+                            <CheckBox Content="Include subfolders" 
+                                      IsChecked="True"
+                                      Name="IncludeSubfoldersCheckbox"
+                                      Margin="0,5"/>
+                            <CheckBox Content="Create backup before correction" 
+                                      IsChecked="True"
+                                      Name="CreateBackupBatchCheckbox"
+                                      Margin="0,5"/>
+                            <TextBlock Text="Options for batch processing multiple SRT files" 
+                                       FontStyle="Italic" 
+                                       Foreground="Gray" 
+                                       Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- File List -->
+                    <GroupBox Header="SRT Files Found" Margin="0,0,0,15">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button Content="🔍 Scan Folder" 
+                                        Click="ScanFolder_Click"
+                                        Background="Orange"
+                                        FontWeight="Bold"
+                                        Margin="0,0,10,0"
+                                        Name="ScanButton"/>
+                                <TextBlock Text="Click to scan for SRT files in the selected folder" 
+                                           VerticalAlignment="Center"
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                            
+                            <!-- Files List -->
+                            <ListBox Name="SrtFilesListBox" 
+                                     MaxHeight="200" 
+                                     Visibility="Collapsed"
+                                     Margin="0,10,0,0">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding FileName}" FontWeight="Bold" Width="200"/>
+                                            <TextBlock Text="{Binding FormattedSize}" Foreground="Gray" Width="80"/>
+                                            <TextBlock Text="{Binding Status}" Foreground="DarkBlue" Width="150"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            
+                            <!-- No Files Message -->
+                            <Border Background="LightYellow" 
+                                    BorderBrush="Orange" 
+                                    BorderThickness="1" 
+                                    CornerRadius="4" 
+                                    Padding="10" 
+                                    Margin="0,10,0,0"
+                                    Name="NoFilesMessage"
+                                    Visibility="Collapsed">
+                                <TextBlock Text="No SRT files found in the selected folder. Try including subfolders or select a different folder." 
+                                           TextWrapping="Wrap" 
+                                           HorizontalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Batch Processing -->
+                    <GroupBox Header="Batch Processing" Margin="0,0,0,15">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,10">
+                                <Button Content="🚀 Start Batch Correction" 
+                                        Click="StartBatchCorrection_Click"
+                                        Background="LightGreen"
+                                        FontWeight="Bold"
+                                        Padding="20,8"
+                                        Name="StartBatchButton"
+                                        IsEnabled="False"
+                                        Margin="0,0,10,0"/>
+                                <Button Content="⏹️ Cancel" 
+                                        Click="CancelBatch_Click"
+                                        Background="LightGray"
+                                        FontWeight="Bold"
+                                        Padding="20,8"
+                                        Name="CancelBatchButton"
+                                        IsEnabled="False"/>
+                            </StackPanel>
+                            
+                            <!-- Progress -->
+                            <ProgressBar Name="BatchProgressBar" 
+                                         Height="20" 
+                                         Margin="0,10,0,0"
+                                         Visibility="Collapsed"/>
+                            <TextBlock Name="BatchProgressText" 
+                                       Text="Ready to process" 
+                                       HorizontalAlignment="Center" 
+                                       Margin="0,5,0,0"
+                                       FontWeight="Bold"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Batch Results -->
+                    <GroupBox Header="Batch Results" Margin="0,0,0,0" Visibility="Collapsed" Name="BatchResults">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="Files Processed:" FontWeight="Bold" Width="150"/>
+                                <TextBlock Name="BatchFilesProcessed" Text="0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="Total Corrections:" FontWeight="Bold" Width="150"/>
+                                <TextBlock Name="BatchTotalCorrections" Text="0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="Processing Time:" FontWeight="Bold" Width="150"/>
+                                <TextBlock Name="BatchProcessingTime" Text="0ms"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="Average per File:" FontWeight="Bold" Width="150"/>
+                                <TextBlock Name="BatchAverageCorrections" Text="0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- Bottom Actions -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Close" 
+                    Click="CloseButton_Click"
+                    Background="LightGray"
+                    Padding="20,8"/>
+        </StackPanel>
+    </Grid>
+</Window>

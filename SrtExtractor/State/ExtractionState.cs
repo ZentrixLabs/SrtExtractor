@@ -46,6 +46,19 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
 
+    // Multi-Pass Correction Settings
+    [ObservableProperty]
+    private bool _enableMultiPassCorrection = true;
+
+    [ObservableProperty]
+    private int _maxCorrectionPasses = 3;
+
+    [ObservableProperty]
+    private bool _useSmartConvergence = true;
+
+    [ObservableProperty]
+    private string _correctionMode = "Standard"; // Quick, Standard, Thorough
+
     // Network Detection
     [ObservableProperty]
     private bool _isNetworkFile;
@@ -84,6 +97,9 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private double _batchProgressPercentage;
 
+    [ObservableProperty]
+    private bool _showSettingsOnStartup;
+
     // Events
     public event EventHandler? PreferencesChanged;
 
@@ -112,6 +128,23 @@ public partial class ExtractionState : ObservableObject
         // Notify computed properties that depend on IsBatchMode
         OnPropertyChanged(nameof(ShowBatchMode));
         OnPropertyChanged(nameof(ShowSingleFileMode));
+    }
+
+    partial void OnCorrectionModeChanged(string value)
+    {
+        // Update max passes based on correction mode
+        MaxCorrectionPasses = value switch
+        {
+            "Quick" => 1,
+            "Standard" => 3,
+            "Thorough" => 5,
+            _ => 3
+        };
+        
+        // Update convergence setting
+        UseSmartConvergence = value != "Thorough";
+        
+        PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnMkvPathChanged(string? value)
@@ -167,6 +200,9 @@ public partial class ExtractionState : ObservableObject
 
     // Available OCR languages
     public string[] AvailableLanguages { get; } = { "eng", "spa", "fra", "deu", "ita", "por", "rus", "jpn", "kor", "chi" };
+
+    // Available correction modes
+    public string[] AvailableCorrectionModes { get; } = { "Quick", "Standard", "Thorough" };
 
     /// <summary>
     /// Add a log message to the UI log display.

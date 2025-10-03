@@ -11,6 +11,18 @@
             MinHeight="700" MinWidth="1000"
             Background="White">
     
+    <!-- Keyboard Shortcuts -->
+    <Window.InputBindings>
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding PickMkvCommand}"/>
+        <KeyBinding Key="P" Modifiers="Ctrl" Command="{Binding ProbeCommand}"/>
+        <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding ExtractCommand}"/>
+        <KeyBinding Key="B" Modifiers="Ctrl" Command="{Binding ToggleBatchModeCommand}"/>
+        <KeyBinding Key="C" Modifiers="Ctrl" Command="{Binding CancelCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding ReDetectToolsCommand}"/>
+        <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}"/>
+    </Window.InputBindings>
+    
     <Window.Resources>
         <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
@@ -49,6 +61,77 @@
         </Style>
     </Window.Resources>
 
+    <!-- Main Container -->
+    <DockPanel>
+        <!-- Menu Bar -->
+        <Menu DockPanel.Dock="Top">
+        <MenuItem Header="_File">
+            <MenuItem Header="_Open Video File..." 
+                      Command="{Binding PickMkvCommand}"
+                      InputGestureText="Ctrl+O"/>
+            <Separator/>
+            <MenuItem Header="_Recent Files">
+                <!-- Recent files will be populated dynamically -->
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="E_xit" 
+                      Click="ExitMenuItem_Click"
+                      InputGestureText="Alt+F4"/>
+        </MenuItem>
+        
+        <MenuItem Header="_Edit">
+            <MenuItem Header="_Cancel Operation" 
+                      Command="{Binding CancelCommand}"
+                      InputGestureText="Ctrl+C"/>
+        </MenuItem>
+        
+        <MenuItem Header="_Tools">
+            <MenuItem Header="_Probe Tracks" 
+                      Command="{Binding ProbeCommand}"
+                      InputGestureText="Ctrl+P"/>
+            <MenuItem Header="_Extract Subtitles" 
+                      Command="{Binding ExtractCommand}"
+                      InputGestureText="Ctrl+E"/>
+            <Separator/>
+            <MenuItem Header="Re-_detect Tools" 
+                      Command="{Binding ReDetectToolsCommand}"
+                      InputGestureText="F5"/>
+            <MenuItem Header="_SRT Correction" 
+                      Click="SrtCorrection_Click"/>
+        </MenuItem>
+        
+        <MenuItem Header="_Options">
+            <MenuItem Header="_Toggle Batch Mode" 
+                      IsCheckable="True"
+                      IsChecked="{Binding State.IsBatchMode}"
+                      InputGestureText="Ctrl+B"/>
+            <Separator/>
+            <MenuItem Header="_Subtitle Preferences">
+                <MenuItem Header="_Prefer Forced Subtitles" 
+                          IsCheckable="True"
+                          IsChecked="{Binding State.PreferForced}"
+                          Click="PreferForcedMenuItem_Click"/>
+                <MenuItem Header="Prefer _Closed Captions" 
+                          IsCheckable="True"
+                          IsChecked="{Binding State.PreferClosedCaptions}"
+                          Click="PreferClosedCaptionsMenuItem_Click"/>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="_Settings..." 
+                      Click="SettingsMenuItem_Click"/>
+        </MenuItem>
+        
+        <MenuItem Header="_Help">
+            <MenuItem Header="_Keyboard Shortcuts" 
+                      Click="KeyboardShortcuts_Click"/>
+            <MenuItem Header="_User Guide" 
+                      Click="UserGuide_Click"/>
+            <Separator/>
+            <MenuItem Header="_About SrtExtractor..." 
+                      Click="AboutMenuItem_Click"/>
+        </MenuItem>
+    </Menu>
+
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -58,7 +141,6 @@
         <!-- Main Content Area -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -84,99 +166,9 @@
             </StackPanel>
         </GroupBox>
 
-        <!-- Tool Status Panel -->
-        <GroupBox Header="Tool Status" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
-            <StackPanel>
-                <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- MKVToolNix Status -->
-                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,4">
-                    <TextBlock Text="MKVToolNix:" FontWeight="Bold" Width="120"/>
-                    <TextBlock Text="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
-                               Margin="4,0"/>
-                    <Button Content="Install via winget" 
-                            Command="{Binding InstallMkvToolNixCommand}"
-                            Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                            Background="LightGreen"/>
-                    <Button Content="Browse..." 
-                            Command="{Binding BrowseMkvToolNixCommand}"/>
-                </StackPanel>
-
-                <!-- Subtitle Edit Status -->
-                <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,4">
-                    <TextBlock Text="Subtitle Edit CLI:" FontWeight="Bold" Width="120"/>
-                    <TextBlock Text="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
-                               Margin="4,0"/>
-                    <TextBlock Text="(Auto-built)" 
-                               FontStyle="Italic" 
-                               Foreground="Gray" 
-                               Margin="8,0"/>
-                </StackPanel>
-
-                <!-- FFmpeg Status -->
-                <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,4">
-                    <TextBlock Text="FFmpeg:" FontWeight="Bold" Width="120"/>
-                    <TextBlock Text="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToStatusConverter}}" 
-                               Margin="4,0"/>
-                    <TextBlock Text="(Auto-downloaded)" 
-                               FontStyle="Italic" 
-                               Foreground="Gray" 
-                               Margin="8,0"/>
-                </StackPanel>
-
-                <!-- Tool Paths Display -->
-                <StackPanel Grid.Row="0" Grid.Column="1" Margin="20,4,0,4">
-                    <TextBlock Text="{Binding State.MkvToolNixStatus.Path, StringFormat='Path: {0}'}" 
-                               FontSize="10" 
-                               Foreground="Gray"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="1" Grid.Column="1" Margin="20,4,0,4">
-                    <TextBlock Text="{Binding State.SubtitleEditStatus.Path, StringFormat='Path: {0}'}" 
-                               FontSize="10" 
-                               Foreground="Gray"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2" Grid.Column="1" Margin="20,4,0,4">
-                    <TextBlock Text="{Binding State.FfmpegStatus.Path, StringFormat='Path: {0}'}" 
-                               FontSize="10" 
-                               Foreground="Gray"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-                </Grid>
-                
-                <!-- Re-detect Tools Button -->
-                <Button Content="🔄 Re-detect Tools" 
-                        Command="{Binding ReDetectToolsCommand}"
-                        Background="LightBlue" 
-                        Margin="0,8,0,0"
-                        Padding="8,4"
-                        HorizontalAlignment="Center"/>
-                
-                <!-- Correct SRT Button -->
-                <Button Content="🔧 Correct SRT File" 
-                        Command="{Binding CorrectSrtCommand}"
-                        Background="LightGreen" 
-                        Margin="0,4,0,0"
-                        Padding="8,4"
-                        HorizontalAlignment="Center"/>
-                
-            </StackPanel>
-        </GroupBox>
 
         <!-- Settings Row -->
-        <GroupBox Header="Settings" Grid.Row="2" Grid.Column="1">
+        <GroupBox Header="Settings" Grid.Row="1" Grid.Column="1">
             <StackPanel>
                 <!-- Batch Mode Checkbox -->
                 <CheckBox Content="🎬 Enable Batch Mode (Process Multiple Files)" 
@@ -275,7 +267,7 @@
         </GroupBox>
 
         <!-- Action Buttons -->
-        <GroupBox Header="Actions" Grid.Row="2" Grid.Column="0">
+        <GroupBox Header="Actions" Grid.Row="1" Grid.Column="0">
             <StackPanel>
                 <!-- Single File Mode Actions -->
                 <StackPanel Orientation="Horizontal" 
@@ -322,16 +314,17 @@
                     <Button Content="Clear Log" 
                             Click="ClearLog_Click"
                             Background="LightGray"/>
-                    <Button Content="About" 
-                            Click="About_Click"
+                    <Button Content="🔧 SRT Correction" 
+                            Click="SrtCorrection_Click"
                             Background="LightGreen"
-                            Margin="10,0,0,0"/>
+                            Margin="10,0,0,0"
+                            ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
 
         <!-- Processing Indicator -->
-        <GroupBox Header="Processing" Grid.Row="3" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+        <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" 
                             Width="20" 
@@ -344,7 +337,7 @@
         </GroupBox>
 
         <!-- Track List -->
-        <GroupBox Header="Subtitle Tracks" Grid.Row="4" Grid.ColumnSpan="2"
+        <GroupBox Header="Subtitle Tracks" Grid.Row="3" Grid.ColumnSpan="2"
                   Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
             <DataGrid ItemsSource="{Binding State.Tracks}" 
                       SelectedItem="{Binding State.SelectedTrack}"
@@ -407,12 +400,14 @@
         </GroupBox>
 
         <!-- Log Display -->
-        <GroupBox Header="Log" Grid.Row="5" Grid.ColumnSpan="2">
+        <GroupBox Header="Log" Grid.Row="4" Grid.ColumnSpan="2">
             <ScrollViewer Height="250" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 
                          TextWrapping="Wrap" 
                          AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Disabled"
+                         HorizontalScrollBarVisibility="Disabled"
                          Background="Black" 
                          Foreground="LightGreen"
                          FontFamily="Consolas"
@@ -620,4 +615,5 @@
             </Grid>
         </GroupBox>
     </Grid>
+    </DockPanel>
 </Window>

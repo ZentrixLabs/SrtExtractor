@@ -22,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IFfmpegService _ffmpegService;
     private readonly ISubtitleOcrService _ocrService;
     private readonly ISrtCorrectionService _srtCorrectionService;
+    private readonly IMultiPassCorrectionService _multiPassCorrectionService;
     private readonly ISettingsService _settingsService;
     private readonly INetworkDetectionService _networkDetectionService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
@@ -37,6 +38,7 @@ public partial class MainViewModel : ObservableObject
         IFfmpegService ffmpegService,
         ISubtitleOcrService ocrService,
         ISrtCorrectionService srtCorrectionService,
+        IMultiPassCorrectionService multiPassCorrectionService,
         ISettingsService settingsService,
         INetworkDetectionService networkDetectionService)
     {
@@ -47,6 +49,7 @@ public partial class MainViewModel : ObservableObject
         _ffmpegService = ffmpegService;
         _ocrService = ocrService;
         _srtCorrectionService = srtCorrectionService;
+        _multiPassCorrectionService = multiPassCorrectionService;
         _settingsService = settingsService;
         _networkDetectionService = networkDetectionService;
 
@@ -55,7 +58,7 @@ public partial class MainViewModel : ObservableObject
 
         // Initialize commands
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
-        ProbeCommand = new AsyncRelayCommand(ProbeTracksAsync, () => State.CanProbe);
+        ProbeCommand = new AsyncRelayCommand(async () => await ProbeTracksAsync(CancellationToken.None), () => State.CanProbe);
         ExtractCommand = new AsyncRelayCommand(async () => await ExtractSubtitlesAsync(), () => State.CanExtract);
         CancelCommand = new RelayCommand(CancelExtraction, () => State.IsProcessing);
         InstallMkvToolNixCommand = new AsyncRelayCommand(InstallMkvToolNixAsync);
@@ -67,6 +70,10 @@ public partial class MainViewModel : ObservableObject
         ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
         ClearBatchQueueCommand = new RelayCommand(ClearBatchQueue);
         RemoveFromBatchCommand = new RelayCommand<BatchFile>(RemoveFromBatch);
+
+        // Menu commands
+        ToggleBatchModeCommand = new RelayCommand(ToggleBatchMode);
+        ShowHelpCommand = new RelayCommand(ShowHelp);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -117,6 +124,10 @@ public partial class MainViewModel : ObservableObject
     public IRelayCommand ClearBatchQueueCommand { get; }
     public IRelayCommand<BatchFile> RemoveFromBatchCommand { get; }
 
+    // Menu commands
+    public IRelayCommand ToggleBatchModeCommand { get; }
+    public IRelayCommand ShowHelpCommand { get; }
+
     #endregion
 
     #region Command Implementations
@@ -153,7 +164,7 @@ public partial class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private async Task ProbeTracksAsync()
+    private async Task ProbeTracksAsync(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(State.MkvPath))
             return;
@@ -171,11 +182,11 @@ public partial class MainViewModel : ObservableObject
             var fileExtension = Path.GetExtension(State.MkvPath).ToLowerInvariant();
             if (fileExtension == ".mp4")
             {
-                result = await _ffmpegService.ProbeAsync(State.MkvPath);
+                result = await _ffmpegService.ProbeAsync(State.MkvPath, cancellationToken);
             }
             else
             {
-                result = await _mkvToolService.ProbeAsync(State.MkvPath);
+                result = await _mkvToolService.ProbeAsync(State.MkvPath, cancellationToken);
             }
             
             State.Tracks.Clear();
@@ -275,6 +286,9 @@ public partial class MainViewModel : ObservableObject
                 await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("MP4 extraction completed!");
                 State.AddLogMessage($"Subtitles extracted to: {outputPath}");
+
+                // Apply multi-pass SRT corrections to MP4 subtitles
+                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None);
             }
             else if (State.SelectedTrack.Codec.Contains("S_TEXT/UTF8") || State.SelectedTrack.Codec.Contains("SubRip/SRT"))
             {
@@ -283,6 +297,9 @@ public partial class MainViewModel : ObservableObject
                 await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
+
+                // Apply multi-pass SRT corrections to text subtitles
+                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None);
             }
             else if (State.SelectedTrack.Codec.Contains("PGS") || State.SelectedTrack.Codec.Contains("S_HDMV/PGS"))
             {
@@ -299,12 +316,8 @@ public partial class MainViewModel : ObservableObject
                 State.UpdateProcessingMessage("OCR conversion completed!");
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
-                // Correct common OCR errors
-                State.UpdateProcessingMessage("Correcting common OCR errors...");
-                State.AddLogMessage("Correcting common OCR errors...");
-                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(outputPath, cancellationToken ?? CancellationToken.None);
-                State.UpdateProcessingMessage("OCR correction completed!");
-                State.AddLogMessage($"🎯 OCR correction completed! Applied {correctionCount} corrections.");
+                // Apply multi-pass OCR corrections
+                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None);
 
                 // Clean up temporary SUP file
                 State.UpdateProcessingMessage("Cleaning up temporary files...");
@@ -511,23 +524,24 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            State.AddLogMessage("Some required tools are missing. Use the install buttons to install them.");
+            State.AddLogMessage("Some required tools are missing. Please configure them in Settings.");
             
-            // Check if MKVToolNix is missing and winget is not available (Windows 10)
-            if (!mkvStatus.IsInstalled)
+            // Show a message directing users to settings
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                var wingetAvailable = await _wingetService.IsWingetAvailableAsync();
-                if (!wingetAvailable)
+                var result = MessageBox.Show(
+                    "Some required tools are missing and need to be configured.\n\n" +
+                    "Would you like to open Settings to configure the tools now?",
+                    "Tools Missing",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                
+                if (result == MessageBoxResult.Yes)
                 {
-                    // Show Windows 10 dialog
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        var dialog = new Views.Windows10Dialog();
-                        dialog.Owner = Application.Current.MainWindow;
-                        dialog.ShowDialog();
-                    });
+                    // This will be handled by the main window when it opens
+                    State.ShowSettingsOnStartup = true;
                 }
-            }
+            });
         }
     }
 
@@ -1201,6 +1215,128 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Error handling batch mode change", ex);
+        }
+    }
+
+    private void ToggleBatchMode()
+    {
+        try
+        {
+            State.IsBatchMode = !State.IsBatchMode;
+            _loggingService.LogInfo($"Batch mode toggled to: {State.IsBatchMode}");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error toggling batch mode", ex);
+        }
+    }
+
+    private void ShowHelp()
+    {
+        try
+        {
+            _loggingService.LogInfo("User requested help");
+            MessageBox.Show(
+                "SrtExtractor Help\n\n" +
+                "Keyboard Shortcuts:\n" +
+                "• Ctrl+O - Open Video File\n" +
+                "• Ctrl+P - Probe Tracks\n" +
+                "• Ctrl+E - Extract Subtitles\n" +
+                "• Ctrl+B - Toggle Batch Mode\n" +
+                "• Ctrl+C - Cancel Operation\n" +
+                "• F5 - Re-detect Tools\n" +
+                "• F1 - Show Help\n" +
+                "• Escape - Cancel Operation\n\n" +
+                "For more detailed help, visit the project repository:\n" +
+                "https://github.com/ZentrixLabs/SrtExtractor",
+                "SrtExtractor Help",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error showing help", ex);
+        }
+    }
+
+    /// <summary>
+    /// Apply multi-pass correction to an SRT file based on current settings.
+    /// </summary>
+    /// <param name="srtPath">Path to the SRT file to correct</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    private async Task ApplyMultiPassCorrectionAsync(string srtPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!State.EnableMultiPassCorrection)
+            {
+                // Use single-pass correction if multi-pass is disabled
+                State.UpdateProcessingMessage("Correcting common subtitle errors...");
+                State.AddLogMessage("Correcting common subtitle errors...");
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(srtPath, cancellationToken);
+                State.UpdateProcessingMessage("Subtitle correction completed!");
+                State.AddLogMessage($"🎯 Subtitle correction completed! Applied {correctionCount} corrections.");
+                return;
+            }
+
+            // Read the SRT content
+            var srtContent = await File.ReadAllTextAsync(srtPath, cancellationToken);
+            
+            // Apply multi-pass correction based on current mode
+            State.UpdateProcessingMessage($"Starting {State.CorrectionMode.ToLower()} multi-pass correction...");
+            State.AddLogMessage($"Starting {State.CorrectionMode.ToLower()} multi-pass correction...");
+            
+            var result = await _multiPassCorrectionService.ProcessWithModeAsync(
+                srtContent, 
+                State.CorrectionMode, 
+                cancellationToken);
+            
+            // Write the corrected content back to file
+            if (result.CorrectedContent != srtContent)
+            {
+                await File.WriteAllTextAsync(srtPath, result.CorrectedContent, cancellationToken);
+            }
+            
+            // Update UI with results
+            State.UpdateProcessingMessage("Multi-pass correction completed!");
+            
+            var convergenceText = result.Converged ? " (converged)" : "";
+            State.AddLogMessage($"🎯 Multi-pass correction completed!{convergenceText}");
+            State.AddLogMessage($"   • Passes completed: {result.PassesCompleted}");
+            State.AddLogMessage($"   • Total corrections: {result.TotalCorrections}");
+            State.AddLogMessage($"   • Processing time: {result.ProcessingTimeMs}ms");
+            
+            // Log any warnings
+            if (result.Warnings.Any())
+            {
+                foreach (var warning in result.Warnings)
+                {
+                    State.AddLogMessage($"⚠️ Warning: {warning}");
+                }
+            }
+            
+            _loggingService.LogInfo($"Multi-pass correction completed: {result.PassesCompleted} passes, {result.TotalCorrections} corrections, {result.ProcessingTimeMs}ms");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error during multi-pass correction", ex);
+            State.AddLogMessage($"❌ Error during correction: {ex.Message}");
+            
+            // Fall back to single-pass correction
+            try
+            {
+                State.UpdateProcessingMessage("Falling back to single-pass correction...");
+                State.AddLogMessage("Falling back to single-pass correction...");
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(srtPath, cancellationToken);
+                State.UpdateProcessingMessage("Single-pass correction completed!");
+                State.AddLogMessage($"🎯 Single-pass correction completed! Applied {correctionCount} corrections.");
+            }
+            catch (Exception fallbackEx)
+            {
+                _loggingService.LogError("Error during fallback single-pass correction", fallbackEx);
+                State.AddLogMessage($"❌ Error during fallback correction: {fallbackEx.Message}");
+                throw;
+            }
         }
     }
 
