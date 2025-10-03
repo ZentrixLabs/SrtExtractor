@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using SrtExtractor.ViewModels;
 
@@ -19,12 +20,7 @@ namespace SrtExtractor.Views
             InitializeComponent();
             DataContext = viewModel;
             
-            // Enable drag and drop
-            AllowDrop = true;
-            DragEnter += MainWindow_DragEnter;
-            DragOver += MainWindow_DragOver;
-            DragLeave += MainWindow_DragLeave;
-            Drop += MainWindow_Drop;
+            // Note: Drag and drop is now handled by the queue panel specifically
             
             // Check if settings should be opened on startup
             Loaded += MainWindow_Loaded;
@@ -130,46 +126,61 @@ namespace SrtExtractor.Views
             }
         }
 
-        private void MainWindow_DragEnter(object sender, DragEventArgs e)
+        private void QueuePanel_DragEnter(object sender, DragEventArgs e)
         {
             // Only allow drag & drop if batch mode is enabled
             if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 e.Effects = DragDropEffects.Copy;
-                DragOverlay.Visibility = Visibility.Visible;
+                // Change the queue panel appearance to indicate drop target
+                if (sender is GroupBox queuePanel)
+                {
+                    queuePanel.Background = System.Windows.Media.Brushes.LightBlue;
+                    queuePanel.BorderBrush = System.Windows.Media.Brushes.Blue;
+                    queuePanel.BorderThickness = new Thickness(2);
+                }
             }
             else
             {
                 e.Effects = DragDropEffects.None;
-                DragOverlay.Visibility = Visibility.Collapsed;
             }
         }
 
-        private void MainWindow_DragOver(object sender, DragEventArgs e)
+        private void QueuePanel_DragOver(object sender, DragEventArgs e)
         {
             // Only allow drag & drop if batch mode is enabled
             if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 e.Effects = DragDropEffects.Copy;
-                DragOverlay.Visibility = Visibility.Visible;
             }
             else
             {
                 e.Effects = DragDropEffects.None;
-                DragOverlay.Visibility = Visibility.Collapsed;
             }
         }
 
-        private void MainWindow_DragLeave(object sender, DragEventArgs e)
+        private void QueuePanel_DragLeave(object sender, DragEventArgs e)
         {
-            DragOverlay.Visibility = Visibility.Collapsed;
+            // Restore original queue panel appearance
+            if (sender is GroupBox queuePanel)
+            {
+                queuePanel.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F8FAFC"));
+                queuePanel.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E2E8F0"));
+                queuePanel.BorderThickness = new Thickness(1);
+            }
         }
 
-        private void MainWindow_Drop(object sender, DragEventArgs e)
+        private void QueuePanel_Drop(object sender, DragEventArgs e)
         {
             try
             {
-                DragOverlay.Visibility = Visibility.Collapsed;
+                // Restore original queue panel appearance
+                if (sender is GroupBox queuePanel)
+                {
+                    queuePanel.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F8FAFC"));
+                    queuePanel.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E2E8F0"));
+                    queuePanel.BorderThickness = new Thickness(1);
+                }
                 
                 if (DataContext is not MainViewModel viewModel)
                     return;

@@ -68,67 +68,83 @@
         <MenuItem Header="_File">
             <MenuItem Header="_Open Video File..." 
                       Command="{Binding PickMkvCommand}"
-                      InputGestureText="Ctrl+O"/>
+                      InputGestureText="Ctrl+O"
+                      ToolTip="Select a video file to extract subtitles from"/>
             <Separator/>
-            <MenuItem Header="_Recent Files">
+            <MenuItem Header="_Recent Files"
+                      ToolTip="Quick access to recently processed video files">
                 <!-- Recent files will be populated dynamically -->
             </MenuItem>
             <Separator/>
             <MenuItem Header="E_xit" 
                       Click="ExitMenuItem_Click"
-                      InputGestureText="Alt+F4"/>
+                      InputGestureText="Alt+F4"
+                      ToolTip="Close the application"/>
         </MenuItem>
         
         <MenuItem Header="_Edit">
             <MenuItem Header="_Cancel Operation" 
                       Command="{Binding CancelCommand}"
-                      InputGestureText="Ctrl+C"/>
+                      InputGestureText="Ctrl+C"
+                      ToolTip="Cancel the current operation"/>
         </MenuItem>
         
         <MenuItem Header="_Tools">
             <MenuItem Header="_Probe Tracks" 
                       Command="{Binding ProbeCommand}"
-                      InputGestureText="Ctrl+P"/>
+                      InputGestureText="Ctrl+P"
+                      ToolTip="Analyze the video file to find available subtitle tracks"/>
             <MenuItem Header="_Extract Subtitles" 
                       Command="{Binding ExtractCommand}"
-                      InputGestureText="Ctrl+E"/>
+                      InputGestureText="Ctrl+E"
+                      ToolTip="Extract the selected subtitle track to SRT format"/>
             <Separator/>
             <MenuItem Header="Re-_detect Tools" 
                       Command="{Binding ReDetectToolsCommand}"
-                      InputGestureText="F5"/>
+                      InputGestureText="F5"
+                      ToolTip="Re-detect and verify external tools (MKVToolNix, FFmpeg, etc.)"/>
             <MenuItem Header="_SRT Correction" 
-                      Click="SrtCorrection_Click"/>
+                      Click="SrtCorrection_Click"
+                      ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
         </MenuItem>
         
         <MenuItem Header="_Options">
             <MenuItem Header="_Toggle Batch Mode" 
                       IsCheckable="True"
                       IsChecked="{Binding State.IsBatchMode}"
-                      InputGestureText="Ctrl+B"/>
+                      InputGestureText="Ctrl+B"
+                      ToolTip="Enable batch processing mode for multiple files"/>
             <Separator/>
-            <MenuItem Header="_Subtitle Preferences">
+            <MenuItem Header="_Subtitle Preferences"
+                      ToolTip="Configure subtitle selection preferences">
                 <MenuItem Header="_Prefer Forced Subtitles" 
                           IsCheckable="True"
                           IsChecked="{Binding State.PreferForced}"
-                          Click="PreferForcedMenuItem_Click"/>
+                          Click="PreferForcedMenuItem_Click"
+                          ToolTip="Prioritize forced subtitles (usually foreign dialogue)"/>
                 <MenuItem Header="Prefer _Closed Captions" 
                           IsCheckable="True"
                           IsChecked="{Binding State.PreferClosedCaptions}"
-                          Click="PreferClosedCaptionsMenuItem_Click"/>
+                          Click="PreferClosedCaptionsMenuItem_Click"
+                          ToolTip="Prioritize closed caption subtitles (usually full dialogue)"/>
             </MenuItem>
             <Separator/>
             <MenuItem Header="_Settings..." 
-                      Click="SettingsMenuItem_Click"/>
+                      Click="SettingsMenuItem_Click"
+                      ToolTip="Open application settings and preferences"/>
         </MenuItem>
         
         <MenuItem Header="_Help">
             <MenuItem Header="_Keyboard Shortcuts" 
-                      Click="KeyboardShortcuts_Click"/>
+                      Click="KeyboardShortcuts_Click"
+                      ToolTip="View all available keyboard shortcuts"/>
             <MenuItem Header="_User Guide" 
-                      Click="UserGuide_Click"/>
+                      Click="UserGuide_Click"
+                      ToolTip="Open the user guide and documentation"/>
             <Separator/>
             <MenuItem Header="_About SrtExtractor..." 
-                      Click="AboutMenuItem_Click"/>
+                      Click="AboutMenuItem_Click"
+                      ToolTip="Show application information and version"/>
         </MenuItem>
     </Menu>
 
@@ -157,12 +173,14 @@
             <StackPanel Orientation="Horizontal">
                 <Button Content="Pick Video..." 
                         Command="{Binding PickMkvCommand}"
-                        IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                        IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                        ToolTip="Select a video file to extract subtitles from (Ctrl+O)"/>
                 <TextBox Text="{Binding State.MkvPath}" 
                          IsReadOnly="True" 
                          Margin="4,0"
                          VerticalAlignment="Center"
-                         MinWidth="300"/>
+                         MinWidth="300"
+                         ToolTip="Path to the selected video file"/>
             </StackPanel>
         </GroupBox>
 
@@ -176,7 +194,8 @@
                           VerticalAlignment="Center"
                           FontWeight="Bold"
                           Foreground="DarkBlue"
-                          Margin="0,5"/>
+                          Margin="0,5"
+                          ToolTip="Enable batch processing mode for multiple files (Ctrl+B)"/>
                 
                 <!-- Subtitle Preference Radio Buttons -->
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
@@ -184,12 +203,14 @@
                                  IsChecked="{Binding State.PreferForced}"
                                  GroupName="SubtitlePreference"
                                  VerticalAlignment="Center"
-                                 Margin="0,0,20,0"/>
+                                 Margin="0,0,20,0"
+                                 ToolTip="Prioritize forced subtitles (usually foreign dialogue)"/>
                     <RadioButton Content="Prefer CC (Closed Captions)" 
                                  IsChecked="{Binding State.PreferClosedCaptions}"
                                  GroupName="SubtitlePreference"
                                  VerticalAlignment="Center"
-                                 Margin="0,0,20,0"/>
+                                 Margin="0,0,20,0"
+                                 ToolTip="Prioritize closed caption subtitles (usually full dialogue)"/>
                 </StackPanel>
                 
                 <!-- Batch Mode Instructions -->
@@ -238,7 +259,8 @@
                     <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
                               ItemsSource="{Binding State.AvailableLanguages}"
                               Width="80"
-                              Margin="0,0,20,0"/>
+                              Margin="0,0,20,0"
+                              ToolTip="Select the language for OCR text recognition"/>
                     <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBox Text="{Binding State.FileNamePattern}" 
                              Width="200"
@@ -275,16 +297,19 @@
                     <Button Content="Probe Tracks" 
                             Command="{Binding ProbeCommand}"
                             IsEnabled="{Binding State.CanProbe}"
-                            Background="LightBlue"/>
+                            Background="LightBlue"
+                            ToolTip="Analyze the video file to find available subtitle tracks (Ctrl+P)"/>
                     <Button Content="Extract Selected → SRT" 
                             Command="{Binding ExtractCommand}"
                             IsEnabled="{Binding State.CanExtract}"
-                            Background="LightCoral"/>
+                            Background="LightCoral"
+                            ToolTip="Extract the selected subtitle track to SRT format (Ctrl+E)"/>
                     <Button Content="Cancel" 
                             Command="{Binding CancelCommand}"
                             IsEnabled="{Binding State.IsProcessing}"
                             Background="Orange"
-                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
+                            ToolTip="Cancel the current operation (Ctrl+C or Esc)"/>
                 </StackPanel>
                 
                 <!-- Batch Mode Actions -->
@@ -298,7 +323,8 @@
                             FontWeight="Bold"
                             FontSize="14"
                             Padding="16,8"
-                            Margin="0,0,10,0"/>
+                            Margin="0,0,10,0"
+                            ToolTip="Process all files in the batch queue with current settings"/>
                     <Button Content="Cancel Batch" 
                             Command="{Binding CancelCommand}"
                             IsEnabled="{Binding State.IsProcessing}"
@@ -306,14 +332,16 @@
                             Foreground="White"
                             FontWeight="Bold"
                             Padding="16,8"
-                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
+                            ToolTip="Cancel the current batch operation (Ctrl+C or Esc)"/>
                 </StackPanel>
                 
                 <!-- Common Actions -->
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <Button Content="Clear Log" 
                             Click="ClearLog_Click"
-                            Background="LightGray"/>
+                            Background="LightGray"
+                            ToolTip="Clear the log display"/>
                     <Button Content="🔧 SRT Correction" 
                             Click="SrtCorrection_Click"
                             Background="LightGreen"
@@ -329,7 +357,8 @@
                 <ProgressBar IsIndeterminate="True" 
                             Width="20" 
                             Height="20" 
-                            Margin="0,0,10,0"/>
+                            Margin="0,0,10,0"
+                            ToolTip="Processing operation in progress"/>
                 <TextBlock Text="{Binding State.ProcessingMessage}" 
                            FontWeight="Bold" 
                            VerticalAlignment="Center"/>
@@ -352,22 +381,57 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" 
                                         Binding="{Binding Id}" 
-                                        Width="40"/>
+                                        Width="40">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Track ID number from the video file"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Codec" 
                                         Binding="{Binding Codec}" 
-                                        Width="120"/>
+                                        Width="120">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Subtitle format (SRT, ASS, VOBSUB, etc.)"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Language" 
                                         Binding="{Binding Language}" 
-                                        Width="80"/>
+                                        Width="80">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Subtitle language code (en, es, fr, etc.)"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Type" 
                                         Binding="{Binding TrackType}" 
-                                        Width="80"/>
+                                        Width="80">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Subtitle track type (subtitles, captions, etc.)"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridCheckBoxColumn Header="Forced" 
                                             Binding="{Binding Forced}" 
-                                            Width="60"/>
+                                            Width="60">
+                        <DataGridCheckBoxColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Indicates if this is a forced subtitle track"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.HeaderStyle>
+                    </DataGridCheckBoxColumn>
                     <DataGridTextColumn Header="Recommended" 
                                         Binding="{Binding IsRecommended}" 
                                         Width="100">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Shows if this track matches your preferences"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Text" Value="⭐ Recommended"/>
@@ -385,16 +449,40 @@
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="Bitrate" 
                                         Binding="{Binding Bitrate, StringFormat='{}{0:N0} bps'}" 
-                                        Width="100"/>
+                                        Width="100">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Data rate in bits per second"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Frames" 
                                         Binding="{Binding FrameCount}" 
-                                        Width="70"/>
+                                        Width="70">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Number of subtitle frames/segments"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Duration" 
                                         Binding="{Binding Duration, Converter={StaticResource DurationConverter}}" 
-                                        Width="100"/>
+                                        Width="100">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Total duration of the subtitle track"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Name" 
                                         Binding="{Binding Name}" 
-                                        Width="*"/>
+                                        Width="*">
+                        <DataGridTextColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="ToolTip" Value="Custom name or title of the subtitle track"/>
+                            </Style>
+                        </DataGridTextColumn.HeaderStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </GroupBox>
@@ -415,39 +503,6 @@
             </ScrollViewer>
         </GroupBox>
 
-        <!-- Drag and Drop Overlay - Must be last to appear on top -->
-        <Border x:Name="DragOverlay" 
-                Background="#E3F2FD" 
-                BorderBrush="#2196F3" 
-                BorderThickness="2" 
-                CornerRadius="8"
-                Opacity="0.95"
-                Visibility="Collapsed"
-                Margin="20"
-                Grid.RowSpan="6">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
-                <TextBlock Text="📁" 
-                           FontSize="48" 
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,10"/>
-                <TextBlock Text="Drop video files here" 
-                           FontSize="18" 
-                           FontWeight="SemiBold" 
-                           Foreground="#1976D2"
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="to add to batch queue" 
-                           FontSize="16" 
-                           FontWeight="Normal" 
-                           Foreground="#1976D2"
-                           HorizontalAlignment="Center"
-                           Margin="0,2,0,0"/>
-                <TextBlock Text="Supports: MKV, MP4" 
-                           FontSize="12" 
-                           Foreground="#666666"
-                           HorizontalAlignment="Center"
-                           Margin="0,8,0,0"/>
-            </StackPanel>
-        </Border>
         </Grid>
 
         <!-- Queue Panel -->
@@ -455,7 +510,12 @@
                   Visibility="{Binding State.QueueColumnWidth, Converter={StaticResource DoubleToVisibilityConverter}}"
                   Background="#F8FAFC"
                   BorderBrush="#E2E8F0"
-                  BorderThickness="1">
+                  BorderThickness="1"
+                  AllowDrop="True"
+                  Drop="QueuePanel_Drop"
+                  DragEnter="QueuePanel_DragEnter"
+                  DragOver="QueuePanel_DragOver"
+                  DragLeave="QueuePanel_DragLeave">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -486,7 +546,8 @@
                             Margin="10,0,0,0"
                             Padding="4,2"
                             FontSize="10"
-                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
+                            ToolTip="Remove all files from the batch queue"/>
                 </StackPanel>
                 
                 <!-- Queue List -->
@@ -561,7 +622,8 @@
                                                 FontWeight="Bold"
                                                 Width="20" Height="20"
                                                 Margin="4,0,0,0"
-                                                Padding="0"/>
+                                                Padding="0"
+                                                ToolTip="Remove this file from the batch queue"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -605,7 +667,8 @@
                                FontSize="11"/>
                     <ProgressBar Value="{Binding State.BatchProgressPercentage}" 
                                  Height="15" 
-                                 Margin="0,4,0,0"/>
+                                 Margin="0,4,0,0"
+                                 ToolTip="Batch processing progress"/>
                     <TextBlock Text="{Binding State.BatchProgressMessage}" 
                                HorizontalAlignment="Center" 
                                FontStyle="Italic" 
