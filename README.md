@@ -15,15 +15,19 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 ## ✨ Features
 
 - **Multi-format Support**: Handles both MKV and MP4 video files
+- **Batch Processing**: Process multiple files simultaneously with drag & drop support
+- **Network File Detection**: Automatically detects network drives with performance estimates
 - **Automatic Tool Management**: Detects and auto-downloads necessary external tools
 - **Smart Subtitle Detection**: Automatically finds and lists available subtitle tracks
 - **Flexible Output**: Generates SRT files with customizable naming patterns
 - **Real-time Logging**: Provides detailed logs of all operations
-- **User-friendly Interface**: Clean, intuitive WPF interface
+- **User-friendly Interface**: Clean, intuitive WPF interface with modern design
 - **OCR Support**: Converts image-based subtitles (PGS) to text using Subtitle Edit
 - **Smart OCR Correction**: Automatically fixes common OCR errors in subtitle text
 - **Standalone Correction Tool**: Correct existing SRT files independently
 - **Preference Settings**: Choose between forced subtitles or closed captions
+- **Process Cancellation**: Cancel long-running operations with proper cleanup
+- **Temporary File Management**: Automatic cleanup of temporary files during processing
 
 ## 🛠️ Supported Subtitle Formats
 
@@ -69,13 +73,33 @@ The application will automatically detect and download required external tools o
 
 ## 🚀 Usage
 
-### Basic Workflow
+### Single File Processing
 
 1. **Select Video File**: Click "Pick Video..." to choose your MKV or MP4 file
 2. **Probe Tracks**: Click "Probe Tracks" to analyze the file for subtitle tracks
 3. **Select Track**: Choose your preferred subtitle track from the list
 4. **Extract**: Click "Extract Selected → SRT" to generate the SRT file
 5. **Automatic Correction**: OCR errors are automatically corrected during extraction
+
+### Batch Processing
+
+Process multiple files efficiently with the new batch mode:
+
+1. **Enable Batch Mode**: Check "🎬 Enable Batch Mode" in the Settings panel
+2. **Confirm Settings**: Review your preferred subtitle settings (forced/CC, OCR language)
+3. **Add Files**: Drag & drop MKV/MP4 files anywhere on the window to add them to the queue
+4. **Review Queue**: Check the batch queue panel showing file sizes, network indicators (🌐), and estimated processing times
+5. **Process Batch**: Click "🚀 Process Batch" to extract subtitles from all files
+6. **Monitor Progress**: Watch real-time progress with detailed status updates
+7. **Review Results**: Get a comprehensive summary of successful, failed, and cancelled files
+
+#### Batch Mode Features
+- **Network Detection**: Files on network drives show 🌐 indicator with realistic time estimates
+- **Drag & Drop**: Simply drag files onto the application window to add them to the queue
+- **Progress Tracking**: Real-time progress bar and "Processing X of Y files" counter
+- **Cancellation Support**: Cancel batch processing at any time with proper cleanup
+- **Detailed Summary**: Complete breakdown of processing results when finished
+- **Automatic Cleanup**: Temporary files are automatically cleaned up during and after processing
 
 ### Standalone SRT Correction
 
@@ -152,9 +176,12 @@ SrtExtractor provides comprehensive logging:
 
 ## 🎨 User Interface
 
-- **Clean Design**: Modern, intuitive interface
+- **Clean Design**: Modern, intuitive interface with optimized layout
 - **Real-time Feedback**: Progress indicators and status updates
 - **Tool Status**: Visual indicators for external tool availability
+- **Batch Queue Panel**: Dedicated panel for managing multiple files with drag & drop
+- **Network Indicators**: Visual indicators (🌐) for network files with time estimates
+- **Progress Tracking**: Real-time progress bars and counters for batch operations
 - **About Window**: Branding and credits information
 
 ## 🐛 Troubleshooting
@@ -164,6 +191,10 @@ SrtExtractor provides comprehensive logging:
 1. **Tools Not Found**: Use "Re-detect Tools" button or check tool installation
 2. **Extraction Fails**: Verify the selected track is a supported format
 3. **OCR Issues**: Ensure Subtitle Edit CLI is properly built and available
+4. **Batch Mode Not Working**: Ensure you've enabled batch mode and added files to the queue
+5. **Network Files Slow**: Files on network drives will take longer - this is normal
+6. **Temporary Files Left Behind**: Use the "🧹 Cleanup Temp Files" button if needed
+7. **Cancellation Issues**: If processes don't stop, restart the application
 
 ### Log Files
 
