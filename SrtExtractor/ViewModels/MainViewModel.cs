@@ -67,7 +67,6 @@ public partial class MainViewModel : ObservableObject
         ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
         ClearBatchQueueCommand = new RelayCommand(ClearBatchQueue);
         RemoveFromBatchCommand = new RelayCommand<BatchFile>(RemoveFromBatch);
-        CleanupTempFilesCommand = new AsyncRelayCommand(CleanupTempFiles);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -117,7 +116,6 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand ProcessBatchCommand { get; }
     public IRelayCommand ClearBatchQueueCommand { get; }
     public IRelayCommand<BatchFile> RemoveFromBatchCommand { get; }
-    public IAsyncRelayCommand CleanupTempFilesCommand { get; }
 
     #endregion
 
@@ -740,12 +738,11 @@ public partial class MainViewModel : ObservableObject
             if (openFileDialog.ShowDialog() == true)
             {
                 State.AddLogMessage($"Correcting OCR errors in: {openFileDialog.FileName}");
-                State.UpdateProcessingMessage("Correcting common OCR errors...");
+                // Don't modify ProcessingMessage as this is a separate operation that can run concurrently
                 
                 var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(openFileDialog.FileName);
                 
                 State.AddLogMessage($"🎯 SRT correction completed successfully! Applied {correctionCount} corrections.");
-                State.UpdateProcessingMessage("SRT correction completed!");
                 MessageBox.Show("SRT file has been corrected successfully!", "Correction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -758,7 +755,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             State.IsBusy = false;
-            State.UpdateProcessingMessage("");
+            // Don't clear ProcessingMessage as it belongs to the main extraction process
         }
     }
 
@@ -825,6 +822,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Clean up temporary files that might have been created during extraction.
+    /// This is called automatically after each extraction to ensure no temp files are left behind.
     /// </summary>
     private async Task CleanupTemporaryFiles(string mkvPath, SubtitleTrack? selectedTrack)
     {
@@ -845,22 +843,28 @@ public partial class MainViewModel : ObservableObject
                     _loggingService.LogInfo($"Cleaning up temporary SUP file: {tempSupPath}");
                     
                     // Give the process a moment to release the file handle
-                    await Task.Delay(1000);
+                    await Task.Delay(2000); // Increased delay for better reliability
                     
                     // Try to delete the file, with retry logic for file handle issues
-                    var maxRetries = 3;
+                    var maxRetries = 5; // Increased retries
                     for (int i = 0; i < maxRetries; i++)
                     {
                         try
                         {
                             File.Delete(tempSupPath);
-                            State.AddLogMessage($"🧹 Cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
+                            _loggingService.LogInfo($"Successfully cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
+                            // Don't spam the UI log with cleanup messages - this is automatic
                             break;
                         }
                         catch (IOException) when (i < maxRetries - 1)
                         {
-                            _loggingService.LogInfo($"File still in use, retrying in 1 second... (attempt {i + 1}/{maxRetries})");
-                            await Task.Delay(1000);
+                            _loggingService.LogInfo($"File still in use, retrying in 2 seconds... (attempt {i + 1}/{maxRetries})");
+                            await Task.Delay(2000); // Increased delay between retries
+                        }
+                        catch (UnauthorizedAccessException) when (i < maxRetries - 1)
+                        {
+                            _loggingService.LogInfo($"Access denied, retrying in 2 seconds... (attempt {i + 1}/{maxRetries})");
+                            await Task.Delay(2000);
                         }
                     }
                 }
@@ -869,56 +873,10 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to clean up temporary files", ex);
-            State.AddLogMessage($"Warning: Could not clean up temporary files: {ex.Message}");
+            // Don't show this to the user as it's automatic cleanup - just log it
         }
     }
 
-    /// <summary>
-    /// Clean up temporary files manually (for user-initiated cleanup).
-    /// </summary>
-    private async Task CleanupTempFiles()
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(State.MkvPath) || State.SelectedTrack == null)
-            {
-                State.AddLogMessage("No file selected for cleanup");
-                return;
-            }
-
-            var outputPath = State.GenerateOutputFilename(State.MkvPath, State.SelectedTrack);
-            var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
-            
-            if (File.Exists(tempSupPath))
-            {
-                // Try to delete the file, with retry logic for file handle issues
-                var maxRetries = 3;
-                for (int i = 0; i < maxRetries; i++)
-                {
-                    try
-                    {
-                        File.Delete(tempSupPath);
-                        State.AddLogMessage($"🧹 Cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
-                        break;
-                    }
-                    catch (IOException) when (i < maxRetries - 1)
-                    {
-                        _loggingService.LogInfo($"File still in use, retrying in 1 second... (attempt {i + 1}/{maxRetries})");
-                        await Task.Delay(1000);
-                    }
-                }
-            }
-            else
-            {
-                State.AddLogMessage("No temporary files found to clean up");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to clean up temporary files", ex);
-            State.AddLogMessage($"Error cleaning up temporary files: {ex.Message}");
-        }
-    }
 
     /// <summary>
     /// Process all files in the batch queue.

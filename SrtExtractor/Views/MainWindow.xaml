@@ -7,14 +7,16 @@
             xmlns:converters="clr-namespace:SrtExtractor.Converters"
             mc:Ignorable="d"
             Title="SrtExtractor - MKV/MP4 Subtitle Extractor"
-            Height="700" Width="1200"
-            MinHeight="600" MinWidth="1000"
+            Height="900" Width="1250"
+            MinHeight="700" MinWidth="1000"
             Background="White">
     
     <Window.Resources>
         <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <converters:DoubleToVisibilityConverter x:Key="DoubleToVisibilityConverter"/>
+        <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
+        <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <Style TargetType="Button">
@@ -169,26 +171,22 @@
                         Padding="8,4"
                         HorizontalAlignment="Center"/>
                 
-                <!-- Cleanup Temp Files Button -->
-                <Button Content="🧹 Cleanup Temp Files" 
-                        Command="{Binding CleanupTempFilesCommand}"
-                        Background="LightYellow" 
-                        Margin="0,4,0,0"
-                        Padding="8,4"
-                        HorizontalAlignment="Center"/>
             </StackPanel>
         </GroupBox>
 
         <!-- Settings Row -->
         <GroupBox Header="Settings" Grid.Row="1" Grid.Column="1">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,5">
-                    <CheckBox Content="🎬 Enable Batch Mode (Process Multiple Files)" 
-                              IsChecked="{Binding State.IsBatchMode}"
-                              VerticalAlignment="Center"
-                              FontWeight="Bold"
-                              Foreground="DarkBlue"
-                              Margin="0,0,20,0"/>
+                <!-- Batch Mode Checkbox -->
+                <CheckBox Content="🎬 Enable Batch Mode (Process Multiple Files)" 
+                          IsChecked="{Binding State.IsBatchMode}"
+                          VerticalAlignment="Center"
+                          FontWeight="Bold"
+                          Foreground="DarkBlue"
+                          Margin="0,5"/>
+                
+                <!-- Subtitle Preference Radio Buttons -->
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <RadioButton Content="Prefer forced subtitles" 
                                  IsChecked="{Binding State.PreferForced}"
                                  GroupName="SubtitlePreference"
@@ -408,7 +406,7 @@
 
         <!-- Log Display -->
         <GroupBox Header="Log" Grid.Row="4" Grid.ColumnSpan="2">
-            <ScrollViewer Height="150" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+            <ScrollViewer Height="250" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 
                          TextWrapping="Wrap" 
@@ -504,34 +502,60 @@
                              ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Margin="2" Padding="8">
+                                <Border BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Margin="2" Padding="8">
+                                    <Border.Background>
+                                        <Binding Path="Status" Converter="{StaticResource StatusToBackgroundConverter}"/>
+                                    </Border.Background>
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         
-                                        <TextBlock Grid.Row="0" Grid.Column="0" 
+                                        <!-- Status Indicator -->
+                                        <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" 
+                                                   FontSize="16" 
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0">
+                                            <TextBlock.Text>
+                                                <Binding Path="Status" Converter="{StaticResource StatusToIconConverter}"/>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                        
+                                        <!-- File Info -->
+                                        <TextBlock Grid.Row="0" Grid.Column="1" 
                                                    Text="{Binding FileName}" 
                                                    FontWeight="Bold" 
                                                    TextWrapping="Wrap"
-                                                   MaxWidth="200"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" 
+                                                   MaxWidth="180"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" 
                                                    Text="{Binding FormattedFileSize}" 
                                                    FontSize="10" 
                                                    Foreground="Gray"
                                                    Margin="0,2,0,0"/>
-                                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,2,0,0">
+                                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,2,0,0">
                                             <TextBlock Text="{Binding NetworkIndicator}" FontSize="12"/>
                                             <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="10" Foreground="Blue" Margin="4,0,0,0"/>
                                         </StackPanel>
                                         
-                                        <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" 
+                                        <!-- Status Message -->
+                                        <TextBlock Grid.Row="3" Grid.Column="1" 
+                                                   Text="{Binding StatusMessage}" 
+                                                   FontSize="9" 
+                                                   Foreground="DarkGray"
+                                                   FontStyle="Italic"
+                                                   Margin="0,2,0,0"
+                                                   TextWrapping="Wrap"/>
+                                        
+                                        <!-- Remove Button -->
+                                        <Button Grid.Row="0" Grid.RowSpan="4" Grid.Column="2" 
                                                 Content="×" 
                                                 Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}"

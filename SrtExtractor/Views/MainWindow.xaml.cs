@@ -40,8 +40,8 @@ namespace SrtExtractor.Views
 
         private void MainWindow_DragEnter(object sender, DragEventArgs e)
         {
-            // Check if the dragged data contains files
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            // Only allow drag & drop if batch mode is enabled
+            if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 e.Effects = DragDropEffects.Copy;
                 DragOverlay.Visibility = Visibility.Visible;
@@ -55,8 +55,8 @@ namespace SrtExtractor.Views
 
         private void MainWindow_DragOver(object sender, DragEventArgs e)
         {
-            // Maintain the copy effect during drag over
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            // Only allow drag & drop if batch mode is enabled
+            if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 e.Effects = DragDropEffects.Copy;
                 DragOverlay.Visibility = Visibility.Visible;
@@ -85,6 +85,14 @@ namespace SrtExtractor.Views
                 if (!e.Data.GetDataPresent(DataFormats.FileDrop))
                     return;
 
+                // Check if batch mode is enabled
+                if (!viewModel.State.IsBatchMode)
+                {
+                    MessageBox.Show("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", 
+                                  "Batch Mode Required", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
                 var files = (string[])e.Data.GetData(DataFormats.FileDrop);
                 if (files == null || files.Length == 0)
                     return;
@@ -110,19 +118,16 @@ namespace SrtExtractor.Views
                 // Add files to batch queue
                 viewModel.AddFilesToBatchQueue(videoFiles);
 
-                // Show feedback only if not in batch mode (to avoid interrupting batch processing)
-                if (!viewModel.State.IsBatchMode)
+                // Show feedback
+                if (videoFiles.Length == 1)
                 {
-                    if (videoFiles.Length == 1)
-                    {
-                        MessageBox.Show($"Added {Path.GetFileName(videoFiles[0])} to the batch queue.", 
-                                      "File Added", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show($"Added {videoFiles.Length} files to the batch queue.", 
-                                      "Files Added", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
+                    MessageBox.Show($"Added {Path.GetFileName(videoFiles[0])} to the batch queue.", 
+                                  "File Added", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show($"Added {videoFiles.Length} files to the batch queue.", 
+                                  "Files Added", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)

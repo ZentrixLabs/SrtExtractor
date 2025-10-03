@@ -9,6 +9,17 @@
     <ApplicationIcon>SrtExtractor.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- Auto-generate version from git tag -->
+  <Target Name="SetVersionFromGit" BeforeTargets="GetAssemblyVersion">
+    <Exec Command="git describe --tags --abbrev=0" ConsoleToMSBuild="true" StandardOutputImportance="high" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitTag" />
+    </Exec>
+    <PropertyGroup>
+      <Version Condition="'$(GitTag)' != ''">$(GitTag.Substring(1))</Version>
+      <Version Condition="'$(GitTag)' == ''">1.0.0</Version>
+    </PropertyGroup>
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
