@@ -61,7 +61,8 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
@@ -84,7 +85,7 @@
         </GroupBox>
 
         <!-- Tool Status Panel -->
-        <GroupBox Header="Tool Status" Grid.Row="1" Grid.Column="0">
+        <GroupBox Header="Tool Status" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
             <StackPanel>
                 <Grid>
                 <Grid.RowDefinitions>
@@ -175,7 +176,7 @@
         </GroupBox>
 
         <!-- Settings Row -->
-        <GroupBox Header="Settings" Grid.Row="1" Grid.Column="1">
+        <GroupBox Header="Settings" Grid.Row="2" Grid.Column="1">
             <StackPanel>
                 <!-- Batch Mode Checkbox -->
                 <CheckBox Content="🎬 Enable Batch Mode (Process Multiple Files)" 
@@ -330,7 +331,7 @@
         </GroupBox>
 
         <!-- Processing Indicator -->
-        <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+        <GroupBox Header="Processing" Grid.Row="3" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" 
                             Width="20" 
@@ -343,7 +344,7 @@
         </GroupBox>
 
         <!-- Track List -->
-        <GroupBox Header="Subtitle Tracks" Grid.Row="3" Grid.ColumnSpan="2"
+        <GroupBox Header="Subtitle Tracks" Grid.Row="4" Grid.ColumnSpan="2"
                   Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
             <DataGrid ItemsSource="{Binding State.Tracks}" 
                       SelectedItem="{Binding State.SelectedTrack}"
@@ -353,7 +354,8 @@
                       CanUserDeleteRows="False"
                       GridLinesVisibility="Horizontal"
                       HeadersVisibility="Column"
-                      SelectionMode="Single">
+                      SelectionMode="Single"
+                      MaxHeight="200">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="ID" 
                                         Binding="{Binding Id}" 
@@ -405,7 +407,7 @@
         </GroupBox>
 
         <!-- Log Display -->
-        <GroupBox Header="Log" Grid.Row="4" Grid.ColumnSpan="2">
+        <GroupBox Header="Log" Grid.Row="5" Grid.ColumnSpan="2">
             <ScrollViewer Height="250" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 
@@ -427,7 +429,7 @@
                 Opacity="0.95"
                 Visibility="Collapsed"
                 Margin="20"
-                Grid.RowSpan="7">
+                Grid.RowSpan="6">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
                 <TextBlock Text="📁" 
                            FontSize="48" 
