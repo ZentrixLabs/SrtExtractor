@@ -13,14 +13,13 @@ This document outlines a comprehensive plan for enhancing SrtExtractor's user ex
 - **Recent Files Menu**: Quick access to recently processed files with persistent storage and dynamic menu population
 - **Enhanced Progress Indicators**: Detailed progress information including processing speed, ETA, current file, and memory usage
 - **Window State Persistence**: Remembers window size, position, and panel layouts across app restarts
+- **Context Menu Improvements**: Comprehensive right-click context menus across all UI areas with track actions, batch management, log operations, and file system integration
 
 ### 🔄 **In Progress**
-- Phase 1 UX Polish (6 of 6 items completed) ✅ **PHASE 1 COMPLETE**
+- Phase 1 UX Polish (8 of 8 items completed) ✅ **PHASE 1 COMPLETE**
 
 ### 📋 **Next Priority**
-- Context Menu Improvements (2-3 hours)
-- Enhanced Status Bar (1-2 hours)
-- File Associations (2-3 hours)
+- Ready for Phase 2: Enhanced Batch Processing or Performance Monitoring
 
 ---
 
@@ -156,110 +155,144 @@ public class WindowStateService
 - Persist user preferences
 - Auto-save settings on change
 
+### 1.7 Context Menu Improvements ⭐ **HIGH PRIORITY** ✅ **COMPLETED**
+**Impact**: High | **Effort**: Low (2-3 hours)
+
+Comprehensive right-click context menus across all major UI areas:
+
+**Subtitle Tracks DataGrid Context Menu**:
+- **Select Track** - Extract the selected subtitle track (with keyboard shortcut hint)
+- **Show Track Details** - View detailed information about the track
+- **Copy Track Info** - Copy track information to clipboard
+- **Refresh Tracks** - Re-analyze the video file for subtitle tracks
+
+**Batch Queue Items Context Menu**:
+- **Process This File** - Process only the selected file from the batch queue
+- **Remove from Queue** - Remove the file from batch processing
+- **Move to Top/Bottom** - Reorder files in the queue
+- **Open File Location** - Open the folder containing the file
+- **Show File Properties** - View detailed file properties
+
+**Log Text Area Context Menu**:
+- **Copy All** - Copy entire log content to clipboard
+- **Copy Selection** - Copy selected text to clipboard
+- **Clear Log** - Clear the log display
+- **Save Log to File** - Save log content to a text file
+- **Open Log Folder** - Open the folder containing log files
+
+**File Path TextBox Context Menu**:
+- **Copy File Path** - Copy full file path to clipboard
+- **Copy File Name** - Copy just the filename to clipboard
+- **Open File Location** - Open the folder containing the video file
+- **Show File Properties** - View detailed file properties
+- **Change Video File** - Select a different video file
+
+**Technical Implementation**:
+- 15+ new event handlers in MainWindow.xaml.cs
+- New methods in MainViewModel for batch queue management
+- File system integration (explorer.exe)
+- Clipboard operations with proper error handling
+- User feedback and confirmation dialogs
+
+**User Experience Impact**:
+- Intuitive right-click navigation across all UI areas
+- Professional-grade context menu functionality
+- Enhanced productivity with quick access to common actions
+- Consistent user experience with visual feedback and error handling
+
+### 1.8 Enhanced Status Bar ⭐ **HIGH PRIORITY** ✅ **COMPLETED/SKIPPED**
+**Impact**: High | **Effort**: Low (1-2 hours)
+
+~~Improve the status bar with better progress indicators and more detailed information:~~
+
+**DECISION**: Skipped in favor of clean, simple processing indicator. The enhanced status bar would add complexity that conflicts with the simplified approach we implemented.
+
+**Current Status Bar Issues**:
+- Basic progress bar without context
+- Limited information during processing
+- No clear indication of what's happening
+
+**Enhanced Status Bar Features**:
+```csharp
+// Status bar improvements:
+- Current operation description (e.g., "Extracting subtitles from video.mkv")
+- File progress (e.g., "File 3 of 7")
+- Processing speed (e.g., "Processing at 15.2 MB/s")
+- Time remaining estimate (e.g., "ETA: 2m 30s")
+- Memory usage indicator (e.g., "Memory: 245 MB")
+- Tool status indicators (e.g., "FFmpeg: Ready", "MKVToolNix: Processing")
+```
+
+**Visual Improvements**:
+- Multi-segment progress bar showing different operation phases
+- Color-coded status indicators (green=ready, yellow=processing, red=error)
+- Smooth animations for progress updates
+- Tooltip with detailed information on hover
+- Clickable elements for quick actions
+
+**Implementation**:
+- Enhance existing status bar in MainWindow.xaml
+- Add new properties to ExtractionState for status information
+- Update MainViewModel to provide detailed status updates
+- Add real-time progress calculation during processing
+
 ---
 
 ## 🔧 Phase 2: Power User Features
 *Estimated Time: 3-5 days*
 
-### 2.1 Subtitle Quality Analysis 🎯 **MEDIUM PRIORITY**
-**Impact**: Medium | **Effort**: Medium (1-2 days)
+### 2.1 Subtitle Quality Analysis 🎯 **LOW PRIORITY**
+**Impact**: Low | **Effort**: Medium (1-2 days)
 
-Analyze subtitle quality and provide recommendations:
+Simple subtitle quality checks:
 
 ```csharp
-// SubtitleQualityAnalyzer service:
-public class SubtitleQualityAnalyzer
-{
-    public QualityReport AnalyzeSrtFile(string filePath);
-    public List<QualityIssue> GetQualityIssues(string filePath);
-    public QualityScore CalculateQualityScore(string filePath);
-}
-
-public class QualityReport
-{
-    public int TotalSubtitles { get; set; }
-    public double AverageCharactersPerSecond { get; set; }
-    public List<QualityIssue> Issues { get; set; }
-    public QualityScore OverallScore { get; set; }
-    public List<string> Recommendations { get; set; }
-}
+// Basic quality analysis:
+- Check for empty subtitles
+- Detect very long subtitle durations
+- Find potential timing issues
+- Basic character count validation
 ```
 
-**Analysis features**:
-- Reading speed analysis (characters/second)
-- Subtitle duration validation
-- Gap detection between subtitles
-- Character count per subtitle
-- Quality score with recommendations
-- Export quality report to file
+**Simple features**:
+- Quick quality check after extraction
+- Basic validation warnings
+- Simple quality score (good/okay/poor)
 
 ### 2.2 Enhanced Batch Processing 🎯 **MEDIUM PRIORITY**
-**Impact**: High | **Effort**: Medium (2-3 days)
+**Impact**: High | **Effort**: Medium (1-2 days)
 
-Advanced batch processing capabilities:
+Better batch processing:
 
 ```csharp
-// Enhanced batch features:
-- Filter by file size, date, or metadata
-- Priority queue with drag & drop reordering
+// Simple batch improvements:
+- Drag & drop reordering in batch queue
 - Resume interrupted batch operations
-- Batch statistics and reporting
-- Export batch results to CSV/JSON
-- Batch operation templates
+- Basic batch statistics
+- Clear completed items from queue
 ```
 
 **UI Improvements**:
-- Advanced filtering options
 - Drag & drop reordering in batch queue
-- Batch operation presets
-- Detailed batch statistics
-- Export batch results
+- Simple batch progress display
+- Clear queue options
 
-### 2.3 Advanced Correction Engine 🎯 **MEDIUM PRIORITY**
-**Impact**: Medium | **Effort**: Medium (1-2 days)
+### 2.3 Performance Monitoring 🎯 **LOW PRIORITY**
+**Impact**: Low | **Effort**: Low (1 day)
 
-Enhanced subtitle correction capabilities:
-
-```csharp
-// AdvancedCorrectionService:
-public class AdvancedCorrectionService
-{
-    public CorrectionProfile CreateCustomProfile(string name);
-    public void ApplyCustomRules(string filePath, CorrectionProfile profile);
-    public CorrectionStatistics GetCorrectionStats(string filePath);
-    public void UndoCorrections(string filePath);
-}
-```
-
-**Features**:
-- Language-specific correction patterns
-- Custom correction rules editor
-- Correction confidence scoring
-- Undo/redo for corrections
-- Correction statistics and analytics
-- Import/export correction profiles
-
-### 2.4 Performance Monitoring 🎯 **MEDIUM PRIORITY**
-**Impact**: Medium | **Effort**: Low (1 day)
-
-Monitor and display performance metrics:
+Basic performance info:
 
 ```csharp
-// PerformanceMonitor service:
-public class PerformanceMonitor
-{
-    public ProcessingMetrics GetCurrentMetrics();
-    public List<ProcessingSession> GetProcessingHistory();
-    public PerformanceRecommendations GetRecommendations();
-}
+// Simple performance tracking:
+- Processing speed display
+- Basic memory usage
+- Error count
 ```
 
-**Metrics to track**:
-- Processing speed (files/hour, MB/s)
-- Memory usage patterns
-- Error rates and types
-- Tool performance comparison
-- System resource utilization
+**Simple features**:
+- Show processing speed in status bar
+- Basic memory usage indicator
+- Simple error counter
 
 ---
 
@@ -418,10 +451,11 @@ Cloud-based features and collaboration:
 | Recent Files Menu | Medium | Low | ⭐ High | 1 | ⭐ High | ✅ **DONE** |
 | Enhanced Progress | High | Medium | ⭐ High | 1 | ⭐ High | ✅ **DONE** |
 | Window Persistence | Medium | Low | ⭐ High | 1 | ⭐ High | ✅ **DONE** |
-| Quality Analysis | Medium | Medium | 🎯 Medium | 2 | 🎯 Medium |
+| Context Menus | High | Low | 🔥 Very High | 1 | 🔥 Critical | ✅ **DONE** |
+| Enhanced Status Bar | High | Low | ⭐ High | 1 | ⭐ High | ✅ **SKIPPED** |
 | Enhanced Batch | High | Medium | ⭐ High | 2 | ⭐ High |
-| Advanced Correction | Medium | Medium | 🎯 Medium | 2 | 🎯 Medium |
-| Performance Monitor | Medium | Low | ⭐ High | 2 | ⭐ High |
+| Quality Analysis | Low | Medium | 🎯 Low | 2 | 🎯 Low |
+| Performance Monitor | Low | Low | 🎯 Low | 2 | 🎯 Low |
 | Subtitle Preview | High | High | 🎯 Medium | 3 | 🎯 Medium |
 | CLI Interface | Medium | Medium | 🎯 Medium | 3 | 🎯 Medium |
 | Watch Folders | Medium | Medium | 🎯 Medium | 3 | 🎯 Medium |
@@ -443,18 +477,19 @@ Focus on **Phase 1** items - these provide maximum user experience improvement w
 4. ✅ **Enhanced Progress Indicators** (2-3 hours) - **COMPLETED**
 5. ✅ **Drag & Drop UX Improvements** (1-2 hours) - **COMPLETED**
 6. ✅ **Window State Persistence** (1 hour) - **COMPLETED**
+7. ✅ **Context Menu Improvements** (2-3 hours) - **COMPLETED**
+8. ✅ **Enhanced Status Bar** (1-2 hours) - **SKIPPED** (went with clean, simple approach)
 
-**Completed**: 8-10 hours | **Remaining**: 0 hours | **Total Time**: 8-10 hours ✅ **PHASE 1 COMPLETE**
+**Completed**: 11-13 hours | **Skipped**: 1-2 hours | **Total Time**: 12-15 hours
 
 ### **Version 2.0 (Next Release)**
 Implement **Phase 2** power user features:
 
-1. **Enhanced Batch Processing** (2-3 days)
-2. **Performance Monitoring** (1 day)
-3. **Subtitle Quality Analysis** (1-2 days)
-4. **Advanced Correction Engine** (1-2 days)
+1. **Enhanced Batch Processing** (1-2 days)
+2. **Performance Monitoring** (1 day) - Optional
+3. **Subtitle Quality Analysis** (1-2 days) - Optional
 
-**Total Time**: 5-8 days
+**Total Time**: 2-5 days (depending on what's actually needed)
 
 ### **Version 3.0 (Future)**
 Implement **Phase 3** advanced features:
@@ -542,9 +577,9 @@ services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
 
 ### ✅ **MAJOR ACHIEVEMENT: PHASE 1 COMPLETE!**
 
-We have successfully completed **ALL 6 items** from Phase 1 UX Polish, delivering a significantly enhanced user experience:
+We have successfully completed **ALL 7 items** from Phase 1 UX Polish, delivering a significantly enhanced user experience:
 
-#### **🚀 Completed Features (8-10 hours total development)**
+#### **🚀 Completed Features (11-13 hours total development)**
 
 1. **✅ Keyboard Shortcuts** - Full keyboard navigation (Ctrl+O, Ctrl+P, Ctrl+E, etc.)
 2. **✅ Comprehensive Tooltips** - Every UI element has helpful tooltips with shortcuts
@@ -552,12 +587,14 @@ We have successfully completed **ALL 6 items** from Phase 1 UX Polish, deliverin
 4. **✅ Recent Files Menu** - Quick access to recently processed files with persistent storage
 5. **✅ Enhanced Progress Indicators** - Detailed progress with speed, ETA, memory usage, and current file
 6. **✅ Window State Persistence** - Remembers window size, position, and layout preferences
+7. **✅ Context Menu Improvements** - Comprehensive right-click context menus across all UI areas with professional-grade functionality
 
 #### **🎯 Impact Achieved**
 - **User Experience**: Dramatically improved with professional-grade polish
 - **Productivity**: Faster workflow with keyboard shortcuts and recent files access
 - **Feedback**: Rich progress information keeps users informed
 - **Consistency**: Window state persistence provides familiar, comfortable interface
+- **Navigation**: Context menus provide intuitive right-click access to all major functions
 - **Professional Feel**: Application now feels like a commercial-quality tool
 
 ## 📝 Next Steps
@@ -570,7 +607,8 @@ We have successfully completed **ALL 6 items** from Phase 1 UX Polish, deliverin
 
 ---
 
-**Document Version**: 2.0  
+**Document Version**: 2.1  
 **Last Updated**: January 2025  
-**Phase 1 Status**: ✅ **COMPLETE**  
+**Phase 1 Status**: ✅ **COMPLETE** (7/7 items)  
+**Context Menus**: ✅ **COMPLETED**  
 **Next Review**: After Phase 2 planning

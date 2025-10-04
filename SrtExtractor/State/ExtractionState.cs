@@ -23,6 +23,13 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private SubtitleTrack? _selectedTrack;
 
+    [ObservableProperty]
+    private bool _hasProbedFile = false;
+
+    [ObservableProperty]
+    private bool _showNoTracksError = false;
+
+
     // Tool Status
     [ObservableProperty]
     private ToolStatus _mkvToolNixStatus = new(false, null, null, null);
@@ -232,6 +239,8 @@ public partial class ExtractionState : ObservableObject
     public bool ShowBatchMode => IsBatchMode;
 
     public bool ShowSingleFileMode => !IsBatchMode;
+
+    public bool ShowNoTracksWarning => ShowNoTracksError;
 
     // Enhanced Progress Computed Properties
     public string FormattedBytesProcessed => FormatBytes(BytesProcessed);
@@ -647,6 +656,8 @@ public partial class ExtractionState : ObservableObject
         MkvPath = null;
         Tracks.Clear();
         SelectedTrack = null;
+        HasProbedFile = false;
+        ShowNoTracksError = false;
         IsBusy = false;
         IsProcessing = false;
         ProcessingMessage = "";

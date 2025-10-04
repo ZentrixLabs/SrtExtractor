@@ -14,6 +14,7 @@ namespace SrtExtractor.Models;
 /// <param name="Duration">Track duration in seconds</param>
 /// <param name="TrackType">Detected track type (Full, Forced, Commentary, SDH)</param>
 /// <param name="IsRecommended">Whether this track is the recommended choice based on user preferences</param>
+/// <param name="StreamIndex">The actual stream index in the file (for FFmpeg extraction)</param>
 public record SubtitleTrack(
     int Id,
     string Codec,
@@ -25,5 +26,6 @@ public record SubtitleTrack(
     int? FrameCount = null,
     double? Duration = null,
     string? TrackType = null,
-    bool IsRecommended = false
+    bool IsRecommended = false,
+    int? StreamIndex = null
 );

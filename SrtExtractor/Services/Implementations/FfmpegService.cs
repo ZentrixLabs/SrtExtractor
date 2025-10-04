@@ -79,11 +79,38 @@ public class FfmpegService : IFfmpegService
 
             var tracks = new List<SubtitleTrack>();
             int trackId = 0;
+            int streamIndexCounter = 0;
 
             foreach (var stream in streams.EnumerateArray())
             {
-                if (stream.TryGetProperty("codec_type", out var codecType) && 
-                    codecType.GetString() == "subtitle")
+                // Check for subtitle streams or data streams that are actually subtitles
+                var isSubtitleStream = false;
+                if (stream.TryGetProperty("codec_type", out var codecType))
+                {
+                    var codecTypeStr = codecType.GetString();
+                    if (codecTypeStr == "subtitle")
+                    {
+                        isSubtitleStream = true;
+                    }
+                    else if (codecTypeStr == "data")
+                    {
+                        // Check if this data stream is actually a subtitle track
+                        var codecName = stream.GetProperty("codec_name").GetString() ?? "";
+                        var handlerName = "";
+                        if (stream.TryGetProperty("tags", out var tags) && 
+                            tags.TryGetProperty("handler_name", out var handler))
+                        {
+                            handlerName = handler.GetString() ?? "";
+                        }
+                        
+                        // Check for subtitle-related indicators, but exclude bin_data as it's not supported
+                        isSubtitleStream = !codecName.Contains("bin_data") && 
+                                         (handlerName.ToLowerInvariant().Contains("subtitle") ||
+                                          handlerName.ToLowerInvariant().Contains("text"));
+                    }
+                }
+                
+                if (isSubtitleStream)
                 {
                     var codec = stream.GetProperty("codec_name").GetString() ?? "unknown";
                     var language = stream.TryGetProperty("tags", out var tags) && 
@@ -147,9 +174,15 @@ public class FfmpegService : IFfmpegService
                     // Detect track type
                     var trackType = DetectTrackType(bitrate, frameCount, duration, forced, isClosedCaption);
 
-                    tracks.Add(new SubtitleTrack(trackId, mappedCodec, language, forced, isClosedCaption, null, bitrate, frameCount, duration, trackType, false));
+                    // Get the actual stream index for this track
+                    var streamIndex = streamIndexCounter;
+
+                    tracks.Add(new SubtitleTrack(trackId, mappedCodec, language, forced, isClosedCaption, null, bitrate, frameCount, duration, trackType, false, streamIndex));
                     trackId++;
                 }
+                
+                // Always increment stream index counter for all streams
+                streamIndexCounter++;
             }
 
             _loggingService.LogInfo($"Found {tracks.Count} subtitle tracks in MP4 file");
@@ -182,10 +215,15 @@ public class FfmpegService : IFfmpegService
                 await _asyncFileService.EnsureDirectoryExistsAsync(outputDir, cancellationToken);
             }
 
-            // Run ffmpeg to extract subtitle
-            var args = $"-i \"{mp4Path}\" -map 0:s:{trackId} -c:s srt \"{outputPath}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffmpegPath, args, cancellationToken);
-
+            // Get the stream index from the track ID
+            // We need to re-probe to get the track information since we don't have access to the original probe result
+            var actualStreamIndex = await FindStreamIndexForTrackAsync(mp4Path, trackId, cancellationToken);
+            
+            // Extract the subtitle using FFmpeg
+            _loggingService.LogInfo($"Extracting subtitle track {trackId} from MP4...");
+            var ffmpegArgs = $"-i \"{mp4Path}\" -map 0:{actualStreamIndex} -c:s srt \"{outputPath}\"";
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffmpegPath, ffmpegArgs, cancellationToken);
+            
             if (exitCode != 0)
             {
                 throw new InvalidOperationException($"ffmpeg failed with exit code {exitCode}: {stderr}");
@@ -206,6 +244,118 @@ public class FfmpegService : IFfmpegService
             throw;
         }
     }
+
+    /// <summary>
+    /// Find the actual stream index for a given track ID by probing the file again.
+    /// </summary>
+    private async Task<int> FindStreamIndexForTrackAsync(string mp4Path, int trackId, CancellationToken cancellationToken = default)
+    {
+        _loggingService.LogInfo($"Finding stream index for track ID {trackId}");
+        
+        // Get FFmpeg path and construct ffprobe path
+        var ffmpegPath = await FindFfmpegPathAsync(cancellationToken);
+        if (string.IsNullOrEmpty(ffmpegPath))
+        {
+            throw new InvalidOperationException("FFmpeg not found");
+        }
+
+        var ffprobePath = Path.Combine(Path.GetDirectoryName(ffmpegPath) ?? "", "ffprobe.exe");
+        
+        // Run ffprobe to get stream information with a timeout
+        var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffprobePath, $"-v quiet -print_format json -show_streams \"{mp4Path}\"", cancellationToken);
+
+        if (exitCode != 0)
+        {
+            throw new InvalidOperationException($"ffprobe failed with exit code {exitCode}: {stderr}");
+        }
+
+        // Parse JSON output
+        _loggingService.LogInfo("Parsing ffprobe JSON output...");
+        var jsonDoc = JsonDocument.Parse(stdout);
+        var streams = jsonDoc.RootElement.GetProperty("streams");
+
+        int currentTrackId = 0;
+        int streamIndex = 0;
+
+        _loggingService.LogInfo($"Processing {streams.GetArrayLength()} streams...");
+        foreach (var stream in streams.EnumerateArray())
+        {
+            // Check for subtitle streams or data streams that are actually subtitles
+            var isSubtitleStream = false;
+            if (stream.TryGetProperty("codec_type", out var codecType))
+            {
+                var codecTypeStr = codecType.GetString();
+                if (codecTypeStr == "subtitle")
+                {
+                    isSubtitleStream = true;
+                }
+                else if (codecTypeStr == "data")
+                {
+                    // Check if this data stream is actually a subtitle track
+                    var codecName = stream.GetProperty("codec_name").GetString() ?? "";
+                    var handlerName = "";
+                    if (stream.TryGetProperty("tags", out var tags) && 
+                        tags.TryGetProperty("handler_name", out var handler))
+                    {
+                        handlerName = handler.GetString() ?? "";
+                    }
+                    
+                    // Check for subtitle-related indicators
+                    isSubtitleStream = codecName.Contains("bin_data") || 
+                                     handlerName.ToLowerInvariant().Contains("subtitle") ||
+                                     handlerName.ToLowerInvariant().Contains("text");
+                }
+            }
+            
+            if (isSubtitleStream)
+            {
+                _loggingService.LogInfo($"Found subtitle stream at index {streamIndex}, track ID {currentTrackId}");
+                if (currentTrackId == trackId)
+                {
+                    _loggingService.LogInfo($"Found matching track ID {trackId} at stream index {streamIndex}");
+                    return streamIndex;
+                }
+                currentTrackId++;
+            }
+            streamIndex++;
+        }
+
+        throw new InvalidOperationException($"Could not find stream index for track ID {trackId}");
+    }
+
+    private async Task<string?> FindMkvmergePathAsync(CancellationToken cancellationToken = default)
+    {
+        // Get MKVToolNix path from tool detection service
+        var mkvStatus = await _toolDetectionService.CheckMkvToolNixAsync();
+        if (mkvStatus.IsInstalled && !string.IsNullOrEmpty(mkvStatus.Path))
+        {
+            var mkvDir = Path.GetDirectoryName(mkvStatus.Path);
+            var mkvmergePath = Path.Combine(mkvDir ?? "", "mkvmerge.exe");
+            if (await _asyncFileService.FileExistsAsync(mkvmergePath, cancellationToken))
+            {
+                return mkvmergePath;
+            }
+        }
+        return null;
+    }
+
+    private async Task<string?> FindMkvextractPathAsync(CancellationToken cancellationToken = default)
+    {
+        // Get MKVToolNix path from tool detection service
+        var mkvStatus = await _toolDetectionService.CheckMkvToolNixAsync();
+        if (mkvStatus.IsInstalled && !string.IsNullOrEmpty(mkvStatus.Path))
+        {
+            var mkvDir = Path.GetDirectoryName(mkvStatus.Path);
+            var mkvextractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe");
+            if (await _asyncFileService.FileExistsAsync(mkvextractPath, cancellationToken))
+            {
+                return mkvextractPath;
+            }
+        }
+        return null;
+    }
+
+
 
     private async Task<string?> FindFfmpegPathAsync(CancellationToken cancellationToken = default)
     {

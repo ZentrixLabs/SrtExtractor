@@ -397,92 +397,86 @@
             </StackPanel>
         </GroupBox>
 
-        <!-- Enhanced Processing Indicator -->
+        <!-- Processing Indicator -->
         <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel>
-                <!-- Main Progress Bar -->
-                <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <ProgressBar Grid.Column="0" 
-                                 Value="{Binding State.ProgressPercentage}" 
-                                 Height="20"
-                                 ToolTip="{Binding State.DetailedProgressMessage}"/>
-                    <TextBlock Grid.Column="1" 
-                               Text="{Binding State.FormattedProgressPercentage}" 
-                               FontWeight="Bold" 
-                               VerticalAlignment="Center"
-                               Margin="8,0,0,0"
-                               MinWidth="50"
-                               HorizontalAlignment="Right"/>
-                </Grid>
-                
-                <!-- Progress Details -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
-                    <TextBlock Text="{Binding State.CurrentOperation}" 
-                               FontWeight="Bold" 
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding State.ProgressDetails}" 
-                               VerticalAlignment="Center"
-                               Margin="8,0,0,0"
-                               Foreground="Gray"/>
-                </StackPanel>
-                
-                <!-- Speed and Time Information -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <TextBlock Text="{Binding State.ProcessingSpeed}" 
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"
-                               FontSize="11"
-                               Foreground="DarkBlue"/>
-                    <TextBlock Text="{Binding State.EstimatedTimeRemaining}" 
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"
-                               FontSize="11"
-                               Foreground="DarkGreen"/>
-                    <TextBlock Text="{Binding State.ElapsedTime}" 
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               Foreground="DarkOrange"/>
-                </StackPanel>
-                
-                <!-- Current File (if available) -->
-                <TextBlock Text="{Binding State.CurrentFile}" 
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" 
+                            Width="200" 
+                            Height="20" 
+                            Margin="0,0,10,0"/>
+                <TextBlock Text="⏳" 
+                           FontWeight="Bold" 
+                           FontSize="16"
                            VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           FontSize="10"
-                           Foreground="Gray"
-                           TextTrimming="CharacterEllipsis"
-                           MaxWidth="300"
-                           Margin="0,4,0,0"
-                           Visibility="{Binding State.CurrentFile, Converter={StaticResource StringToVisibilityConverter}}"/>
-                
-                <!-- Memory Usage -->
-                <TextBlock Text="{Binding State.MemoryUsage, StringFormat='Memory: {0}'}" 
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           FontSize="10"
-                           Foreground="Purple"
-                           Margin="0,2,0,0"/>
+                           Margin="0,0,10,0"
+                           RenderTransformOrigin="0.5,0.5">
+                    <TextBlock.RenderTransform>
+                        <TransformGroup>
+                            <RotateTransform x:Name="HourglassRotation"/>
+                        </TransformGroup>
+                    </TextBlock.RenderTransform>
+                    <TextBlock.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetName="HourglassRotation"
+                                                   Storyboard.TargetProperty="Angle"
+                                                   From="0" To="360" Duration="0:0:1"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </TextBlock.Triggers>
+                </TextBlock>
+                <TextBlock Text="{Binding State.ProcessingMessage}" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center"/>
             </StackPanel>
         </GroupBox>
 
         <!-- Track List -->
         <GroupBox Header="Subtitle Tracks" Grid.Row="3" Grid.ColumnSpan="2"
                   Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
-            <DataGrid ItemsSource="{Binding State.Tracks}" 
-                      SelectedItem="{Binding State.SelectedTrack}"
-                      AutoGenerateColumns="False" 
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      GridLinesVisibility="Horizontal"
-                      HeadersVisibility="Column"
-                      SelectionMode="Single"
-                      MaxHeight="200">
+            <Grid>
+                <!-- No Tracks Message -->
+                <Border Background="#FFF3CD" 
+                        BorderBrush="#FFEAA7" 
+                        BorderThickness="1" 
+                        CornerRadius="6" 
+                        Padding="16" 
+                        Margin="8"
+                        Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="⚠️ No Subtitle Tracks Found" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="#856404"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="This video file does not contain any subtitle tracks." 
+                                   FontSize="14" 
+                                   Foreground="#856404"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock Text="Try selecting a different video file or check if the file has embedded subtitles." 
+                                   FontSize="12" 
+                                   Foreground="#6C757D"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Tracks DataGrid -->
+                <DataGrid ItemsSource="{Binding State.Tracks}" 
+                          SelectedItem="{Binding State.SelectedTrack}"
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          SelectionMode="Single"
+                          MaxHeight="200"
+                          Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Select Track" 
@@ -625,7 +619,8 @@
                         </DataGridTextColumn.HeaderStyle>
                     </DataGridTextColumn>
                 </DataGrid.Columns>
-            </DataGrid>
+                </DataGrid>
+            </Grid>
         </GroupBox>
 
         <!-- Log Display -->

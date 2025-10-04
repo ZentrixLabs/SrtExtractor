@@ -155,6 +155,9 @@ public partial class MainViewModel : ObservableObject
                 State.MkvPath = openFileDialog.FileName;
                 State.Tracks.Clear();
                 State.SelectedTrack = null;
+                State.HasProbedFile = false;
+                // Clear the message state when selecting a new file
+                State.ShowNoTracksError = false;
                 
                 // Update network detection
                 UpdateNetworkDetection(State.MkvPath);
@@ -179,6 +182,8 @@ public partial class MainViewModel : ObservableObject
         try
         {
             State.IsBusy = true;
+            // Clear the message state when starting probe
+            State.ShowNoTracksError = false;
             
             // Get file size for progress tracking
             var fileInfo = new FileInfo(State.MkvPath);
@@ -213,10 +218,22 @@ public partial class MainViewModel : ObservableObject
             }
 
             State.SelectedTrack = selectedTrack;
+            
+            // Show message only if no tracks were found - do this AFTER all other state changes
+            State.ShowNoTracksError = result.Tracks.Count == 0;
 
             State.UpdateProcessingMessage("Analysis completed!");
             State.AddLogMessage($"Found {result.Tracks.Count} subtitle tracks");
-            if (selectedTrack != null)
+            
+            // Mark that we've probed this file
+            State.HasProbedFile = true;
+            
+            if (result.Tracks.Count == 0)
+            {
+                State.AddLogMessage("⚠️ No subtitle tracks found in this video file");
+                State.AddLogMessage("💡 Try selecting a different video file or check if the file has embedded subtitles");
+            }
+            else if (selectedTrack != null)
             {
                 var englishTracks = result.Tracks.Where(t => string.Equals(t.Language, "eng", StringComparison.OrdinalIgnoreCase)).ToList();
                 if (englishTracks.Count == 1)
@@ -1398,6 +1415,15 @@ public partial class MainViewModel : ObservableObject
 
             _loggingService.LogInfo($"User selected recent file: {filePath}");
             State.MkvPath = filePath;
+            State.Tracks.Clear();
+            State.SelectedTrack = null;
+            State.HasProbedFile = false;
+            // Clear the message state when opening a recent file
+            State.ShowNoTracksError = false;
+            
+            // Update network detection
+            UpdateNetworkDetection(filePath);
+            
             State.AddLogMessage($"Opened recent file: {Path.GetFileName(filePath)}");
         }
         catch (Exception ex)
