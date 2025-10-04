@@ -71,7 +71,9 @@ public partial class MainViewModel : ObservableObject
         
         // Batch mode commands
         ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
+        ResumeBatchCommand = new AsyncRelayCommand(ResumeBatchAsync, () => State.CanResumeBatch);
         ClearBatchQueueCommand = new RelayCommand(ClearBatchQueue);
+        ClearCompletedBatchItemsCommand = new RelayCommand(ClearCompletedBatchItems);
         RemoveFromBatchCommand = new RelayCommand<BatchFile>(RemoveFromBatch);
         ProcessSingleBatchFileCommand = new AsyncRelayCommand<BatchFile>(ProcessSingleBatchFileAsync);
 
@@ -99,6 +101,7 @@ public partial class MainViewModel : ObservableObject
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ProcessBatchCommand.NotifyCanExecuteChanged();
+                    ResumeBatchCommand.NotifyCanExecuteChanged();
                 });
             }
             else if (e.PropertyName == nameof(State.IsBatchMode))
@@ -126,7 +129,9 @@ public partial class MainViewModel : ObservableObject
     
     // Batch mode commands
     public IAsyncRelayCommand ProcessBatchCommand { get; }
+    public IAsyncRelayCommand ResumeBatchCommand { get; }
     public IRelayCommand ClearBatchQueueCommand { get; }
+    public IRelayCommand ClearCompletedBatchItemsCommand { get; }
     public IRelayCommand<BatchFile> RemoveFromBatchCommand { get; }
     public IAsyncRelayCommand<BatchFile> ProcessSingleBatchFileCommand { get; }
 
@@ -948,18 +953,33 @@ public partial class MainViewModel : ObservableObject
         if (!State.BatchQueue.Any())
             return;
 
+        await ProcessBatchFromIndexAsync(0);
+    }
+
+    /// <summary>
+    /// Process batch files starting from a specific index.
+    /// </summary>
+    /// <param name="startIndex">The index to start processing from</param>
+    private async Task ProcessBatchFromIndexAsync(int startIndex)
+    {
+        if (!State.BatchQueue.Any() || startIndex >= State.BatchQueue.Count)
+            return;
+
         try
         {
             State.IsBusy = true;
             State.StartProcessing("Starting batch processing...");
-            State.AddLogMessage($"Starting batch processing of {State.BatchQueue.Count} files");
+            State.AddLogMessage($"Starting batch processing of {State.BatchQueue.Count} files from index {startIndex}");
 
             var totalFiles = State.BatchQueue.Count;
-            var processedCount = 0;
-            var successCount = 0;
-            var errorCount = 0;
+            var processedCount = startIndex;
+            var successCount = State.BatchQueue.Take(startIndex).Count(f => f.Status == BatchFileStatus.Completed);
+            var errorCount = State.BatchQueue.Take(startIndex).Count(f => f.Status == BatchFileStatus.Error);
 
-            foreach (var batchFile in State.BatchQueue.ToList())
+            // Reset the last processed index
+            State.LastProcessedBatchIndex = startIndex - 1;
+
+            foreach (var batchFile in State.BatchQueue.Skip(startIndex).ToList())
             {
                 // Check for cancellation before processing each file
                 if (_extractionCancellationTokenSource?.Token.IsCancellationRequested == true)
@@ -1033,6 +1053,7 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 processedCount++;
+                State.LastProcessedBatchIndex = processedCount - 1;
             }
 
             State.StopProcessingWithProgress();
@@ -1141,6 +1162,61 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to clear batch queue", ex);
+        }
+    }
+
+    /// <summary>
+    /// Clear only completed items from the batch queue.
+    /// </summary>
+    private void ClearCompletedBatchItems()
+    {
+        try
+        {
+            var completedCount = State.BatchCompletedCount;
+            State.ClearCompletedBatchItems();
+            State.AddLogMessage($"Cleared {completedCount} completed items from batch queue");
+            _loggingService.LogInfo($"User cleared {completedCount} completed batch items");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to clear completed batch items", ex);
+        }
+    }
+
+    /// <summary>
+    /// Resume batch processing from where it was interrupted.
+    /// </summary>
+    private async Task ResumeBatchAsync()
+    {
+        try
+        {
+            if (!State.AreToolsAvailable)
+            {
+                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", 
+                              "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var startIndex = State.LastProcessedBatchIndex + 1;
+            var remainingFiles = State.BatchQueue.Skip(startIndex).ToList();
+            
+            if (!remainingFiles.Any())
+            {
+                State.AddLogMessage("No remaining files to process in batch queue");
+                return;
+            }
+
+            State.AddLogMessage($"Resuming batch processing from file {startIndex + 1} of {State.BatchQueue.Count}");
+            _loggingService.LogInfo($"User resumed batch processing from index {startIndex}");
+
+            // Start processing from the next unprocessed file
+            await ProcessBatchFromIndexAsync(startIndex);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to resume batch processing", ex);
+            State.AddLogMessage($"Failed to resume batch processing: {ex.Message}");
+            MessageBox.Show($"Failed to resume batch processing: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1256,6 +1332,40 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError($"Error moving batch item to bottom: {batchFile.FileName}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Reorder batch queue items by dragging and dropping.
+    /// </summary>
+    /// <param name="draggedItem">The item being dragged</param>
+    /// <param name="targetItem">The item being dropped on</param>
+    public void ReorderBatchQueue(BatchFile draggedItem, BatchFile targetItem)
+    {
+        try
+        {
+            if (State.BatchQueue.Contains(draggedItem) && State.BatchQueue.Contains(targetItem) && draggedItem != targetItem)
+            {
+                var draggedIndex = State.BatchQueue.IndexOf(draggedItem);
+                var targetIndex = State.BatchQueue.IndexOf(targetItem);
+                
+                State.BatchQueue.RemoveAt(draggedIndex);
+                
+                // Adjust target index if we removed an item before it
+                if (draggedIndex < targetIndex)
+                {
+                    targetIndex--;
+                }
+                
+                State.BatchQueue.Insert(targetIndex, draggedItem);
+                
+                State.AddLogMessage($"Reordered queue: {draggedItem.FileName} moved to position {targetIndex + 1}");
+                _loggingService.LogInfo($"User reordered batch queue: {draggedItem.FileName} moved to position {targetIndex + 1}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError($"Error reordering batch queue: {draggedItem.FileName}", ex);
         }
     }
 

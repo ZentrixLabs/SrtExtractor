@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SrtExtractor.Models;
@@ -93,7 +94,19 @@ public partial class ExtractionState : ObservableObject
     private ObservableCollection<BatchFile> _batchQueue = new();
 
     [ObservableProperty]
+    private int _batchCompletedCount = 0;
+
+    [ObservableProperty]
+    private int _batchErrorCount = 0;
+
+    [ObservableProperty]
+    private int _batchPendingCount = 0;
+
+    [ObservableProperty]
     private int _currentBatchIndex;
+
+    [ObservableProperty]
+    private int _lastProcessedBatchIndex = -1;
 
     [ObservableProperty]
     private int _totalBatchFiles;
@@ -241,6 +254,11 @@ public partial class ExtractionState : ObservableObject
     public bool ShowSingleFileMode => !IsBatchMode;
 
     public bool ShowNoTracksWarning => ShowNoTracksError;
+
+    // Resume Batch Computed Properties
+    public bool CanResumeBatch => BatchQueue.Any() && LastProcessedBatchIndex >= 0 && LastProcessedBatchIndex < BatchQueue.Count - 1 && AreToolsAvailable && !IsBusy;
+
+    public bool ShowResumeBatchButton => CanResumeBatch && BatchCompletedCount > 0;
 
     // Enhanced Progress Computed Properties
     public string FormattedBytesProcessed => FormatBytes(BytesProcessed);
@@ -407,6 +425,7 @@ public partial class ExtractionState : ObservableObject
         BatchQueue.Add(batchFile);
 
         TotalBatchFiles = BatchQueue.Count;
+        UpdateBatchStatistics();
         
         OnPropertyChanged(nameof(CanProcessBatch));
         OnPropertyChanged(nameof(HasBatchQueue));
@@ -423,6 +442,7 @@ public partial class ExtractionState : ObservableObject
         if (BatchQueue.Remove(batchFile))
         {
             TotalBatchFiles = BatchQueue.Count;
+            UpdateBatchStatistics();
             OnPropertyChanged(nameof(CanProcessBatch));
             OnPropertyChanged(nameof(HasBatchQueue));
         }
@@ -436,11 +456,47 @@ public partial class ExtractionState : ObservableObject
         BatchQueue.Clear();
         TotalBatchFiles = 0;
         CurrentBatchIndex = 0;
+        LastProcessedBatchIndex = -1;
         BatchProgressMessage = "";
         BatchProgressPercentage = 0;
         
+        UpdateBatchStatistics();
+        
         OnPropertyChanged(nameof(CanProcessBatch));
         OnPropertyChanged(nameof(HasBatchQueue));
+    }
+
+    /// <summary>
+    /// Clear only completed files from the batch queue.
+    /// </summary>
+    public void ClearCompletedBatchItems()
+    {
+        var completedItems = BatchQueue.Where(f => f.Status == BatchFileStatus.Completed).ToList();
+        foreach (var item in completedItems)
+        {
+            BatchQueue.Remove(item);
+        }
+        
+        TotalBatchFiles = BatchQueue.Count;
+        UpdateBatchStatistics();
+        
+        OnPropertyChanged(nameof(CanProcessBatch));
+        OnPropertyChanged(nameof(HasBatchQueue));
+    }
+
+    /// <summary>
+    /// Update batch statistics based on current queue status.
+    /// </summary>
+    public void UpdateBatchStatistics()
+    {
+        BatchCompletedCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Completed);
+        BatchErrorCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Error);
+        BatchPendingCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Pending);
+        
+        // Update computed properties
+        OnPropertyChanged(nameof(CanProcessBatch));
+        OnPropertyChanged(nameof(CanResumeBatch));
+        OnPropertyChanged(nameof(ShowResumeBatchButton));
     }
 
     /// <summary>

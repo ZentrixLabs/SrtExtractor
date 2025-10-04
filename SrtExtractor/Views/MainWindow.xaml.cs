@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SrtExtractor.Services.Interfaces;
 using SrtExtractor.Services.Implementations;
 using SrtExtractor.ViewModels;
+using SrtExtractor.Models;
 using System.Diagnostics;
 using Microsoft.Win32;
 
@@ -778,6 +780,147 @@ namespace SrtExtractor.Views
                     MessageBox.Show($"Error opening file properties: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+        }
+
+        #endregion
+
+        #region Batch Queue Drag & Drop Reordering
+
+        private bool _isDragging = false;
+        private Point _dragStartPoint;
+        private BatchFile? _draggedItem;
+
+        private void BatchQueueListBox_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is ListBox listBox)
+            {
+                _dragStartPoint = e.GetPosition(listBox);
+                _draggedItem = null;
+                
+                // Find the item under the mouse
+                var item = FindAnchestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+                if (item != null && item.DataContext is BatchFile batchFile)
+                {
+                    _draggedItem = batchFile;
+                }
+            }
+        }
+
+        private void BatchQueueListBox_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed && _draggedItem != null)
+            {
+                var position = e.GetPosition((IInputElement)sender);
+                var distance = Math.Abs(position.X - _dragStartPoint.X) + Math.Abs(position.Y - _dragStartPoint.Y);
+                
+                if (distance > 10) // Minimum drag distance
+                {
+                    _isDragging = true;
+                    
+                    var data = new DataObject(typeof(BatchFile), _draggedItem);
+                    DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
+                    
+                    _isDragging = false;
+                    _draggedItem = null;
+                }
+            }
+        }
+
+        private void BatchQueueListBox_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            _isDragging = false;
+            _draggedItem = null;
+        }
+
+        private void BatchQueueListBox_DragLeave(object sender, DragEventArgs e)
+        {
+            // Clear any remaining highlights when drag leaves the ListBox
+            if (sender is ListBox listBox)
+            {
+                foreach (var item in listBox.Items)
+                {
+                    if (listBox.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem listBoxItem)
+                    {
+                        listBoxItem.Background = System.Windows.Media.Brushes.Transparent;
+                    }
+                }
+            }
+        }
+
+        private void BatchQueueListBox_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(BatchFile)))
+            {
+                e.Effects = DragDropEffects.Move;
+                
+                // Visual feedback - highlight the drop target
+                if (sender is ListBox listBox)
+                {
+                    var targetListBoxItem = FindAnchestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+                    if (targetListBoxItem != null)
+                    {
+                        // Clear previous highlights
+                        foreach (var item in listBox.Items)
+                        {
+                            if (listBox.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem listBoxItem)
+                            {
+                                listBoxItem.Background = System.Windows.Media.Brushes.Transparent;
+                            }
+                        }
+                        
+                        // Highlight current target
+                        targetListBoxItem.Background = System.Windows.Media.Brushes.LightBlue;
+                    }
+                }
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void BatchQueueListBox_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(BatchFile)))
+            {
+                var draggedItem = (BatchFile)e.Data.GetData(typeof(BatchFile));
+                
+                // Find the ListBoxItem that was dropped on
+                var targetListBoxItem = FindAnchestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+                if (targetListBoxItem?.DataContext is BatchFile targetBatchFile && draggedItem != targetBatchFile)
+                {
+                    if (DataContext is MainViewModel viewModel)
+                    {
+                        viewModel.ReorderBatchQueue(draggedItem, targetBatchFile);
+                    }
+                }
+                
+                // Reset visual feedback
+                if (sender is ListBox listBox)
+                {
+                    foreach (var item in listBox.Items)
+                    {
+                        if (listBox.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem listBoxItem)
+                        {
+                            listBoxItem.Background = System.Windows.Media.Brushes.Transparent;
+                        }
+                    }
+                }
+            }
+        }
+
+        private static T? FindAnchestor<T>(DependencyObject current) where T : class
+        {
+            do
+            {
+                if (current is T ancestor)
+                {
+                    return ancestor;
+                }
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+            while (current != null);
+            return null;
         }
 
         #endregion

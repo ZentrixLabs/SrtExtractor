@@ -711,22 +711,67 @@
                 </Border>
                 
                 <!-- Queue Header -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                    <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
-                               FontWeight="Bold" 
-                               Foreground="Blue"
-                               VerticalAlignment="Center"
-                               Margin="4,0,0,0"/>
-                    <Button Content="Clear All" 
-                            Command="{Binding ClearBatchQueueCommand}"
-                            Background="LightCoral"
-                            Margin="10,0,0,0"
-                            Padding="4,2"
-                            FontSize="10"
-                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="Remove all files from the batch queue"/>
-                </StackPanel>
+                <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Queue Count -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
+                                   FontWeight="Bold" 
+                                   Foreground="Blue"
+                                   VerticalAlignment="Center"
+                                   Margin="4,0,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Batch Statistics -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="✅" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                        <TextBlock Text="{Binding State.BatchCompletedCount}" 
+                                   VerticalAlignment="Center" 
+                                   Margin="0,0,8,0"
+                                   ToolTip="Completed files"/>
+                        <TextBlock Text="❌" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                        <TextBlock Text="{Binding State.BatchErrorCount}" 
+                                   VerticalAlignment="Center" 
+                                   Margin="0,0,8,0"
+                                   ToolTip="Failed files"/>
+                        <TextBlock Text="⏳" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                        <TextBlock Text="{Binding State.BatchPendingCount}" 
+                                   VerticalAlignment="Center"
+                                   ToolTip="Pending files"/>
+                    </StackPanel>
+                    
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="Resume Batch" 
+                                Command="{Binding ResumeBatchCommand}"
+                                Background="LightBlue"
+                                Margin="0,0,4,0"
+                                Padding="4,2"
+                                FontSize="10"
+                                Visibility="{Binding State.ShowResumeBatchButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                                ToolTip="Resume batch processing from where it was interrupted"/>
+                        <Button Content="Clear Completed" 
+                                Command="{Binding ClearCompletedBatchItemsCommand}"
+                                Background="LightGreen"
+                                Margin="0,0,4,0"
+                                Padding="4,2"
+                                FontSize="10"
+                                ToolTip="Remove only completed files from the queue"/>
+                        <Button Content="Clear All" 
+                                Command="{Binding ClearBatchQueueCommand}"
+                                Background="LightCoral"
+                                Padding="4,2"
+                                FontSize="10"
+                                Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
+                                ToolTip="Remove all files from the batch queue"/>
+                    </StackPanel>
+                </Grid>
                 
                 <!-- Queue List -->
                 <Grid Grid.Row="2">
@@ -735,7 +780,14 @@
                              BorderBrush="Gray"
                              BorderThickness="1"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             AllowDrop="True"
+                             Drop="BatchQueueListBox_Drop"
+                             DragOver="BatchQueueListBox_DragOver"
+                             DragLeave="BatchQueueListBox_DragLeave"
+                             PreviewMouseLeftButtonDown="BatchQueueListBox_PreviewMouseLeftButtonDown"
+                             PreviewMouseMove="BatchQueueListBox_PreviewMouseMove"
+                             PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp">
                         <ListBox.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Process This File" 
