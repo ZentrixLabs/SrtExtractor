@@ -44,6 +44,7 @@ namespace SrtExtractor.Views
             LocationChanged += MainWindow_LocationChanged;
             SizeChanged += MainWindow_SizeChanged;
             StateChanged += MainWindow_StateChanged;
+            
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -81,8 +82,7 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening settings: {ex.Message}", 
-                              "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error opening settings:\n{ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -110,9 +110,19 @@ namespace SrtExtractor.Views
 
         private void UserGuide_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("User Guide coming soon!\n\nFor now, please refer to the README file in the project repository:\nhttps://github.com/ZentrixLabs/SrtExtractor", 
-                          "User Guide", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                var userGuideWindow = new UserGuideWindow();
+                userGuideWindow.Owner = this;
+                userGuideWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error opening user guide", ex);
+                MessageBox.Show($"Error opening user guide:\n{ex.Message}", "User Guide Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
+
 
         private void PreferForcedMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -141,8 +151,7 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening SRT correction: {ex.Message}", 
-                              "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error opening SRT correction:\n{ex.Message}", "SRT Correction Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -211,8 +220,7 @@ namespace SrtExtractor.Views
                 // Check if batch mode is enabled
                 if (!viewModel.State.IsBatchMode)
                 {
-                    MessageBox.Show("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", 
-                                  "Batch Mode Required", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", "Batch Mode Required", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -233,8 +241,7 @@ namespace SrtExtractor.Views
 
                 if (videoFiles.Length == 0)
                 {
-                    MessageBox.Show("No valid video files found. Please drag MKV or MP4 files.", 
-                                  "Invalid Files", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("No valid video files found. Please drag MKV or MP4 files.", "Invalid Files", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -244,19 +251,16 @@ namespace SrtExtractor.Views
                 // Show feedback
                 if (videoFiles.Length == 1)
                 {
-                    MessageBox.Show($"Added {Path.GetFileName(videoFiles[0])} to the batch queue.", 
-                                  "File Added", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Added {Path.GetFileName(videoFiles[0])} to the batch queue.", "File Added", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    MessageBox.Show($"Added {videoFiles.Length} files to the batch queue.", 
-                                  "Files Added", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Added {videoFiles.Length} files to the batch queue.", "Files Added", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error processing dropped files: {ex.Message}", 
-                              "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error processing dropped files:\n{ex.Message}", "Drag & Drop Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -284,8 +288,7 @@ namespace SrtExtractor.Views
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Error opening settings: {ex.Message}", 
-                                      "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        MessageBox.Show($"Error opening settings:\n{ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -618,7 +621,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening file properties", ex);
-                    MessageBox.Show($"Error opening file properties: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Error opening file properties:\n{ex.Message}", "File Properties Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -671,7 +674,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error saving log to file", ex);
-                    MessageBox.Show($"Error saving log: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Error saving log:\n{ex.Message}", "Log Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -694,14 +697,13 @@ namespace SrtExtractor.Views
                 }
                 else
                 {
-                    MessageBox.Show("Log directory does not exist yet. Log files will be created when the application starts logging.", 
-                                  "Log Directory", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Log directory does not exist yet. Log files will be created when the application starts logging.", "Log Directory", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
                 _loggingService.LogError("Error opening log folder", ex);
-                MessageBox.Show($"Error opening log folder: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error opening log folder:\n{ex.Message}", "Log Folder Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -754,7 +756,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening batch file location", ex);
-                    MessageBox.Show($"Error opening file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Error opening file location:\n{ex.Message}", "File Location Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -777,7 +779,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening batch file properties", ex);
-                    MessageBox.Show($"Error opening file properties: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Error opening file properties:\n{ex.Message}", "File Properties Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -924,5 +926,6 @@ namespace SrtExtractor.Views
         }
 
         #endregion
+
     }
 }

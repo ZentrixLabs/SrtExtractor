@@ -19,6 +19,7 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 - **Network File Detection**: Automatically detects network drives with performance estimates
 - **Automatic Tool Management**: Detects and auto-downloads necessary external tools
 - **Smart Subtitle Detection**: Automatically finds and lists available subtitle tracks
+- **Intelligent Track Recommendation**: Prioritizes SubRip/SRT subtitles over HDMV PGS when both are available
 - **Flexible Output**: Generates SRT files with customizable naming patterns
 - **Real-time Logging**: Provides detailed logs of all operations
 - **User-friendly Interface**: Clean, intuitive WPF interface with modern design
@@ -44,6 +45,26 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 
 ### OCR Conversion
 - `S_HDMV/PGS` - Blu-ray PGS subtitles (converted via OCR)
+
+## 🎯 Smart Track Recommendation
+
+SrtExtractor features an intelligent recommendation engine that automatically selects the best subtitle track based on your preferences and available options:
+
+### **Priority Order**
+1. **SubRip/SRT Tracks** (Highest Priority) - Direct text extraction, no OCR required
+2. **Other Text-based Tracks** (ASS, SSA, VTT) - Also direct extraction
+3. **HDMV PGS Tracks** (Lower Priority) - Requires OCR conversion
+
+### **Smart Selection Logic**
+- **When both SubRip/SRT and HDMV PGS are available**: SubRip/SRT is automatically recommended
+- **Quality-based selection**: Within each priority group, tracks are ranked by bitrate and frame count
+- **User preferences respected**: Forced subtitles and closed captions are prioritized based on settings
+- **Comprehensive logging**: Track selection decisions are logged for transparency
+
+### **Example Scenarios**
+- **File with SubRip/SRT + HDMV PGS**: SubRip/SRT track recommended (faster extraction, no OCR)
+- **File with only HDMV PGS**: HDMV PGS track recommended (with OCR processing)
+- **Multiple SubRip/SRT tracks**: Highest quality SubRip/SRT track recommended
 
 ## 🔧 Requirements
 
@@ -80,9 +101,10 @@ The application will automatically detect and download required external tools o
 
 1. **Select Video File**: Click "Pick Video..." to choose your MKV or MP4 file
 2. **Probe Tracks**: Click "Probe Tracks" to analyze the file for subtitle tracks
-3. **Select Track**: Choose your preferred subtitle track from the list
-4. **Extract**: Click "Extract Selected → SRT" to generate the SRT file
-5. **Multi-Pass Correction**: OCR errors are automatically corrected using advanced multi-pass correction
+3. **Review Recommendation**: The smart recommendation engine automatically selects the best track (SubRip/SRT preferred over HDMV PGS)
+4. **Select Track**: Choose your preferred subtitle track from the list, or use the recommended one
+5. **Extract**: Click "Extract Selected → SRT" to generate the SRT file
+6. **Multi-Pass Correction**: OCR errors are automatically corrected using advanced multi-pass correction
 
 ### Batch Processing
 
@@ -160,13 +182,14 @@ Example: `Movie.eng.forced.srt` or `Show.eng.cc.srt`
 
 ## 🏗️ Architecture
 
-Built with modern .NET 9 and WPF, SrtExtractor follows the MVVM pattern:
+Built with modern .NET 9 and WPF, SrtExtractor follows the MVVM pattern with intelligent subtitle recommendation:
 
 - **Models**: Data structures for tracks, settings, and tool status
-- **ViewModels**: Business logic and UI state management
-- **Views**: XAML-based user interface
+- **ViewModels**: Business logic, UI state management, and smart track recommendation
+- **Views**: XAML-based user interface with recommendation indicators
 - **Services**: External tool integration and file operations
 - **State**: Observable state management for data binding
+- **Recommendation Engine**: Intelligent track selection prioritizing SubRip/SRT over HDMV PGS
 
 ## 🔧 External Tools
 
@@ -237,6 +260,7 @@ SrtExtractor provides comprehensive logging:
 - **UI Log**: Real-time display in the application
 - **File Log**: Rolling daily logs saved to `C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\`
 - **Log Format**: `srt_YYYYMMDD.txt`
+- **Recommendation Logging**: Track selection decisions and reasoning are logged for transparency
 
 ## 🎨 User Interface
 
@@ -263,6 +287,7 @@ SrtExtractor provides comprehensive logging:
 7. **Cancellation Issues**: If processes don't stop, restart the application
 8. **Batch SRT Correction Shows "None Found"**: Ensure you've selected a folder and clicked "Scan for SRT Files"
 9. **SRT Files Not Updating**: Check that files aren't read-only or locked by another application
+10. **Wrong Track Recommended**: Check the log for recommendation decisions; you can manually select a different track
 
 ### Log Files
 

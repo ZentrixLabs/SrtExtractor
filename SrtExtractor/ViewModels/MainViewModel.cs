@@ -58,6 +58,7 @@ public partial class MainViewModel : ObservableObject
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
+        
 
         // Initialize commands
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
@@ -173,7 +174,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to pick MKV file", ex);
-            MessageBox.Show($"Failed to select MKV file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to select MKV file:\n{ex.Message}", "File Selection Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         
         return Task.CompletedTask;
@@ -255,7 +256,7 @@ public partial class MainViewModel : ObservableObject
         {
             _loggingService.LogError("Failed to probe video tracks", ex);
             State.AddLogMessage($"Error probing tracks: {ex.Message}");
-            MessageBox.Show($"Failed to probe video file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to probe video file:\n{ex.Message}", "Probe Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -391,7 +392,7 @@ public partial class MainViewModel : ObservableObject
             // Only show success dialog in single file mode, not batch mode
             if (!State.IsBatchMode)
             {
-                MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         catch (OperationCanceledException)
@@ -415,7 +416,7 @@ public partial class MainViewModel : ObservableObject
             // Only show error dialog in single file mode, not batch mode
             if (!State.IsBatchMode)
             {
-                MessageBox.Show($"Failed to extract subtitles: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         finally
@@ -468,7 +469,7 @@ public partial class MainViewModel : ObservableObject
         {
             _loggingService.LogError("Failed to install MKVToolNix", ex);
             State.AddLogMessage($"Error installing MKVToolNix: {ex.Message}");
-            MessageBox.Show($"Failed to install MKVToolNix: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to install MKVToolNix:\n{ex.Message}", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -583,8 +584,7 @@ public partial class MainViewModel : ObservableObject
             Application.Current.Dispatcher.Invoke(() =>
             {
                 var result = MessageBox.Show(
-                    "Some required tools are missing and need to be configured.\n\n" +
-                    "Would you like to open Settings to configure the tools now?",
+                    "Some required tools are missing and need to be configured.\n\nWould you like to open Settings to configure the tools now?",
                     "Tools Missing",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
@@ -733,7 +733,15 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        // Default: Prefer Full tracks, then by quality
+        // Default: Prefer SubRip/SRT tracks first, then Full tracks, then by quality
+        var subripTracks = languageTracks.Where(t => IsSubRipTrack(t.Codec)).ToList();
+        if (subripTracks.Any())
+        {
+            _loggingService.LogInfo($"Found {subripTracks.Count} SubRip/SRT tracks, prioritizing over HDMV PGS");
+            return GetBestQualityTrack(subripTracks);
+        }
+
+        // If no SubRip/SRT, prefer Full tracks, then by quality
         var fullTracks = languageTracks.Where(t => t.TrackType == "Full").ToList();
         if (fullTracks.Any())
         {
@@ -749,22 +757,106 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     /// <param name="tracks">List of tracks to choose from</param>
     /// <returns>Best quality track</returns>
-    private static SubtitleTrack GetBestQualityTrack(IList<SubtitleTrack> tracks)
+    private SubtitleTrack GetBestQualityTrack(IList<SubtitleTrack> tracks)
     {
         if (!tracks.Any()) return tracks.First();
 
-        // Prefer text-based subtitles over PGS when available
-        var textTracks = tracks.Where(t => t.Codec.Contains("S_TEXT")).ToList();
-        if (textTracks.Any())
+        // Priority order: SubRip/SRT > Other text-based > HDMV PGS > Other PGS
+        var subripTracks = tracks.Where(t => IsSubRipTrack(t.Codec)).ToList();
+        if (subripTracks.Any())
         {
-            tracks = textTracks;
+            _loggingService.LogInfo($"Selecting from {subripTracks.Count} SubRip/SRT tracks (highest priority)");
+            tracks = subripTracks;
+        }
+        else
+        {
+            // If no SubRip/SRT, prefer other text-based subtitles over PGS
+            var textTracks = tracks.Where(t => IsTextBasedTrack(t.Codec)).ToList();
+            if (textTracks.Any())
+            {
+                _loggingService.LogInfo($"No SubRip/SRT found, selecting from {textTracks.Count} text-based tracks");
+                tracks = textTracks;
+            }
+            else
+            {
+                _loggingService.LogInfo($"No text-based tracks found, selecting from {tracks.Count} available tracks (including PGS)");
+            }
         }
 
         // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec preference
         return tracks.OrderByDescending(t => t.Bitrate ?? 0)
                      .ThenByDescending(t => t.FrameCount ?? 0)
-                     .ThenByDescending(t => t.Codec.Contains("S_TEXT") ? 1 : 0)
+                     .ThenByDescending(t => GetCodecPriority(t.Codec))
                      .First();
+    }
+
+    /// <summary>
+    /// Check if a codec is SubRip/SRT format.
+    /// </summary>
+    /// <param name="codec">Codec string to check</param>
+    /// <returns>True if SubRip/SRT</returns>
+    private static bool IsSubRipTrack(string codec)
+    {
+        return codec.Contains("S_TEXT/UTF8") || 
+               codec.Contains("SubRip/SRT") || 
+               codec.Contains("subrip") ||
+               codec.Contains("srt");
+    }
+
+    /// <summary>
+    /// Check if a codec is text-based (not PGS).
+    /// </summary>
+    /// <param name="codec">Codec string to check</param>
+    /// <returns>True if text-based</returns>
+    private static bool IsTextBasedTrack(string codec)
+    {
+        return codec.Contains("S_TEXT") || 
+               codec.Contains("ASS") || 
+               codec.Contains("SSA") || 
+               codec.Contains("VTT");
+    }
+
+    /// <summary>
+    /// Get codec priority for sorting (higher number = higher priority).
+    /// </summary>
+    /// <param name="codec">Codec string</param>
+    /// <returns>Priority value</returns>
+    private static int GetCodecPriority(string codec)
+    {
+        if (IsSubRipTrack(codec)) return 100;  // Highest priority
+        if (IsTextBasedTrack(codec)) return 50; // Medium priority
+        if (codec.Contains("PGS") || codec.Contains("S_HDMV/PGS")) return 10; // Lower priority
+        return 0; // Lowest priority
+    }
+
+    /// <summary>
+    /// Test method to verify recommendation logic prioritizes SubRip/SRT over HDMV PGS.
+    /// This method can be called for testing purposes.
+    /// </summary>
+    public void TestRecommendationLogic()
+    {
+        var testTracks = new List<SubtitleTrack>
+        {
+            new SubtitleTrack(1, "S_HDMV/PGS", "eng", false, false, "HDMV PGS Full", 50000, 2000, 7200, "Full", false),
+            new SubtitleTrack(2, "S_TEXT/UTF8", "eng", false, false, "SubRip/SRT Full", 1000, 1500, 7200, "Full", false),
+            new SubtitleTrack(3, "S_HDMV/PGS", "eng", false, false, "HDMV PGS Forced", 5000, 100, 7200, "Forced", false),
+            new SubtitleTrack(4, "S_TEXT/ASS", "eng", false, false, "ASS Full", 2000, 1800, 7200, "Full", false)
+        };
+
+        var recommended = SelectBestTrack(testTracks);
+        
+        _loggingService.LogInfo($"Test Recommendation Result:");
+        _loggingService.LogInfo($"  Recommended Track: {recommended?.Id} - {recommended?.Codec} - {recommended?.Name}");
+        _loggingService.LogInfo($"  Expected: Track 2 (SubRip/SRT) should be recommended over HDMV PGS");
+        
+        if (recommended?.Codec.Contains("S_TEXT/UTF8") == true)
+        {
+            _loggingService.LogInfo("  ✅ Test PASSED: SubRip/SRT correctly prioritized over HDMV PGS");
+        }
+        else
+        {
+            _loggingService.LogError($"  ❌ Test FAILED: Expected SubRip/SRT, got {recommended?.Codec}");
+        }
     }
 
     private async Task ReDetectToolsAsync()
@@ -817,7 +909,7 @@ public partial class MainViewModel : ObservableObject
         {
             _loggingService.LogError("Failed to correct SRT file", ex);
             State.AddLogMessage($"Error correcting SRT file: {ex.Message}");
-            MessageBox.Show($"Failed to correct SRT file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to correct SRT file:\n{ex.Message}", "Correction Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -1129,8 +1221,14 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, 
-                           errorCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+            if (errorCount > 0)
+            {
+                MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             
             // Clear the batch queue and reset progress after completion
             State.ClearBatchQueue();
@@ -1139,7 +1237,7 @@ public partial class MainViewModel : ObservableObject
         {
             _loggingService.LogError("Batch processing failed", ex);
             State.AddLogMessage($"Batch processing failed: {ex.Message}");
-            MessageBox.Show($"Batch processing failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Batch processing failed:\n{ex.Message}", "Batch Processing Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -1192,8 +1290,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!State.AreToolsAvailable)
             {
-                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", 
-                              "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1216,7 +1313,7 @@ public partial class MainViewModel : ObservableObject
         {
             _loggingService.LogError("Failed to resume batch processing", ex);
             State.AddLogMessage($"Failed to resume batch processing: {ex.Message}");
-            MessageBox.Show($"Failed to resume batch processing: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to resume batch processing:\n{ex.Message}", "Resume Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1385,8 +1482,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!State.AreToolsAvailable)
             {
-                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", 
-                              "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1448,14 +1544,16 @@ public partial class MainViewModel : ObservableObject
                              $"All files in the batch will be processed with these settings.\n\n" +
                              $"Do you want to continue?";
                 
-                var result = MessageBox.Show(message, "Batch Mode Settings Confirmation", 
-                                           MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var result = MessageBox.Show(
+                    message,
+                    "Batch Mode Settings Confirmation",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
                 
                 if (result == MessageBoxResult.No)
                 {
                     // User declined, disable batch mode
                     State.IsBatchMode = false;
-                    return;
                 }
                 
                 State.AddLogMessage("🎬 Batch Mode enabled! Drag & drop video files anywhere on this window to add them to the queue.");
@@ -1649,4 +1747,5 @@ public partial class MainViewModel : ObservableObject
     }
 
     #endregion
+
 }

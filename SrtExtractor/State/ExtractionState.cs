@@ -124,6 +124,7 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _recentFiles = new();
 
+
     // Events
     public event EventHandler? PreferencesChanged;
 
@@ -704,6 +705,7 @@ public partial class ExtractionState : ObservableObject
         DetailedProgressMessage = string.Join(" • ", parts);
     }
 
+
     /// <summary>
     /// Reset the state to initial values.
     /// </summary>
@@ -735,6 +737,7 @@ public partial class ExtractionState : ObservableObject
         EstimatedProcessingTimeMinutes = 0;
         FormattedFileSize = "";
         NetworkDriveInfo = "";
+        
         
         ClearLog();
     }

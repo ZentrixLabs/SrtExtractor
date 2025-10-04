@@ -1,6 +1,0 @@
-[2025-10-03 10:45:51.031] [Info] [LogToolDetection] Tool 'FFmpeg' detected at E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows\ffmpeg.exe (vUnknown)
-[2025-10-03 10:46:01.009] [Info] [SelectFolder] Selected folder for batch SRT correction: X:\Movies
-[2025-10-03 10:46:02.101] [Info] [ScanFolder] Scanning folder for SRT files: X:\Movies
-[2025-10-03 10:46:07.695] [Info] [ScanFolder] Found 79 SRT files
-[2025-10-03 10:54:37.637] [Info] [ScanFolder] Scanning folder for SRT files: X:\Movies
-[2025-10-03 10:54:39.584] [Info] [ScanFolder] Found 79 SRT files

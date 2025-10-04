@@ -956,5 +956,6 @@
             </Grid>
         </GroupBox>
     </Grid>
+    
     </DockPanel>
 </Window>
