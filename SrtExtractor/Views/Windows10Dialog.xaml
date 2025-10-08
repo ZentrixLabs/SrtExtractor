@@ -21,7 +21,7 @@
             <TextBlock Text="⚠️ Windows 10 Version Too Old" 
                        FontSize="24" 
                        FontWeight="Bold" 
-                       Foreground="Orange" 
+                       Foreground="{StaticResource WarningBrush}" 
                        HorizontalAlignment="Center"
                        Margin="0,0,0,10"/>
             <TextBlock Text="Automatic tool installation requires Windows 10 version 1809 or later" 

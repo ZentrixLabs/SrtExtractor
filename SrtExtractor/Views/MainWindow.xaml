@@ -826,7 +826,7 @@
                         <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
                                    FontWeight="Bold" 
-                                   Foreground="Blue"
+                                   Foreground="{StaticResource PrimaryBrush}"
                                    VerticalAlignment="Center"
                                    Margin="4,0,0,0"/>
                     </StackPanel>
@@ -1008,7 +1008,7 @@
                                                    Margin="0,2,0,0"/>
                                         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,2,0,0">
                                             <TextBlock Text="{Binding NetworkIndicator}" FontSize="12"/>
-                                            <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="10" Foreground="Blue" Margin="4,0,0,0"/>
+                                            <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="10" Foreground="{StaticResource PrimaryBrush}" Margin="4,0,0,0"/>
                                         </StackPanel>
                                         
                                         <!-- Status Message -->

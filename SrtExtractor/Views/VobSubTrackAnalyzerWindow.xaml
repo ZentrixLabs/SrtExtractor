@@ -73,7 +73,7 @@
                     <LineBreak/>
                     This analyzer shows the actual Matroska track numbers (what Subtitle Edit displays), and recommends tracks based on your preferences (Tools → Options → Subtitle Preferences).
                     <LineBreak/>
-                    <Run FontWeight="Bold" Foreground="Green">✅ Track numbers now match Subtitle Edit!</Run>
+                    <Run FontWeight="Bold" Foreground="{StaticResource SuccessBrush}">✅ Track numbers now match Subtitle Edit!</Run>
                     <Run>Use these track numbers to select the correct subtitles in Subtitle Edit's batch converter.</Run>
                 </TextBlock>
             </StackPanel>
