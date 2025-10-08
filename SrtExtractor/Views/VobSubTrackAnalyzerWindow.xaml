@@ -8,6 +8,7 @@
         xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
         ui:WindowHelper.UseModernWindowStyle="True"
+        Icon="pack://application:,,,/SrtExtractor.ico"
         Title="VobSub Track Analyzer" 
         Height="700" Width="1100"
         MinHeight="600" MinWidth="900"
