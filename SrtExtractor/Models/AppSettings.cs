@@ -6,6 +6,7 @@ namespace SrtExtractor.Models;
 /// <param name="MkvMergePath">Path to mkvmerge.exe</param>
 /// <param name="MkvExtractPath">Path to mkvextract.exe</param>
 /// <param name="SubtitleEditPath">Path to SubtitleEdit.exe</param>
+/// <param name="TesseractDataPath">Path to Tesseract data directory</param>
 /// <param name="AutoDetectTools">Whether to automatically detect tools on startup</param>
 /// <param name="LastToolCheck">Timestamp of last tool detection</param>
 /// <param name="PreferForced">Whether to prefer forced subtitle tracks</param>
@@ -16,6 +17,7 @@ namespace SrtExtractor.Models;
         string? MkvMergePath,
         string? MkvExtractPath,
         string? SubtitleEditPath,
+        string? TesseractDataPath,
         bool AutoDetectTools,
         DateTime? LastToolCheck,
         bool PreferForced,
@@ -31,6 +33,7 @@ namespace SrtExtractor.Models;
         MkvMergePath: null,
         MkvExtractPath: null,
         SubtitleEditPath: null,
+        TesseractDataPath: null,
         AutoDetectTools: true,
         LastToolCheck: null,
             PreferForced: true,

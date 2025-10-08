@@ -31,7 +31,8 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 - **Preference Settings**: Choose between forced subtitles or closed captions
 - **Process Cancellation**: Cancel long-running operations with proper cleanup
 - **Temporary File Management**: Automatic cleanup of temporary files during processing
-- **Performance Optimized**: Async file operations with proper threading and memory management
+- **High Performance**: Optimized regex patterns, intelligent caching, and efficient memory management
+- **Responsive UI**: Debounced window operations and optimized batch processing for smooth experience
 
 ## 🛠️ Supported Subtitle Formats
 

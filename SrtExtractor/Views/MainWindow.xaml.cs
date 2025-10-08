@@ -21,6 +21,8 @@ namespace SrtExtractor.Views
         private readonly IServiceProvider _serviceProvider;
         private readonly IWindowStateService _windowStateService;
         private readonly ILoggingService _loggingService;
+        private CancellationTokenSource? _saveStateCts;
+        private readonly TimeSpan _saveStateDebounce = TimeSpan.FromSeconds(1);
 
         public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider, IWindowStateService windowStateService, ILoggingService loggingService)
         {
@@ -41,6 +43,7 @@ namespace SrtExtractor.Views
             // Subscribe to window events for state persistence
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
+            Closed += MainWindow_Closed;
             LocationChanged += MainWindow_LocationChanged;
             SizeChanged += MainWindow_SizeChanged;
             StateChanged += MainWindow_StateChanged;
@@ -152,6 +155,22 @@ namespace SrtExtractor.Views
             catch (Exception ex)
             {
                 MessageBox.Show($"Error opening SRT correction:\n{ex.Message}", "SRT Correction Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void VobSubTrackAnalyzer_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Create the VobSub Track Analyzer window with dependency injection
+                var vobSubTrackAnalyzerWindow = _serviceProvider.GetRequiredService<VobSubTrackAnalyzerWindow>();
+                vobSubTrackAnalyzerWindow.Owner = this;
+                vobSubTrackAnalyzerWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error opening VobSub Track Analyzer", ex);
+                MessageBox.Show($"Error opening VobSub Track Analyzer:\n{ex.Message}", "VobSub Track Analyzer Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -296,22 +315,22 @@ namespace SrtExtractor.Views
 
         private async void State_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MainViewModel.State.RecentFiles))
+            try
             {
-                Dispatcher.Invoke(PopulateRecentFilesMenu);
-            }
-            else if (e.PropertyName == nameof(MainViewModel.State.IsBatchMode) || 
-                     e.PropertyName == nameof(MainViewModel.State.QueueColumnWidth))
-            {
-                // Save window state when batch mode or queue column width changes
-                try
+                if (e.PropertyName == nameof(MainViewModel.State.RecentFiles))
                 {
+                    Dispatcher.Invoke(PopulateRecentFilesMenu);
+                }
+                else if (e.PropertyName == nameof(MainViewModel.State.IsBatchMode) || 
+                         e.PropertyName == nameof(MainViewModel.State.QueueColumnWidth))
+                {
+                    // Save window state when batch mode or queue column width changes
                     await SaveWindowStateAsync().ConfigureAwait(false);
                 }
-                catch (Exception ex)
-                {
-                    _loggingService.LogError("Error saving window state on property change", ex);
-                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Unhandled error in State_PropertyChanged", ex);
             }
         }
 
@@ -442,6 +461,31 @@ namespace SrtExtractor.Views
         }
 
         /// <summary>
+        /// Debounces window state saves to prevent excessive disk I/O during resize/move operations.
+        /// </summary>
+        private async Task DebounceWindowStateSaveAsync()
+        {
+            // Cancel any pending save
+            _saveStateCts?.Cancel();
+            _saveStateCts?.Dispose();
+            _saveStateCts = new CancellationTokenSource();
+            
+            try
+            {
+                await Task.Delay(_saveStateDebounce, _saveStateCts.Token);
+                await SaveWindowStateAsync();
+            }
+            catch (OperationCanceledException)
+            {
+                // Debounced - this is expected
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error in debounced window state save", ex);
+            }
+        }
+
+        /// <summary>
         /// Handles window closing event to save state.
         /// </summary>
         private async void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -452,12 +496,44 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error saving window state on close", ex);
+                _loggingService.LogError("Unhandled error in MainWindow_Closing", ex);
             }
         }
 
         /// <summary>
-        /// Handles window location changes to save state.
+        /// Handles window closed event to clean up event handlers and prevent memory leaks.
+        /// </summary>
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            try
+            {
+                // Unsubscribe from all events to prevent memory leaks
+                if (DataContext is MainViewModel viewModel && viewModel.State != null)
+                {
+                    viewModel.State.PropertyChanged -= State_PropertyChanged;
+                }
+                
+                Loaded -= MainWindow_Loaded;
+                Closing -= MainWindow_Closing;
+                Closed -= MainWindow_Closed;
+                LocationChanged -= MainWindow_LocationChanged;
+                SizeChanged -= MainWindow_SizeChanged;
+                StateChanged -= MainWindow_StateChanged;
+                
+                // Cancel any pending debounced saves and dispose
+                _saveStateCts?.Cancel();
+                _saveStateCts?.Dispose();
+                
+                _loggingService.LogInfo("MainWindow event handlers unsubscribed successfully");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error unsubscribing MainWindow event handlers", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handles window location changes to save state (debounced).
         /// </summary>
         private async void MainWindow_LocationChanged(object? sender, EventArgs e)
         {
@@ -466,17 +542,17 @@ namespace SrtExtractor.Views
                 // Only save if window is not minimized or maximized
                 if (WindowState == System.Windows.WindowState.Normal)
                 {
-                    await SaveWindowStateAsync().ConfigureAwait(false);
+                    await DebounceWindowStateSaveAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error saving window state on location change", ex);
+                _loggingService.LogError("Unhandled error in MainWindow_LocationChanged", ex);
             }
         }
 
         /// <summary>
-        /// Handles window size changes to save state.
+        /// Handles window size changes to save state (debounced).
         /// </summary>
         private async void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -485,12 +561,12 @@ namespace SrtExtractor.Views
                 // Only save if window is not minimized or maximized
                 if (WindowState == System.Windows.WindowState.Normal)
                 {
-                    await SaveWindowStateAsync().ConfigureAwait(false);
+                    await DebounceWindowStateSaveAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error saving window state on size change", ex);
+                _loggingService.LogError("Unhandled error in MainWindow_SizeChanged", ex);
             }
         }
 
@@ -505,7 +581,7 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
-                _loggingService.LogError("Error saving window state on state change", ex);
+                _loggingService.LogError("Unhandled error in MainWindow_StateChanged", ex);
             }
         }
 
@@ -788,7 +864,6 @@ namespace SrtExtractor.Views
 
         #region Batch Queue Drag & Drop Reordering
 
-        private bool _isDragging = false;
         private Point _dragStartPoint;
         private BatchFile? _draggedItem;
 
@@ -817,12 +892,9 @@ namespace SrtExtractor.Views
                 
                 if (distance > 10) // Minimum drag distance
                 {
-                    _isDragging = true;
-                    
                     var data = new DataObject(typeof(BatchFile), _draggedItem);
                     DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
                     
-                    _isDragging = false;
                     _draggedItem = null;
                 }
             }
@@ -830,7 +902,6 @@ namespace SrtExtractor.Views
 
         private void BatchQueueListBox_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            _isDragging = false;
             _draggedItem = null;
         }
 

@@ -54,8 +54,11 @@ public class SubtitleOcrService : ISubtitleOcrService
             
             _loggingService.LogInfo($"Running Subtitle Edit CLI with args: {args}");
             
-            // Use a shorter timeout for Subtitle Edit to prevent GUI hanging
-            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            // Calculate timeout based on file size (OCR is slow, especially for large files)
+            var timeout = CalculateOcrTimeout(supPath);
+            _loggingService.LogInfo($"Using OCR timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeMB(supPath):F1} MB");
+            
+            using var cts = new CancellationTokenSource(timeout);
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
             var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.SubtitleEditPath, args, combinedCts.Token);
 
@@ -118,5 +121,57 @@ public class SubtitleOcrService : ISubtitleOcrService
             "por" or "pt" => "Latin",  // Portuguese uses Latin script
             _ => "Latin"               // Default to Latin for most Western languages
         };
+    }
+
+    /// <summary>
+    /// Calculate appropriate OCR timeout based on SUP file size.
+    /// OCR is very slow, especially for large PGS subtitle files.
+    /// </summary>
+    /// <param name="supPath">Path to the SUP file</param>
+    /// <returns>Calculated timeout duration</returns>
+    private static TimeSpan CalculateOcrTimeout(string supPath)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(supPath);
+            var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
+            
+            // OCR is much slower than extraction
+            // Base: 5 minutes, add 3 minutes per 50MB
+            // Network files and large files need more time
+            var baseMinutes = 5.0;
+            var additionalMinutes = (sizeMB / 50.0) * 3.0;
+            
+            var totalMinutes = baseMinutes + additionalMinutes;
+            
+            // Cap at 2 hours for very large files
+            var maxMinutes = 120;
+            totalMinutes = Math.Min(totalMinutes, maxMinutes);
+            
+            return TimeSpan.FromMinutes(totalMinutes);
+        }
+        catch
+        {
+            // If we can't determine file size, use a safe default of 30 minutes
+            return TimeSpan.FromMinutes(30);
+        }
+    }
+
+    /// <summary>
+    /// Get file size in MB for logging purposes.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>File size in MB</returns>
+    private static double GetFileSizeMB(string filePath)
+    {
+        try
+        {
+            var fileInfo = new FileInfo(filePath);
+            return fileInfo.Length / (1024.0 * 1024.0);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 }

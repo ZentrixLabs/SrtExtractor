@@ -1,0 +1,262 @@
+<Window x:Class="SrtExtractor.Views.VobSubTrackAnalyzerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SrtExtractor.Views"
+        xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        mc:Ignorable="d"
+        Title="VobSub Track Analyzer" 
+        Height="700" Width="1100"
+        MinHeight="600" MinWidth="900"
+        Background="White"
+        WindowStartupLocation="CenterOwner">
+    
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="MinWidth" Value="120"/>
+        </Style>
+        
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        
+        <!-- DataGrid Selection Style -->
+        <Style TargetType="DataGridRow">
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#FF0078D4"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFE3F2FD"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Info -->
+        <GroupBox Header="ℹ️ About This Tool" Grid.Row="0" Background="#FFF9F9F9">
+            <StackPanel>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,8">
+                    <Run FontWeight="Bold">VobSub Track Analyzer</Run>
+                    <LineBreak/>
+                    This tool helps you identify VobSub (image-based) subtitle tracks in your MKV files.
+                    Since VobSub requires OCR processing, we recommend using Subtitle Edit's batch converter.
+                    <LineBreak/>
+                    This analyzer shows the actual Matroska track numbers (what Subtitle Edit displays), and recommends tracks based on your preferences (Tools → Options → Subtitle Preferences).
+                    <LineBreak/>
+                    <Run FontWeight="Bold" Foreground="Green">✅ Track numbers now match Subtitle Edit!</Run>
+                    <Run>Use these track numbers to select the correct subtitles in Subtitle Edit's batch converter.</Run>
+                </TextBlock>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- File/Folder Selection -->
+        <GroupBox Header="📁 File/Folder Selection" Grid.Row="1">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Button Content="Select File..." 
+                            Command="{Binding SelectFileCommand}"
+                            Background="LightCyan"
+                            IsEnabled="{Binding IsNotScanning}"
+                            ToolTip="Select a single MKV file to analyze"/>
+                    <Button Content="Select Folder..." 
+                            Command="{Binding SelectFolderCommand}"
+                            Background="LightBlue"
+                            IsEnabled="{Binding IsNotScanning}"
+                            ToolTip="Select a folder containing MKV files"/>
+                    <TextBox Text="{Binding SelectedPath}" 
+                             IsReadOnly="True" 
+                             Margin="8,0"
+                             VerticalAlignment="Center"
+                             MinWidth="350"/>
+                    <Button Content="🔍 Scan for VobSub Tracks" 
+                            Command="{Binding ScanForVobSubTracksCommand}"
+                            Background="LightGreen"
+                            IsEnabled="{Binding CanStartScan}"
+                            Margin="8,0,0,0"/>
+                </StackPanel>
+                
+                <CheckBox Content="Include subfolders" 
+                          IsChecked="{Binding IncludeSubfolders}"
+                          VerticalAlignment="Center"
+                          IsEnabled="{Binding IsFolderSelected}"
+                          ToolTip="Only applies when a folder is selected"
+                          Margin="0,0,20,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="2" Margin="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Track List -->
+            <GroupBox Header="🎬 VobSub Tracks Found" Grid.Column="0">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding VobSubTracks}"
+                              SelectedItem="{Binding SelectedTrack}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              SelectionMode="Single"
+                              Background="White">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="File" 
+                                                Binding="{Binding FileName}" 
+                                                Width="*"/>
+                            <DataGridTextColumn Header="Track #" 
+                                                Binding="{Binding TrackNumber}" 
+                                                Width="70"/>
+                            <DataGridTextColumn Header="Language" 
+                                                Binding="{Binding Language}" 
+                                                Width="80"/>
+                            <DataGridTextColumn Header="Type" 
+                                                Binding="{Binding TrackType}" 
+                                                Width="90"/>
+                            <DataGridTextColumn Header="Title" 
+                                                Binding="{Binding Title}" 
+                                                Width="150"/>
+                            <DataGridTextColumn Header="Codec" 
+                                                Binding="{Binding Codec}" 
+                                                Width="100"/>
+                            <DataGridTextColumn Header="Recommendation" 
+                                                Binding="{Binding RecommendationReason}" 
+                                                Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    
+                    <!-- Empty State -->
+                    <Border Background="#F9FAFB" 
+                            BorderBrush="#E5E7EB" 
+                            BorderThickness="1" 
+                            CornerRadius="6" 
+                            Padding="40"
+                            Visibility="{Binding HasVobSubTracks, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="🔍" 
+                                       FontSize="48" 
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,16"/>
+                            <TextBlock Text="No VobSub tracks found" 
+                                       FontSize="16" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#374151"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Select a file or folder and scan to find VobSub subtitle tracks" 
+                                       FontSize="12" 
+                                       Foreground="#6B7280" 
+                                       HorizontalAlignment="Center"
+                                       Margin="0,8,0,0"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </GroupBox>
+
+            <GridSplitter Grid.Column="1" 
+                          Width="5" 
+                          HorizontalAlignment="Stretch" 
+                          Background="#E0E0E0"/>
+
+            <!-- Analysis Panel -->
+            <GroupBox Header="📊 Analysis Results" Grid.Column="2">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock Text="{Binding AnalysisResults}" 
+                               FontFamily="Consolas" 
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Padding="8"/>
+                </ScrollViewer>
+            </GroupBox>
+        </Grid>
+
+        <!-- Progress -->
+        <GroupBox Header="⏳ Progress" Grid.Row="3" 
+                  Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="Scanning:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding CurrentFile}" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                
+                <ProgressBar Value="{Binding ProgressPercentage}" 
+                             Height="20" 
+                             Margin="0,0,0,4"/>
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding ProgressText}" 
+                               FontSize="12" 
+                               Foreground="#666666"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                    <TextBlock FontSize="12" Foreground="#333333">
+                        <Run Text="Files Scanned:"/>
+                        <Run Text="{Binding TotalFiles}" FontWeight="Bold"/>
+                        <Run Text=" | Files with VobSub:"/>
+                        <Run Text="{Binding FilesWithVobSub}" FontWeight="Bold"/>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Actions -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="📋 Copy Instructions" 
+                    Command="{Binding CopyInstructionsCommand}"
+                    Background="#2196F3"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Padding="12,6"
+                    IsEnabled="{Binding HasVobSubTracks}"
+                    ToolTip="Copy Subtitle Edit batch conversion instructions to clipboard"/>
+            <Button Content="💾 Export Report" 
+                    Command="{Binding ExportReportCommand}"
+                    Background="#4CAF50"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Padding="12,6"
+                    IsEnabled="{Binding HasVobSubTracks}"
+                    ToolTip="Export detailed analysis report to text file"/>
+            <Button Content="Cancel Scan" 
+                    Command="{Binding CancelScanCommand}"
+                    Background="#FF9800"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Padding="12,6"
+                    IsEnabled="{Binding IsScanning}"/>
+            <Button Content="Close" 
+                    Click="CloseButton_Click"
+                    Background="LightGray"
+                    Margin="10,0,0,0"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -185,6 +185,73 @@ public class MkvToolService : IMkvToolService
         }
     }
 
+    public async Task<(string idxFilePath, string subFilePath)> ExtractVobSubAsync(string mkvPath, int trackId, string outputDirectory, CancellationToken cancellationToken = default)
+    {
+        _loggingService.LogInfo($"Extracting VobSub track {trackId} to directory: {outputDirectory}");
+
+        try
+        {
+            // Calculate timeout based on file size
+            var timeout = CalculateTimeoutForFile(mkvPath);
+            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(mkvPath):F1} GB");
+
+            // Get the tool path directly from tool detection
+            var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
+            if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
+            {
+                throw new InvalidOperationException("MKVToolNix not found");
+            }
+
+            // Get mkvextract path (same directory as mkvmerge)
+            var mkvDir = Path.GetDirectoryName(toolStatus.Path);
+            var mkvextractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe");
+            if (!File.Exists(mkvextractPath))
+            {
+                throw new InvalidOperationException($"mkvextract.exe not found at: {mkvextractPath}");
+            }
+
+            // Ensure output directory exists
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
+            // Generate output file names
+            var baseFileName = Path.GetFileNameWithoutExtension(mkvPath);
+            var idxFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.idx");
+            var subFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.sub");
+
+            // Run mkvextract tracks to extract VobSub
+            // VobSub tracks are extracted as .idx/.sub file pairs
+            var args = $"tracks \"{mkvPath}\" {trackId}:\"{idxFilePath}\"";
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args, timeout, cancellationToken);
+
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"mkvextract failed with exit code {exitCode}: {stderr}");
+            }
+
+            // Check if both .idx and .sub files were created
+            if (!File.Exists(idxFilePath))
+            {
+                throw new InvalidOperationException($"VobSub .idx file was not created: {idxFilePath}");
+            }
+
+            if (!File.Exists(subFilePath))
+            {
+                throw new InvalidOperationException($"VobSub .sub file was not created: {subFilePath}");
+            }
+
+            _loggingService.LogExtraction($"VobSub extraction (track {trackId})", true);
+            return (idxFilePath, subFilePath);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogExtraction($"VobSub extraction (track {trackId})", false, ex.Message);
+            throw;
+        }
+    }
+
     private List<SubtitleTrack> ParseSubtitleTracks(string jsonOutput)
     {
         try
@@ -204,10 +271,17 @@ public class MkvToolService : IMkvToolService
                             ? codecElement.GetString() ?? "" 
                             : "";
 
-                        // Extract language
+                        // Extract properties including the actual Matroska track number
+                        var trackNumber = id; // Default to id if number not found
                         var language = "";
                         if (trackElement.TryGetProperty("properties", out var propertiesElement))
                         {
+                            // Get the actual Matroska track number (what Subtitle Edit shows)
+                            if (propertiesElement.TryGetProperty("number", out var numberElement))
+                            {
+                                trackNumber = numberElement.GetInt32();
+                            }
+                            
                             if (propertiesElement.TryGetProperty("language", out var langElement))
                             {
                                 language = langElement.GetString() ?? "";
@@ -288,7 +362,12 @@ public class MkvToolService : IMkvToolService
                         // Detect track type based on characteristics
                         var trackType = DetectTrackType(bitrate, frameCount, duration, forced, isClosedCaption);
 
-                        tracks.Add(new SubtitleTrack(id, codec, language, forced, isClosedCaption, name, bitrate, frameCount, duration, trackType, false));
+                        // Create track with:
+                        // - trackNumber (actual Matroska track number) for display
+                        // - id (mkvmerge zero-based index) for extraction commands
+                        tracks.Add(new SubtitleTrack(trackNumber, codec, language, false, forced, 
+                            name ?? "", bitrate ?? 0, frameCount ?? 0, 0, "", false, 
+                            forced, isClosedCaption, false, trackType, frameCount ?? 0, extractionId: id));
                     }
                 }
             }
@@ -430,6 +509,69 @@ public class MkvToolService : IMkvToolService
         {
             // If we can't determine file size, use a conservative 2-hour timeout
             return TimeSpan.FromHours(2);
+        }
+    }
+
+    public async Task<(string idxFilePath, string subFilePath)> ExtractVobSubWithFfmpegAsync(string mkvPath, int trackId, string outputDirectory, CancellationToken cancellationToken = default)
+    {
+        _loggingService.LogInfo($"Extracting VobSub track {trackId} using FFmpeg to directory: {outputDirectory}");
+
+        try
+        {
+            // Calculate timeout based on file size
+            var timeout = CalculateTimeoutForFile(mkvPath);
+            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(mkvPath):F1} GB");
+
+            // Get FFmpeg path from tool detection
+            var toolStatus = await _toolDetectionService.CheckFfmpegAsync();
+            if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
+            {
+                throw new InvalidOperationException("FFmpeg not found");
+            }
+
+            // Ensure output directory exists
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
+            // Generate output file names
+            var baseFileName = Path.GetFileNameWithoutExtension(mkvPath);
+            var idxFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.idx");
+            var subFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.sub");
+
+            // Use FFmpeg to extract VobSub subtitles
+            // FFmpeg can extract VobSub directly from MKV and create .idx/.sub files
+            var args = $"-i \"{mkvPath}\" -map 0:s:{trackId - 1} -c copy -f vobsub \"{Path.Combine(outputDirectory, $"{baseFileName}.{trackId}")}\"";
+            
+            _loggingService.LogInfo($"Running FFmpeg command: {toolStatus.Path} {args}");
+            
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolStatus.Path, args, timeout, cancellationToken);
+
+            if (exitCode != 0)
+            {
+                _loggingService.LogError($"FFmpeg failed with exit code {exitCode}: {stderr}");
+                throw new InvalidOperationException($"FFmpeg failed with exit code {exitCode}: {stderr}");
+            }
+
+            // Check if both .idx and .sub files were created
+            if (!File.Exists(idxFilePath))
+            {
+                throw new InvalidOperationException($"VobSub .idx file was not created: {idxFilePath}");
+            }
+
+            if (!File.Exists(subFilePath))
+            {
+                throw new InvalidOperationException($"VobSub .sub file was not created: {subFilePath}");
+            }
+
+            _loggingService.LogExtraction($"VobSub extraction with FFmpeg (track {trackId})", true);
+            return (idxFilePath, subFilePath);
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogExtraction($"VobSub extraction with FFmpeg (track {trackId})", false, ex.Message);
+            throw;
         }
     }
 

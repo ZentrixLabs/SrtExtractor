@@ -107,9 +107,13 @@
                       Command="{Binding ReDetectToolsCommand}"
                       InputGestureText="F5"
                       ToolTip="Re-detect and verify external tools (MKVToolNix, FFmpeg, etc.)"/>
+            <Separator/>
             <MenuItem Header="_SRT Correction" 
                       Click="SrtCorrection_Click"
                       ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
+            <MenuItem Header="_VobSub Track Analyzer..." 
+                      Click="VobSubTrackAnalyzer_Click"
+                      ToolTip="Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit"/>
         </MenuItem>
         
         <MenuItem Header="_Options">
@@ -388,11 +392,6 @@
                             Click="ClearLog_Click"
                             Background="LightGray"
                             ToolTip="Clear the log display"/>
-                    <Button Content="🔧 SRT Correction" 
-                            Click="SrtCorrection_Click"
-                            Background="LightGreen"
-                            Margin="10,0,0,0"
-                            ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>

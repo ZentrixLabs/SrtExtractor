@@ -48,18 +48,36 @@ namespace SrtExtractor
             // Register ViewModels
             services.AddTransient<MainViewModel>();
             services.AddTransient<BatchSrtCorrectionViewModel>();
+            services.AddTransient<VobSubTrackAnalyzerViewModel>();
 
             // Register Views
             services.AddTransient<MainWindow>();
             services.AddTransient<BatchSrtCorrectionWindow>();
+            services.AddTransient<VobSubTrackAnalyzerWindow>();
             services.AddTransient<SettingsWindow>();
             services.AddTransient<SrtCorrectionWindow>();
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
-            _serviceProvider?.Dispose();
-            base.OnExit(e);
+            try
+            {
+                // Dispose of the main window's ViewModel if it exists
+                if (Current.MainWindow?.DataContext is IDisposable disposableViewModel)
+                {
+                    disposableViewModel.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't prevent shutdown
+                System.Diagnostics.Debug.WriteLine($"Error disposing ViewModel: {ex.Message}");
+            }
+            finally
+            {
+                _serviceProvider?.Dispose();
+                base.OnExit(e);
+            }
         }
     }
 }

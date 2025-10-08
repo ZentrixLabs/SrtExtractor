@@ -32,6 +32,10 @@ public class ProcessRunner : IProcessRunner
     {
         _loggingService.LogInfo($"Running process: {exe} {args}");
 
+        Process? process = null;
+        CancellationTokenSource? timeoutCts = null;
+        CancellationTokenSource? combinedCts = null;
+
         try
         {
             var startInfo = new ProcessStartInfo
@@ -46,16 +50,29 @@ public class ProcessRunner : IProcessRunner
                 StandardErrorEncoding = System.Text.Encoding.UTF8
             };
 
-            using var process = new Process { StartInfo = startInfo };
+            process = new Process { StartInfo = startInfo };
             
-            var outputBuilder = new StringBuilder();
-            var errorBuilder = new StringBuilder();
+            // Limit StringBuilder capacity to prevent unbounded memory growth (10MB max)
+            const int MaxOutputSize = 10 * 1024 * 1024;
+            var outputBuilder = new StringBuilder(4096);
+            var errorBuilder = new StringBuilder(4096);
+            var outputSize = 0L;
+            var errorSize = 0L;
 
             process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data != null)
                 {
-                    outputBuilder.AppendLine(e.Data);
+                    var dataSize = System.Text.Encoding.UTF8.GetByteCount(e.Data);
+                    if (outputSize + dataSize < MaxOutputSize)
+                    {
+                        outputBuilder.AppendLine(e.Data);
+                        outputSize += dataSize;
+                    }
+                    else
+                    {
+                        _loggingService.LogWarning("Process output exceeded maximum size limit");
+                    }
                 }
             };
 
@@ -63,7 +80,16 @@ public class ProcessRunner : IProcessRunner
             {
                 if (e.Data != null)
                 {
-                    errorBuilder.AppendLine(e.Data);
+                    var dataSize = System.Text.Encoding.UTF8.GetByteCount(e.Data);
+                    if (errorSize + dataSize < MaxOutputSize)
+                    {
+                        errorBuilder.AppendLine(e.Data);
+                        errorSize += dataSize;
+                    }
+                    else
+                    {
+                        _loggingService.LogWarning("Process error output exceeded maximum size limit");
+                    }
                 }
             };
 
@@ -72,8 +98,8 @@ public class ProcessRunner : IProcessRunner
             process.BeginErrorReadLine();
 
             // Wait for process to complete or cancellation with timeout
-            using var timeoutCts = new CancellationTokenSource(timeout);
-            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            timeoutCts = new CancellationTokenSource(timeout);
+            combinedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             
             try
             {
@@ -82,13 +108,11 @@ public class ProcessRunner : IProcessRunner
             catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
             {
                 _loggingService.LogWarning($"Process timed out after {timeout.TotalMinutes:F0} minutes: {exe} {args}");
-                process.Kill();
                 throw new TimeoutException($"Process timed out: {exe}");
             }
             catch (OperationCanceledException)
             {
                 _loggingService.LogWarning("Process execution was cancelled, killing process");
-                process.Kill();
                 throw;
             }
 
@@ -118,6 +142,33 @@ public class ProcessRunner : IProcessRunner
         {
             _loggingService.LogError($"Failed to run process: {exe} {args}", ex);
             throw;
+        }
+        finally
+        {
+            // Ensure proper cleanup of process and resources
+            try
+            {
+                if (process != null && !process.HasExited)
+                {
+                    _loggingService.LogInfo("Killing process tree due to timeout or cancellation");
+                    try
+                    {
+                        process.Kill(entireProcessTree: true);
+                        await process.WaitForExitAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+                    }
+                    catch (Exception killEx)
+                    {
+                        _loggingService.LogWarning($"Error killing process: {killEx.Message}");
+                    }
+                }
+            }
+            finally
+            {
+                // Dispose all resources
+                process?.Dispose();
+                timeoutCts?.Dispose();
+                combinedCts?.Dispose();
+            }
         }
     }
 }

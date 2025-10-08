@@ -202,6 +202,9 @@ public partial class ExtractionState : ObservableObject
 
     [ObservableProperty]
     private string _logText = string.Empty;
+    
+    // Internal log message list to prevent string concatenation memory issues
+    private readonly List<string> _logMessages = new(1000);
 
     // Enhanced Progress Information
     [ObservableProperty]
@@ -280,6 +283,7 @@ public partial class ExtractionState : ObservableObject
 
     /// <summary>
     /// Add a log message to the UI log display.
+    /// Uses a list-based approach to prevent string concatenation memory issues.
     /// </summary>
     /// <param name="message">The message to add</param>
     public void AddLogMessage(string message)
@@ -287,21 +291,26 @@ public partial class ExtractionState : ObservableObject
         var timestamp = DateTime.Now.ToString("HH:mm:ss");
         var logEntry = $"[{timestamp}] {message}";
         
-        LogText += logEntry + Environment.NewLine;
+        _logMessages.Add(logEntry);
         
         // Keep only the last 1000 lines to prevent memory issues
-        var lines = LogText.Split('\n');
-        if (lines.Length > 1000)
+        // This is much more efficient than string concatenation and splitting
+        if (_logMessages.Count > 1000)
         {
-            LogText = string.Join(Environment.NewLine, lines.Skip(lines.Length - 1000));
+            // Remove oldest 100 messages at once to reduce frequency of removals
+            _logMessages.RemoveRange(0, 100);
         }
+        
+        // Update the bound property - join only when needed
+        LogText = string.Join(Environment.NewLine, _logMessages);
     }
 
     /// <summary>
-    /// Clear the log display.
+    /// Clear the log display and internal message list.
     /// </summary>
     public void ClearLog()
     {
+        _logMessages.Clear();
         LogText = string.Empty;
     }
 

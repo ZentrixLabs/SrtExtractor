@@ -34,4 +34,24 @@ public interface IMkvToolService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Path to the extracted SUP file</returns>
     Task<string> ExtractPgsAsync(string mkvPath, int trackId, string outSup, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Extract a VobSub subtitle track to .idx/.sub file pair.
+    /// </summary>
+    /// <param name="mkvPath">Path to the MKV file</param>
+    /// <param name="trackId">ID of the subtitle track to extract</param>
+    /// <param name="outputDirectory">Directory to save the .idx/.sub files</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Tuple of (idxFilePath, subFilePath)</returns>
+    Task<(string idxFilePath, string subFilePath)> ExtractVobSubAsync(string mkvPath, int trackId, string outputDirectory, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Extract a VobSub subtitle track using FFmpeg (preserves format better than MKVToolNix).
+    /// </summary>
+    /// <param name="mkvPath">Path to the MKV file</param>
+    /// <param name="trackId">ID of the subtitle track to extract</param>
+    /// <param name="outputDirectory">Directory to save the .idx/.sub files</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Tuple of (idxFilePath, subFilePath)</returns>
+    Task<(string idxFilePath, string subFilePath)> ExtractVobSubWithFfmpegAsync(string mkvPath, int trackId, string outputDirectory, CancellationToken cancellationToken = default);
 }

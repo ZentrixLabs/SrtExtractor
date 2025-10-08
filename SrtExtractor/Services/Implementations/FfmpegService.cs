@@ -74,7 +74,7 @@ public class FfmpegService : IFfmpegService
             }
 
             // Parse JSON output
-            var jsonDoc = JsonDocument.Parse(stdout);
+            using var jsonDoc = JsonDocument.Parse(stdout);
             var streams = jsonDoc.RootElement.GetProperty("streams");
 
             var tracks = new List<SubtitleTrack>();
@@ -177,7 +177,9 @@ public class FfmpegService : IFfmpegService
                     // Get the actual stream index for this track
                     var streamIndex = streamIndexCounter;
 
-                    tracks.Add(new SubtitleTrack(trackId, mappedCodec, language, forced, isClosedCaption, null, bitrate, frameCount, duration, trackType, false, streamIndex));
+                    tracks.Add(new SubtitleTrack(trackId, mappedCodec, language, false, forced, 
+                        "", bitrate ?? 0, frameCount ?? 0, 0, "", false, 
+                        forced, isClosedCaption, false, trackType, frameCount ?? 0));
                     trackId++;
                 }
                 
@@ -269,10 +271,10 @@ public class FfmpegService : IFfmpegService
             throw new InvalidOperationException($"ffprobe failed with exit code {exitCode}: {stderr}");
         }
 
-        // Parse JSON output
-        _loggingService.LogInfo("Parsing ffprobe JSON output...");
-        var jsonDoc = JsonDocument.Parse(stdout);
-        var streams = jsonDoc.RootElement.GetProperty("streams");
+            // Parse JSON output
+            _loggingService.LogInfo("Parsing ffprobe JSON output...");
+            using var jsonDoc = JsonDocument.Parse(stdout);
+            var streams = jsonDoc.RootElement.GetProperty("streams");
 
         int currentTrackId = 0;
         int streamIndex = 0;

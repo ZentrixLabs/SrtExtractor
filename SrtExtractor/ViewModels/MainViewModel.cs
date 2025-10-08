@@ -13,7 +13,7 @@ namespace SrtExtractor.ViewModels;
 /// Main ViewModel for the SrtExtractor application.
 /// Handles all business logic, commands, and tool management.
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly ILoggingService _loggingService;
     private readonly IToolDetectionService _toolDetectionService;
@@ -27,6 +27,7 @@ public partial class MainViewModel : ObservableObject
     private readonly INetworkDetectionService _networkDetectionService;
     private readonly IRecentFilesService _recentFilesService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
+    private Task? _initializationTask;
 
     [ObservableProperty]
     private ExtractionState _state = new();
@@ -68,6 +69,7 @@ public partial class MainViewModel : ObservableObject
         InstallMkvToolNixCommand = new AsyncRelayCommand(InstallMkvToolNixAsync);
         BrowseMkvToolNixCommand = new RelayCommand(BrowseMkvToolNix);
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
+        CleanupTempFilesCommand = new AsyncRelayCommand(CleanupTempFilesAsync);
         CorrectSrtCommand = new AsyncRelayCommand(CorrectSrtAsync);
         
         // Batch mode commands
@@ -88,8 +90,8 @@ public partial class MainViewModel : ObservableObject
         {
             if (e.PropertyName is nameof(State.CanProbe) or nameof(State.CanExtract) or nameof(State.IsProcessing))
             {
-                // Use Dispatcher to ensure UI thread access
-                Application.Current.Dispatcher.Invoke(() =>
+                // Use Dispatcher to ensure UI thread access (non-blocking)
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     ProbeCommand.NotifyCanExecuteChanged();
                     ExtractCommand.NotifyCanExecuteChanged();
@@ -98,8 +100,8 @@ public partial class MainViewModel : ObservableObject
             }
             else if (e.PropertyName == nameof(State.HasBatchQueue))
             {
-                // Use Dispatcher to ensure UI thread access
-                Application.Current.Dispatcher.Invoke(() =>
+                // Use Dispatcher to ensure UI thread access (non-blocking)
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     ProcessBatchCommand.NotifyCanExecuteChanged();
                     ResumeBatchCommand.NotifyCanExecuteChanged();
@@ -113,8 +115,8 @@ public partial class MainViewModel : ObservableObject
             // Automatic saving was removed to prevent infinite loops
         };
 
-        // Initialize the application
-        Task.Run(async () => await InitializeAsync());
+        // Initialize the application - track the task for proper disposal
+        _initializationTask = Task.Run(async () => await InitializeAsync());
     }
 
     #region Commands
@@ -126,6 +128,7 @@ public partial class MainViewModel : ObservableObject
     public IAsyncRelayCommand InstallMkvToolNixCommand { get; }
     public IRelayCommand BrowseMkvToolNixCommand { get; }
     public IAsyncRelayCommand ReDetectToolsCommand { get; }
+    public IAsyncRelayCommand CleanupTempFilesCommand { get; }
     public IAsyncRelayCommand CorrectSrtCommand { get; }
     
     // Batch mode commands
@@ -219,7 +222,9 @@ public partial class MainViewModel : ObservableObject
             foreach (var track in result.Tracks)
             {
                 var isRecommended = selectedTrack != null && track.Id == selectedTrack.Id;
-                var recommendedTrack = track with { IsRecommended = isRecommended };
+                var recommendedTrack = new SubtitleTrack(track.TrackId, track.Codec, track.Language, track.IsDefault, track.IsForced,
+                    track.Name, track.Bitrate, track.Duration, track.Width, track.Title, track.IsSelected,
+                    track.Forced, track.IsClosedCaption, isRecommended, track.TrackType, track.FrameCount, extractionId: track.ExtractionId);
                 State.Tracks.Add(recommendedTrack);
             }
 
@@ -317,14 +322,14 @@ public partial class MainViewModel : ObservableObject
             var fileExtension = Path.GetExtension(State.MkvPath).ToLowerInvariant();
             if (fileExtension == ".mp4")
             {
-                // Use FFmpeg for MP4 files
+                // Use FFmpeg for MP4 files (uses the display ID for MP4 files)
                 State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
                 await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProcessingMessage("MP4 extraction completed!");
                 State.AddLogMessage($"Subtitles extracted to: {outputPath}");
 
                 // Apply multi-pass SRT corrections to MP4 subtitles
-                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None);
+                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             }
             else if (State.SelectedTrack.Codec.Contains("S_TEXT/UTF8") || State.SelectedTrack.Codec.Contains("SubRip/SRT"))
             {
@@ -333,14 +338,14 @@ public partial class MainViewModel : ObservableObject
                 
                 // Simulate progress for text extraction (this is typically very fast)
                 State.UpdateProgress(State.TotalBytes * 50 / 100, "Extracting text subtitles");
-                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
+                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.ExtractionId, outputPath, cancellationToken ?? CancellationToken.None);
                 State.UpdateProgress(State.TotalBytes * 80 / 100, "Text extraction completed");
                 
                 State.UpdateProcessingMessage("Text extraction completed!");
                 State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
 
                 // Apply multi-pass SRT corrections to text subtitles
-                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None);
+                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             }
             else if (State.SelectedTrack.Codec.Contains("PGS") || State.SelectedTrack.Codec.Contains("S_HDMV/PGS"))
             {
@@ -349,7 +354,7 @@ public partial class MainViewModel : ObservableObject
                 
                 State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
                 State.UpdateProgress(State.TotalBytes * 30 / 100, "Extracting PGS subtitles");
-                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.Id, tempSupPath, cancellationToken ?? CancellationToken.None);
+                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.ExtractionId, tempSupPath, cancellationToken ?? CancellationToken.None);
                 State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
                 State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
@@ -361,7 +366,7 @@ public partial class MainViewModel : ObservableObject
                 State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
                 // Apply multi-pass OCR corrections
-                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None);
+                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
                 // Clean up temporary SUP file
                 State.UpdateProcessingMessage("Cleaning up temporary files...");
@@ -374,6 +379,32 @@ public partial class MainViewModel : ObservableObject
                     // Ignore cleanup errors
                 }
                 State.UpdateProcessingMessage("PGS extraction completed!");
+            }
+            else if (State.SelectedTrack.Codec.Contains("VobSub") || State.SelectedTrack.Codec.Contains("S_VOBSUB"))
+            {
+                // VobSub (image-based) subtitles detected - direct users to Subtitle Edit
+                _loggingService.LogInfo("VobSub track detected - directing user to Subtitle Edit for OCR processing");
+                
+                var message = "VobSub Image-Based Subtitles Detected\n\n" +
+                             "This subtitle track is VobSub (image-based) which requires OCR processing.\n\n" +
+                             "We recommend using Subtitle Edit for VobSub extraction:\n\n" +
+                             "1. Open Subtitle Edit\n" +
+                             "2. Go to: Tools → Batch Convert\n" +
+                             "3. Add your MKV file(s)\n" +
+                             "4. Set format: SubRip (.srt)\n" +
+                             "5. Configure OCR settings\n" +
+                             "6. Click Convert\n\n" +
+                             "Tip: Use Tools → VobSub Track Analyzer in SrtExtractor to identify track numbers across multiple files!";
+                
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(message, "VobSub Subtitles - Use Subtitle Edit", 
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                    State.UpdateProcessingMessage("VobSub extraction cancelled - please use Subtitle Edit");
+                    State.AddLogMessage("VobSub track detected. Please use Subtitle Edit's batch convert feature for OCR.");
+                });
+                
+                throw new InvalidOperationException("VobSub subtitles require Subtitle Edit for OCR processing. See the VobSub Track Analyzer tool for help.");
             }
             else
             {
@@ -652,7 +683,9 @@ public partial class MainViewModel : ObservableObject
             return;
 
         // Get the original tracks without recommendation flags
-        var originalTracks = State.Tracks.Select(t => t with { IsRecommended = false }).ToList();
+        var originalTracks = State.Tracks.Select(t => new SubtitleTrack(t.TrackId, t.Codec, t.Language, t.IsDefault, t.IsForced,
+            t.Name, t.Bitrate, t.Duration, t.Width, t.Title, t.IsSelected,
+            t.Forced, t.IsClosedCaption, false, t.TrackType, t.FrameCount, extractionId: t.ExtractionId)).ToList();
         
         // Re-select best track based on current preferences
         var selectedTrack = SelectBestTrack(originalTracks);
@@ -662,7 +695,9 @@ public partial class MainViewModel : ObservableObject
         foreach (var track in originalTracks)
         {
             var isRecommended = selectedTrack != null && track.Id == selectedTrack.Id;
-            var recommendedTrack = track with { IsRecommended = isRecommended };
+            var recommendedTrack = new SubtitleTrack(track.TrackId, track.Codec, track.Language, track.IsDefault, track.IsForced,
+                track.Name, track.Bitrate, track.Duration, track.Width, track.Title, track.IsSelected,
+                track.Forced, track.IsClosedCaption, isRecommended, track.TrackType, track.FrameCount, extractionId: track.ExtractionId);
             State.Tracks.Add(recommendedTrack);
         }
 
@@ -784,8 +819,8 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec preference
-        return tracks.OrderByDescending(t => t.Bitrate ?? 0)
-                     .ThenByDescending(t => t.FrameCount ?? 0)
+        return tracks.OrderByDescending(t => t.Bitrate)
+                     .ThenByDescending(t => t.FrameCount)
                      .ThenByDescending(t => GetCodecPriority(t.Codec))
                      .First();
     }
@@ -881,6 +916,37 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private async Task CleanupTempFilesAsync()
+    {
+        try
+        {
+            State.IsBusy = true;
+            State.UpdateProcessingMessage("Cleaning up temporary files...");
+            State.AddLogMessage("🧹 Cleaning up temporary files...");
+
+            // Clean up VobSub temp directories
+            await CleanupVobSubTempDirectories();
+
+            // Clean up any other temp files if needed
+            if (State.SelectedTrack != null && !string.IsNullOrEmpty(State.MkvPath))
+            {
+                await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
+            }
+
+            State.UpdateProcessingMessage("Cleanup completed!");
+            State.AddLogMessage("✅ Temporary files cleaned up successfully");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to clean up temporary files", ex);
+            State.AddLogMessage($"❌ Failed to clean up temporary files: {ex.Message}");
+        }
+        finally
+        {
+            State.IsBusy = false;
+        }
+    }
+
     private async Task CorrectSrtAsync()
     {
         try
@@ -926,6 +992,7 @@ public partial class MainViewModel : ObservableObject
                 MkvMergePath: null, // These will be updated when tools are detected
                 MkvExtractPath: null,
                 SubtitleEditPath: null,
+                TesseractDataPath: null,
                 AutoDetectTools: true,
                 LastToolCheck: DateTime.Now,
                     PreferForced: State.PreferForced,
@@ -1001,38 +1068,111 @@ public partial class MainViewModel : ObservableObject
                 {
                     _loggingService.LogInfo($"Cleaning up temporary SUP file: {tempSupPath}");
                     
-                    // Give the process a moment to release the file handle
-                    await Task.Delay(2000); // Increased delay for better reliability
-                    
-                    // Try to delete the file, with retry logic for file handle issues
-                    var maxRetries = 5; // Increased retries
-                    for (int i = 0; i < maxRetries; i++)
+                    // Use exponential backoff with shorter total time to prevent UI blocking
+                    var retryDelays = new[] { 100, 200, 500, 1000, 1500 }; // Total: max 3.3 seconds
+                    for (int i = 0; i < retryDelays.Length; i++)
                     {
                         try
                         {
                             File.Delete(tempSupPath);
                             _loggingService.LogInfo($"Successfully cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
-                            // Don't spam the UI log with cleanup messages - this is automatic
                             break;
                         }
-                        catch (IOException) when (i < maxRetries - 1)
+                        catch (IOException) when (i < retryDelays.Length - 1)
                         {
-                            _loggingService.LogInfo($"File still in use, retrying in 2 seconds... (attempt {i + 1}/{maxRetries})");
-                            await Task.Delay(2000); // Increased delay between retries
+                            _loggingService.LogInfo($"File still in use, retrying in {retryDelays[i]}ms... (attempt {i + 1}/{retryDelays.Length})");
+                            await Task.Delay(retryDelays[i]);
                         }
-                        catch (UnauthorizedAccessException) when (i < maxRetries - 1)
+                        catch (UnauthorizedAccessException) when (i < retryDelays.Length - 1)
                         {
-                            _loggingService.LogInfo($"Access denied, retrying in 2 seconds... (attempt {i + 1}/{maxRetries})");
-                            await Task.Delay(2000);
+                            _loggingService.LogInfo($"Access denied, retrying in {retryDelays[i]}ms... (attempt {i + 1}/{retryDelays.Length})");
+                            await Task.Delay(retryDelays[i]);
+                        }
+                        catch (Exception ex) when (i == retryDelays.Length - 1)
+                        {
+                            // Log final failure but don't throw - cleanup is best-effort
+                            _loggingService.LogWarning($"Failed to clean up temporary file after {retryDelays.Length} attempts: {ex.Message}");
                         }
                     }
                 }
+            }
+            // Check if this was a VobSub extraction (which creates temporary .idx/.sub files)
+            else if (selectedTrack.Codec.Contains("VobSub") || selectedTrack.Codec.Contains("S_VOBSUB"))
+            {
+                // Clean up VobSub temporary directories
+                await CleanupVobSubTempDirectories();
             }
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to clean up temporary files", ex);
             // Don't show this to the user as it's automatic cleanup - just log it
+        }
+    }
+
+    /// <summary>
+    /// Cleans up VobSub temporary directories created during extraction.
+    /// </summary>
+    private async Task CleanupVobSubTempDirectories()
+    {
+        try
+        {
+            var srtExtractorTempDir = Path.Combine(Path.GetTempPath(), "SrtExtractor");
+            
+            if (!Directory.Exists(srtExtractorTempDir))
+            {
+                _loggingService.LogInfo("No SrtExtractor temp directory found to clean up");
+                return;
+            }
+
+            _loggingService.LogInfo($"Cleaning up VobSub temporary directories in: {srtExtractorTempDir}");
+
+            // Get all subdirectories (each extraction creates a GUID-named directory)
+            var tempDirectories = Directory.GetDirectories(srtExtractorTempDir);
+            var cleanedCount = 0;
+
+            foreach (var tempDir in tempDirectories)
+            {
+                try
+                {
+                    // Check if this directory contains VobSub files (.idx/.sub)
+                    var idxFiles = Directory.GetFiles(tempDir, "*.idx");
+                    var subFiles = Directory.GetFiles(tempDir, "*.sub");
+                    
+                    if (idxFiles.Length > 0 || subFiles.Length > 0)
+                    {
+                        _loggingService.LogInfo($"Cleaning up VobSub temp directory: {Path.GetFileName(tempDir)}");
+                        
+                        // Give processes time to release file handles
+                        await Task.Delay(1000);
+                        
+                        // Delete the entire directory
+                        Directory.Delete(tempDir, true);
+                        cleanedCount++;
+                    }
+                }
+                catch (IOException ex)
+                {
+                    _loggingService.LogWarning($"Could not clean up temp directory {Path.GetFileName(tempDir)}: {ex.Message}");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    _loggingService.LogWarning($"Access denied cleaning up temp directory {Path.GetFileName(tempDir)}: {ex.Message}");
+                }
+            }
+
+            if (cleanedCount > 0)
+            {
+                _loggingService.LogInfo($"Successfully cleaned up {cleanedCount} VobSub temporary directories");
+            }
+            else
+            {
+                _loggingService.LogInfo("No VobSub temporary directories found to clean up");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to clean up VobSub temporary directories", ex);
         }
     }
 
@@ -1340,6 +1480,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Add files to batch queue from drag and drop.
+    /// Uses bulk add to prevent excessive UI updates.
     /// </summary>
     /// <param name="filePaths">Array of file paths to add</param>
     public void AddFilesToBatchQueue(string[] filePaths)
@@ -1348,26 +1489,45 @@ public partial class MainViewModel : ObservableObject
         {
             var addedCount = 0;
             var skippedCount = 0;
+            var filesToAdd = new List<BatchFile>();
 
+            // First pass: validate and prepare files without adding to ObservableCollection
             foreach (var filePath in filePaths)
             {
-                if (State.AddToBatchQueue(filePath))
-                {
-                    addedCount++;
-                    
-                    // Update network detection for the batch file
-                    var batchFile = State.BatchQueue.FirstOrDefault(f => f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
-                    if (batchFile != null)
-                    {
-                        var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
-                        var estimatedMinutes = _networkDetectionService.GetEstimatedProcessingTime(filePath);
-                        batchFile.UpdateNetworkStatus(isNetwork, estimatedMinutes);
-                    }
-                }
-                else
+                // Check for duplicates
+                if (string.IsNullOrEmpty(filePath) || 
+                    State.BatchQueue.Any(f => f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
                 {
                     skippedCount++;
+                    continue;
                 }
+
+                var batchFile = new BatchFile { FilePath = filePath };
+                batchFile.UpdateFromFileSystem();
+                
+                // Update network detection
+                var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
+                var estimatedMinutes = _networkDetectionService.GetEstimatedProcessingTime(filePath);
+                batchFile.UpdateNetworkStatus(isNetwork, estimatedMinutes);
+                
+                filesToAdd.Add(batchFile);
+                addedCount++;
+            }
+
+            // Second pass: bulk add to ObservableCollection (single UI update per file, but better than alternative)
+            // Note: WPF doesn't support true bulk operations on ObservableCollection,
+            // but this pattern is still better than State.AddToBatchQueue which does more work per item
+            foreach (var file in filesToAdd)
+            {
+                State.BatchQueue.Add(file);
+            }
+
+            // Update statistics once at the end
+            if (filesToAdd.Any())
+            {
+                State.TotalBatchFiles = State.BatchQueue.Count;
+                State.UpdateBatchStatistics();
+                // Note: UpdateBatchStatistics() already calls OnPropertyChanged for computed properties
             }
 
             if (addedCount > 0)
@@ -1647,8 +1807,8 @@ public partial class MainViewModel : ObservableObject
         {
             var recentFiles = await _recentFilesService.GetRecentFilesAsync().ConfigureAwait(false);
             
-            // Update UI on UI thread
-            Application.Current.Dispatcher.Invoke(() =>
+            // Update UI on UI thread (non-blocking)
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 State.RecentFiles.Clear();
                 foreach (var file in recentFiles)
@@ -1677,48 +1837,65 @@ public partial class MainViewModel : ObservableObject
             if (!State.EnableMultiPassCorrection)
             {
                 // Use single-pass correction if multi-pass is disabled
-                State.UpdateProcessingMessage("Correcting common subtitle errors...");
-                State.AddLogMessage("Correcting common subtitle errors...");
-                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(srtPath, cancellationToken);
-                State.UpdateProcessingMessage("Subtitle correction completed!");
-                State.AddLogMessage($"🎯 Subtitle correction completed! Applied {correctionCount} corrections.");
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    State.UpdateProcessingMessage("Correcting common subtitle errors...");
+                    State.AddLogMessage("Correcting common subtitle errors...");
+                });
+                
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(srtPath, cancellationToken).ConfigureAwait(false);
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    State.UpdateProcessingMessage("Subtitle correction completed!");
+                    State.AddLogMessage($"🎯 Subtitle correction completed! Applied {correctionCount} corrections.");
+                });
                 return;
             }
 
             // Read the SRT content
-            var srtContent = await File.ReadAllTextAsync(srtPath, cancellationToken);
+            var srtContent = await File.ReadAllTextAsync(srtPath, cancellationToken).ConfigureAwait(false);
             
             // Apply multi-pass correction based on current mode
-            State.UpdateProcessingMessage($"Starting {State.CorrectionMode.ToLower()} multi-pass correction...");
-            State.AddLogMessage($"Starting {State.CorrectionMode.ToLower()} multi-pass correction...");
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                State.UpdateProcessingMessage($"Starting {State.CorrectionMode.ToLower()} multi-pass correction...");
+                State.AddLogMessage($"Starting {State.CorrectionMode.ToLower()} multi-pass correction...");
+            });
             
             var result = await _multiPassCorrectionService.ProcessWithModeAsync(
                 srtContent, 
                 State.CorrectionMode, 
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             
             // Write the corrected content back to file
             if (result.CorrectedContent != srtContent)
             {
-                await File.WriteAllTextAsync(srtPath, result.CorrectedContent, cancellationToken);
+                await File.WriteAllTextAsync(srtPath, result.CorrectedContent, cancellationToken).ConfigureAwait(false);
             }
             
-            // Update UI with results
-            State.UpdateProcessingMessage("Multi-pass correction completed!");
-            
-            var convergenceText = result.Converged ? " (converged)" : "";
-            State.AddLogMessage($"🎯 Multi-pass correction completed!{convergenceText}");
-            State.AddLogMessage($"   • Passes completed: {result.PassesCompleted}");
-            State.AddLogMessage($"   • Total corrections: {result.TotalCorrections}");
-            State.AddLogMessage($"   • Processing time: {result.ProcessingTimeMs}ms");
+            // Update UI with results - marshal back to UI thread
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                State.UpdateProcessingMessage("Multi-pass correction completed!");
+                
+                var convergenceText = result.Converged ? " (converged)" : "";
+                State.AddLogMessage($"🎯 Multi-pass correction completed!{convergenceText}");
+                State.AddLogMessage($"   • Passes completed: {result.PassesCompleted}");
+                State.AddLogMessage($"   • Total corrections: {result.TotalCorrections}");
+                State.AddLogMessage($"   • Processing time: {result.ProcessingTimeMs}ms");
+            });
             
             // Log any warnings
             if (result.Warnings.Any())
             {
-                foreach (var warning in result.Warnings)
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    State.AddLogMessage($"⚠️ Warning: {warning}");
-                }
+                    foreach (var warning in result.Warnings)
+                    {
+                        State.AddLogMessage($"⚠️ Warning: {warning}");
+                    }
+                });
             }
             
             _loggingService.LogInfo($"Multi-pass correction completed: {result.PassesCompleted} passes, {result.TotalCorrections} corrections, {result.ProcessingTimeMs}ms");
@@ -1726,24 +1903,105 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Error during multi-pass correction", ex);
-            State.AddLogMessage($"❌ Error during correction: {ex.Message}");
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                State.AddLogMessage($"❌ Error during correction: {ex.Message}");
+            });
             
             // Fall back to single-pass correction
             try
             {
-                State.UpdateProcessingMessage("Falling back to single-pass correction...");
-                State.AddLogMessage("Falling back to single-pass correction...");
-                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(srtPath, cancellationToken);
-                State.UpdateProcessingMessage("Single-pass correction completed!");
-                State.AddLogMessage($"🎯 Single-pass correction completed! Applied {correctionCount} corrections.");
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    State.UpdateProcessingMessage("Falling back to single-pass correction...");
+                    State.AddLogMessage("Falling back to single-pass correction...");
+                });
+                
+                var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(srtPath, cancellationToken).ConfigureAwait(false);
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    State.UpdateProcessingMessage("Single-pass correction completed!");
+                    State.AddLogMessage($"🎯 Single-pass correction completed! Applied {correctionCount} corrections.");
+                });
             }
             catch (Exception fallbackEx)
             {
                 _loggingService.LogError("Error during fallback single-pass correction", fallbackEx);
-                State.AddLogMessage($"❌ Error during fallback correction: {fallbackEx.Message}");
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    State.AddLogMessage($"❌ Error during fallback correction: {fallbackEx.Message}");
+                });
                 throw;
             }
         }
+    }
+
+    #endregion
+
+    #region IDisposable Implementation
+
+    private bool _disposed = false;
+
+    /// <summary>
+    /// Disposes of resources used by the MainViewModel.
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Protected implementation of Dispose pattern.
+    /// </summary>
+    /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                // Wait for initialization to complete (with timeout to prevent hanging on shutdown)
+                try
+                {
+                    if (_initializationTask != null && !_initializationTask.IsCompleted)
+                    {
+                        _loggingService.LogInfo("Waiting for initialization to complete before disposal...");
+                        if (!_initializationTask.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            _loggingService.LogWarning("Initialization task did not complete within timeout during disposal");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error waiting for initialization during disposal", ex);
+                }
+
+                // Dispose managed resources
+                _extractionCancellationTokenSource?.Dispose();
+                _extractionCancellationTokenSource = null;
+
+                // Unsubscribe from events to prevent memory leaks
+                if (State != null)
+                {
+                    State.PreferencesChanged -= OnPreferencesChanged;
+                }
+
+                _loggingService.LogInfo("MainViewModel disposed successfully");
+            }
+
+            _disposed = true;
+        }
+    }
+
+    /// <summary>
+    /// Finalizer to ensure resources are cleaned up even if Dispose() is not called.
+    /// </summary>
+    ~MainViewModel()
+    {
+        Dispose(false);
     }
 
     #endregion
