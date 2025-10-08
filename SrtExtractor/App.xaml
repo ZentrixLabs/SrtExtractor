@@ -18,7 +18,33 @@
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Dark">
                             <ResourceDictionary.MergedDictionaries>
-                                <ui:ColorPaletteResources Accent="#FF0078D4" />
+                                <ui:ColorPaletteResources 
+                                    Accent="#FF0078D4"
+                                    AltHigh="#FF1E1E1E"
+                                    AltLow="#FF1E1E1E"
+                                    AltMedium="#FF1E1E1E"
+                                    AltMediumHigh="#FF1E1E1E"
+                                    AltMediumLow="#FF2D2D30"
+                                    BaseHigh="#FFFFFFFF"
+                                    BaseLow="#FF3E3E42"
+                                    BaseMedium="#FFB0B0B0"
+                                    BaseMediumHigh="#FFD0D0D0"
+                                    BaseMediumLow="#FF7F7F7F"
+                                    ChromeAltLow="#FFFFFFFF"
+                                    ChromeBlackHigh="#FF000000"
+                                    ChromeBlackLow="#FFFFFFFF"
+                                    ChromeBlackMedium="#FF000000"
+                                    ChromeBlackMediumLow="#FF000000"
+                                    ChromeDisabledHigh="#FF3E3E42"
+                                    ChromeDisabledLow="#FFB0B0B0"
+                                    ChromeGray="#FF7F7F7F"
+                                    ChromeHigh="#FF7F7F7F"
+                                    ChromeLow="#FF2D2D30"
+                                    ChromeMedium="#FF1E1E1E"
+                                    ChromeMediumLow="#FF3E3E42"
+                                    ChromeWhite="#FFFFFFFF"
+                                    ListLow="#FF1E1E1E"
+                                    ListMedium="#FF3E3E42" />
                             </ResourceDictionary.MergedDictionaries>
                         </ResourceDictionary>
                     </ui:ThemeResources.ThemeDictionaries>

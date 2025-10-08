@@ -3,42 +3,28 @@
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
 
     <!-- ============================================ -->
-    <!-- COLOR PALETTE (Windows 11 Inspired)         -->
+    <!-- COLOR PALETTE (Theme-Aware via ModernWPF)   -->
     <!-- ============================================ -->
     
-    <!-- Primary Colors -->
+    <!-- NOTE: We use ModernWPF's SystemControlForegroundBaseXXX resources -->
+    <!-- These automatically adapt to Light/Dark theme -->
+    
+    <!-- Primary Colors (Accent - theme independent) -->
     <Color x:Key="PrimaryColor">#0078D4</Color>
     <Color x:Key="PrimaryHoverColor">#106EBE</Color>
     <Color x:Key="PrimaryPressedColor">#005A9E</Color>
     
-    <!-- Accent Colors -->
-    <Color x:Key="SuccessColor">#107C10</Color>
-    <Color x:Key="WarningColor">#FFA500</Color>
-    <Color x:Key="ErrorColor">#D13438</Color>
+    <!-- Accent Colors (visible in both themes) -->
+    <Color x:Key="SuccessColor">#10B981</Color>
+    <Color x:Key="SuccessColorDark">#6EE7B7</Color>
+    <Color x:Key="WarningColor">#F59E0B</Color>
+    <Color x:Key="WarningColorDark">#FCD34D</Color>
+    <Color x:Key="ErrorColor">#EF4444</Color>
+    <Color x:Key="ErrorColorDark">#FCA5A5</Color>
     <Color x:Key="InfoColor">#0078D4</Color>
     
-    <!-- Neutral Colors (Light Theme) -->
-    <Color x:Key="SurfaceColor">#FFFFFF</Color>
-    <Color x:Key="BackgroundColor">#F3F3F3</Color>
-    <Color x:Key="BackgroundAltColor">#FAFAFA</Color>
-    <Color x:Key="BorderColor">#E1E1E1</Color>
-    
-    <!-- Text Colors -->
-    <Color x:Key="TextPrimaryColor">#000000</Color>
-    <Color x:Key="TextSecondaryColor">#605E5C</Color>
-    <Color x:Key="TextTertiaryColor">#8A8886</Color>
-    <Color x:Key="TextDisabledColor">#C8C6C4</Color>
-    <Color x:Key="TextOnPrimaryColor">#FFFFFF</Color>
-    
-    <!-- Status Colors -->
-    <Color x:Key="StatusPendingColor">#FFFFFF</Color>
-    <Color x:Key="StatusProcessingColor">#FFF8DC</Color>
-    <Color x:Key="StatusCompletedColor">#F0FFF0</Color>
-    <Color x:Key="StatusErrorColor">#FFF0F0</Color>
-    <Color x:Key="StatusCancelledColor">#F8F8F8</Color>
-    
     <!-- ============================================ -->
-    <!-- BRUSHES                                     -->
+    <!-- BRUSHES (Theme-Aware)                       -->
     <!-- ============================================ -->
     
     <!-- Primary Brushes -->
@@ -46,31 +32,31 @@
     <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryHoverColor}"/>
     <SolidColorBrush x:Key="PrimaryPressedBrush" Color="{StaticResource PrimaryPressedColor}"/>
     
-    <!-- Accent Brushes -->
+    <!-- Accent Brushes (Theme-Aware) -->
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
     
-    <!-- Neutral Brushes -->
-    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
-    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
-    <SolidColorBrush x:Key="BackgroundAltBrush" Color="{StaticResource BackgroundAltColor}"/>
-    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <!-- Neutral Brushes (Use ModernWPF System Resources) -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{DynamicResource SystemChromeMediumLowColor}"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{DynamicResource SystemAltHighColor}"/>
+    <SolidColorBrush x:Key="BackgroundAltBrush" Color="{DynamicResource SystemChromeLowColor}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource SystemBaseMediumLowColor}"/>
     
-    <!-- Text Brushes -->
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
-    <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiaryColor}"/>
-    <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
-    <SolidColorBrush x:Key="TextOnPrimaryBrush" Color="{StaticResource TextOnPrimaryColor}"/>
+    <!-- Text Brushes (Theme-Aware via ModernWPF) -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{DynamicResource SystemBaseHighColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource SystemBaseMediumHighColor}"/>
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="{DynamicResource SystemBaseMediumColor}"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="{DynamicResource SystemBaseMediumLowColor}"/>
+    <SolidColorBrush x:Key="TextOnPrimaryBrush" Color="{DynamicResource SystemAltHighColor}"/>
     
-    <!-- Status Brushes -->
-    <SolidColorBrush x:Key="StatusPendingBrush" Color="{StaticResource StatusPendingColor}"/>
-    <SolidColorBrush x:Key="StatusProcessingBrush" Color="{StaticResource StatusProcessingColor}"/>
-    <SolidColorBrush x:Key="StatusCompletedBrush" Color="{StaticResource StatusCompletedColor}"/>
-    <SolidColorBrush x:Key="StatusErrorBrush" Color="{StaticResource StatusErrorColor}"/>
-    <SolidColorBrush x:Key="StatusCancelledBrush" Color="{StaticResource StatusCancelledColor}"/>
+    <!-- Status Brushes (Theme-Aware) -->
+    <SolidColorBrush x:Key="StatusPendingBrush" Color="{DynamicResource SystemChromeMediumColor}"/>
+    <SolidColorBrush x:Key="StatusProcessingBrush" Color="#40F59E0B"/>
+    <SolidColorBrush x:Key="StatusCompletedBrush" Color="#4010B981"/>
+    <SolidColorBrush x:Key="StatusErrorBrush" Color="#40EF4444"/>
+    <SolidColorBrush x:Key="StatusCancelledBrush" Color="{DynamicResource SystemChromeLowColor}"/>
     
     <!-- ============================================ -->
     <!-- TYPOGRAPHY                                  -->
