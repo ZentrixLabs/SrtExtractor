@@ -15,6 +15,7 @@ namespace SrtExtractor.ViewModels;
 public partial class BatchSrtCorrectionViewModel : ObservableObject
 {
     private readonly ILoggingService _loggingService;
+    private readonly INotificationService _notificationService;
     private readonly ISrtCorrectionService _srtCorrectionService;
     private readonly IAsyncFileService _asyncFileService;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -54,10 +55,12 @@ public partial class BatchSrtCorrectionViewModel : ObservableObject
 
     public BatchSrtCorrectionViewModel(
         ILoggingService loggingService,
+        INotificationService notificationService,
         ISrtCorrectionService srtCorrectionService,
         IAsyncFileService asyncFileService)
     {
         _loggingService = loggingService;
+        _notificationService = notificationService;
         _srtCorrectionService = srtCorrectionService;
         _asyncFileService = asyncFileService;
     }
@@ -124,7 +127,7 @@ public partial class BatchSrtCorrectionViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError($"Error scanning folder: {SelectedFolder}", ex);
-            MessageBox.Show($"Error scanning folder: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Error scanning folder: {ex.Message}", "Error");
         }
     }
 
@@ -194,8 +197,8 @@ public partial class BatchSrtCorrectionViewModel : ObservableObject
             if (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
                 ProgressText = $"Completed! Processed {processedCount} files with {totalCorrections} total corrections.";
-                MessageBox.Show($"Batch correction completed!\n\nProcessed: {processedCount} files\nTotal corrections: {totalCorrections}", 
-                              "Batch Correction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowSuccess($"Batch correction completed!\n\nProcessed: {processedCount} files\nTotal corrections: {totalCorrections}", 
+                              "Batch Correction Complete");
             }
             else
             {
@@ -210,7 +213,7 @@ public partial class BatchSrtCorrectionViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Error during batch SRT correction", ex);
-            MessageBox.Show($"Error during batch correction: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Error during batch correction: {ex.Message}", "Error");
         }
         finally
         {

@@ -235,7 +235,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -741,17 +741,18 @@
 
         <!-- Log Display -->
         <GroupBox Header="Log" Grid.Row="4" Grid.ColumnSpan="2">
-            <ScrollViewer Height="250" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+            <Grid>
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 
                          TextWrapping="Wrap" 
                          AcceptsReturn="True"
-                         VerticalScrollBarVisibility="Disabled"
-                         HorizontalScrollBarVisibility="Disabled"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
                          Background="{DynamicResource LogBackgroundBrush}" 
                          Foreground="{DynamicResource LogForegroundBrush}"
                          FontFamily="{StaticResource MonospaceFontFamily}"
-                         FontSize="{StaticResource FontSizeCaption}">
+                         FontSize="{StaticResource FontSizeCaption}"
+                         MinHeight="150">
                     <TextBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Copy All" 
@@ -804,7 +805,7 @@
                         </ContextMenu>
                     </TextBox.ContextMenu>
                 </TextBox>
-            </ScrollViewer>
+            </Grid>
         </GroupBox>
 
         </Grid>
@@ -1185,5 +1186,18 @@
                 </StackPanel>
             </Border>
         </Border>
+        
+        <!-- Toast Notification Container -->
+        <ItemsControl x:Name="ToastContainer"
+                     VerticalAlignment="Bottom"
+                     HorizontalAlignment="Right"
+                     Margin="0,0,20,20"
+                     Panel.ZIndex="9999">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel VerticalAlignment="Bottom"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
     </Grid>
 </Window>

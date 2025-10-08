@@ -16,6 +16,7 @@ namespace SrtExtractor.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly ILoggingService _loggingService;
+    private readonly INotificationService _notificationService;
     private readonly IToolDetectionService _toolDetectionService;
     private readonly IWingetService _wingetService;
     private readonly IMkvToolService _mkvToolService;
@@ -35,6 +36,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel(
         ILoggingService loggingService,
+        INotificationService notificationService,
         IToolDetectionService toolDetectionService,
         IWingetService wingetService,
         IMkvToolService mkvToolService,
@@ -48,6 +50,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IFileCacheService fileCacheService)
     {
         _loggingService = loggingService;
+        _notificationService = notificationService;
         _toolDetectionService = toolDetectionService;
         _wingetService = wingetService;
         _mkvToolService = mkvToolService;
@@ -180,7 +183,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to pick MKV file", ex);
-            MessageBox.Show($"Failed to select MKV file:\n{ex.Message}", "File Selection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to select MKV file:\n{ex.Message}", "File Selection Error");
         }
         
         return Task.CompletedTask;
@@ -264,7 +267,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogError("Failed to probe video tracks", ex);
             State.AddLogMessage($"Error probing tracks: {ex.Message}");
-            MessageBox.Show($"Failed to probe video file:\n{ex.Message}", "Probe Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to probe video file:\n{ex.Message}", "Probe Error");
         }
         finally
         {
@@ -401,8 +404,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    MessageBox.Show(message, "VobSub Subtitles - Use Subtitle Edit", 
-                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                    _notificationService.ShowInfo(message, "VobSub Subtitles - Use Subtitle Edit", 8000);
                     State.UpdateProcessingMessage("VobSub extraction cancelled - please use Subtitle Edit");
                     State.AddLogMessage("VobSub track detected. Please use Subtitle Edit's batch convert feature for OCR.");
                 });
@@ -426,7 +428,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Only show success dialog in single file mode, not batch mode
             if (!State.IsBatchMode)
             {
-                MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowSuccess($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete");
             }
         }
         catch (OperationCanceledException)
@@ -450,7 +452,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Only show error dialog in single file mode, not batch mode
             if (!State.IsBatchMode)
             {
-                MessageBox.Show($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _notificationService.ShowError($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error");
             }
         }
         finally
@@ -496,14 +498,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             else
             {
                 State.AddLogMessage("Failed to install MKVToolNix");
-                MessageBox.Show("Failed to install MKVToolNix. Please check the log for details.", "Installation Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning("Failed to install MKVToolNix. Please check the log for details.", "Installation Failed");
             }
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to install MKVToolNix", ex);
             State.AddLogMessage($"Error installing MKVToolNix: {ex.Message}");
-            MessageBox.Show($"Failed to install MKVToolNix:\n{ex.Message}", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to install MKVToolNix:\n{ex.Message}", "Installation Error");
         }
         finally
         {
@@ -615,15 +617,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             State.AddLogMessage("Some required tools are missing. Please configure them in Settings.");
             
             // Show a message directing users to settings
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.Invoke(async () =>
             {
-                var result = MessageBox.Show(
+                var result = await _notificationService.ShowConfirmationAsync(
                     "Some required tools are missing and need to be configured.\n\nWould you like to open Settings to configure the tools now?",
-                    "Tools Missing",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
+                    "Tools Missing");
                 
-                if (result == MessageBoxResult.Yes)
+                if (result)
                 {
                     // This will be handled by the main window when it opens
                     State.ShowSettingsOnStartup = true;
@@ -971,14 +971,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(openFileDialog.FileName);
                 
                 State.AddLogMessage($"🎯 SRT correction completed successfully! Applied {correctionCount} corrections.");
-                MessageBox.Show("SRT file has been corrected successfully!", "Correction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowSuccess("SRT file has been corrected successfully!", "Correction Complete");
             }
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to correct SRT file", ex);
             State.AddLogMessage($"Error correcting SRT file: {ex.Message}");
-            MessageBox.Show($"Failed to correct SRT file:\n{ex.Message}", "Correction Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to correct SRT file:\n{ex.Message}", "Correction Error");
         }
         finally
         {
@@ -1379,11 +1379,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (errorCount > 0)
             {
-                MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning(message, "Batch Processing Complete");
             }
             else
             {
-                MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowInfo(message, "Batch Processing Complete");
             }
             
             // Clear the batch queue and reset progress after completion
@@ -1393,7 +1393,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogError("Batch processing failed", ex);
             State.AddLogMessage($"Batch processing failed: {ex.Message}");
-            MessageBox.Show($"Batch processing failed:\n{ex.Message}", "Batch Processing Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Batch processing failed:\n{ex.Message}", "Batch Processing Error");
         }
         finally
         {
@@ -1446,7 +1446,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!State.AreToolsAvailable)
             {
-                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required");
                 return;
             }
 
@@ -1469,7 +1469,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogError("Failed to resume batch processing", ex);
             State.AddLogMessage($"Failed to resume batch processing: {ex.Message}");
-            MessageBox.Show($"Failed to resume batch processing:\n{ex.Message}", "Resume Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to resume batch processing:\n{ex.Message}", "Resume Error");
         }
     }
 
@@ -1658,7 +1658,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!State.AreToolsAvailable)
             {
-                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required");
                 return;
             }
 
@@ -1720,17 +1720,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
                              $"All files in the batch will be processed with these settings.\n\n" +
                              $"Do you want to continue?";
                 
-                var result = MessageBox.Show(
+                _notificationService.ShowConfirmation(
                     message,
                     "Batch Mode Settings Confirmation",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                
-                if (result == MessageBoxResult.No)
-                {
-                    // User declined, disable batch mode
-                    State.IsBatchMode = false;
-                }
+                    () => { /* User confirmed, continue */ },
+                    () => { 
+                        // User declined, disable batch mode
+                        State.IsBatchMode = false;
+                    });
                 
                 State.AddLogMessage("🎬 Batch Mode enabled! Drag & drop video files anywhere on this window to add them to the queue.");
                 State.AddLogMessage("💡 Tip: Files with 🌐 are on network drives and may take longer to process.");
@@ -1767,8 +1764,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             _loggingService.LogInfo("User requested help");
-            MessageBox.Show(
-                "SrtExtractor Help\n\n" +
+            _notificationService.ShowInfo(
                 "Keyboard Shortcuts:\n" +
                 "• Ctrl+O - Open Video File\n" +
                 "• Ctrl+P - Probe Tracks\n" +
@@ -1781,8 +1777,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 "For more detailed help, visit the project repository:\n" +
                 "https://github.com/ZentrixLabs/SrtExtractor",
                 "SrtExtractor Help",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                7000);
         }
         catch (Exception ex)
         {
@@ -1813,7 +1808,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _loggingService.LogError($"Error opening recent file: {filePath}", ex);
-            MessageBox.Show($"Failed to open recent file:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to open recent file:\n{ex.Message}", "Error");
         }
     }
 
