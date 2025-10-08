@@ -65,9 +65,21 @@
     
     <DockPanel>
         <!-- Navigation Panel -->
-        <Border DockPanel.Dock="Left" Width="200" Background="#F8F9FA" BorderBrush="#E9ECEF" BorderThickness="0,0,1,0">
+        <Border DockPanel.Dock="Left" Width="200" Background="{StaticResource BackgroundAltBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
             <StackPanel>
-            <TextBlock Text="📚 User Guide" FontSize="16" FontWeight="Bold" Margin="12,12,12,8" Foreground="#495057"/>
+            <StackPanel Orientation="Horizontal" Margin="12,12,12,8">
+                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                           Text="{StaticResource IconHelp}" 
+                           FontSize="16" 
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="User Guide" 
+                           FontSize="16" 
+                           FontWeight="{StaticResource FontWeightBold}" 
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
             
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="8,0,8,8">
