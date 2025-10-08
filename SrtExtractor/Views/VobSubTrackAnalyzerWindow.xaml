@@ -53,7 +53,17 @@
         </Grid.RowDefinitions>
 
         <!-- Header with Info -->
-        <GroupBox Header="ℹ️ About This Tool" Grid.Row="0" Background="#FFF9F9F9">
+        <GroupBox Grid.Row="0">
+            <GroupBox.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="{StaticResource IconInfo}" 
+                               FontSize="14" 
+                               Margin="0,0,6,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="About This Tool" VerticalAlignment="Center"/>
+                </StackPanel>
+            </GroupBox.Header>
             <StackPanel>
                 <TextBlock TextWrapping="Wrap" Margin="0,0,0,8">
                     <Run FontWeight="Bold">VobSub Track Analyzer</Run>
@@ -169,11 +179,11 @@
                     </DataGrid>
                     
                     <!-- Empty State -->
-                    <Border Background="#F9FAFB" 
-                            BorderBrush="#E5E7EB" 
+                    <Border Background="{StaticResource BackgroundBrush}" 
+                            BorderBrush="{StaticResource BorderBrush}" 
                             BorderThickness="1" 
-                            CornerRadius="6" 
-                            Padding="40"
+                            CornerRadius="{StaticResource RadiusM}" 
+                            Padding="{StaticResource ThicknessXXL}"
                             Visibility="{Binding HasVobSubTracks, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock FontFamily="{StaticResource IconFontFamily}" 
@@ -188,8 +198,8 @@
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Select a file or folder and scan to find VobSub subtitle tracks" 
-                                       FontSize="12" 
-                                       Foreground="#6B7280" 
+                                       FontSize="{StaticResource FontSizeSmall}" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" 
                                        HorizontalAlignment="Center"
                                        Margin="0,8,0,0"
                                        TextWrapping="Wrap"
@@ -202,10 +212,20 @@
             <GridSplitter Grid.Column="1" 
                           Width="5" 
                           HorizontalAlignment="Stretch" 
-                          Background="#E0E0E0"/>
+                          Background="{StaticResource BorderBrush}"/>
 
             <!-- Analysis Panel -->
-            <GroupBox Header="📊 Analysis Results" Grid.Column="2">
+            <GroupBox Grid.Column="2">
+                <GroupBox.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="{StaticResource IconInfo}" 
+                                   FontSize="14" 
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="Analysis Results" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </GroupBox.Header>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <TextBlock Text="{Binding AnalysisResults}" 
                                FontFamily="Consolas" 
@@ -234,12 +254,12 @@
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <TextBlock Text="{Binding ProgressText}" 
-                               FontSize="12" 
-                               Foreground="#666666"/>
+                               FontSize="{StaticResource FontSizeSmall}" 
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-                    <TextBlock FontSize="12" Foreground="#333333">
+                    <TextBlock FontSize="{StaticResource FontSizeSmall}" Foreground="{StaticResource TextPrimaryBrush}">
                         <Run Text="Files Scanned:"/>
                         <Run Text="{Binding TotalFiles}" FontWeight="Bold"/>
                         <Run Text=" | Files with VobSub:"/>
