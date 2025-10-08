@@ -516,10 +516,24 @@ public partial class ExtractionState : ObservableObject
         BatchErrorCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Error);
         BatchPendingCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Pending);
         
-        // Update computed properties
+        // Batch all property change notifications to reduce UI overhead
         OnPropertyChanged(nameof(CanProcessBatch));
         OnPropertyChanged(nameof(CanResumeBatch));
         OnPropertyChanged(nameof(ShowResumeBatchButton));
+    }
+
+    /// <summary>
+    /// Update batch statistics efficiently without triggering excessive UI updates.
+    /// Use this for frequent updates during batch processing.
+    /// </summary>
+    public void UpdateBatchStatisticsFast()
+    {
+        BatchCompletedCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Completed);
+        BatchErrorCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Error);
+        BatchPendingCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Pending);
+        
+        // Only notify essential properties during batch processing
+        // Skip computed properties that cause UI cascades
     }
 
     /// <summary>

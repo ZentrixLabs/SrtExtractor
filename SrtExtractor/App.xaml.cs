@@ -57,6 +57,7 @@ namespace SrtExtractor
         services.AddSingleton<IWingetService, WingetService>();
         services.AddSingleton<IAsyncFileService, AsyncFileService>();
         services.AddSingleton<IFileLockDetectionService, FileLockDetectionService>();
+        services.AddSingleton<IFileCacheService, FileCacheService>();
         services.AddSingleton<IMkvToolService, MkvToolService>();
         services.AddSingleton<IFfmpegService, FfmpegService>();
         services.AddSingleton<ISubtitleOcrService, SubtitleOcrService>();

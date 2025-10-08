@@ -506,14 +506,22 @@
 
         <!-- Processing Indicator -->
         <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" 
-                            Width="200" 
-                            Height="20" 
-                            Margin="0,0,10,0"/>
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                    <ProgressBar IsIndeterminate="True" 
+                                Width="200" 
+                                Height="20" 
+                                Margin="0,0,10,0"/>
+                    <TextBlock Text="Processing..." 
+                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                               VerticalAlignment="Center"/>
+                </StackPanel>
                 <TextBlock Text="{Binding State.ProcessingMessage}" 
                            FontWeight="{StaticResource FontWeightSemiBold}" 
-                           VerticalAlignment="Center"/>
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           MaxWidth="400"
+                           HorizontalAlignment="Center"/>
             </StackPanel>
         </GroupBox>
 

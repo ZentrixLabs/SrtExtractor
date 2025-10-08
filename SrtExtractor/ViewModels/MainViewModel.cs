@@ -26,6 +26,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly ISettingsService _settingsService;
     private readonly INetworkDetectionService _networkDetectionService;
     private readonly IRecentFilesService _recentFilesService;
+    private readonly IFileCacheService _fileCacheService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
     private Task? _initializationTask;
 
@@ -43,7 +44,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IMultiPassCorrectionService multiPassCorrectionService,
         ISettingsService settingsService,
         INetworkDetectionService networkDetectionService,
-        IRecentFilesService recentFilesService)
+        IRecentFilesService recentFilesService,
+        IFileCacheService fileCacheService)
     {
         _loggingService = loggingService;
         _toolDetectionService = toolDetectionService;
@@ -56,6 +58,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _settingsService = settingsService;
         _networkDetectionService = networkDetectionService;
         _recentFilesService = recentFilesService;
+        _fileCacheService = fileCacheService;
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
@@ -1266,6 +1269,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     
                     successCount++;
                     State.AddLogMessage($"✅ Completed: {batchFile.FileName}");
+                    
+                    // Use fast statistics update during batch processing to reduce UI overhead
+                    State.UpdateBatchStatisticsFast();
                 }
                 catch (OperationCanceledException)
                 {
@@ -1286,6 +1292,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     
                     _loggingService.LogError($"Failed to process batch file {batchFile.FileName}", ex);
                     State.AddLogMessage($"❌ Failed: {batchFile.FileName} - {ex.Message}");
+                    
+                    // Use fast statistics update during batch processing to reduce UI overhead
+                    State.UpdateBatchStatisticsFast();
                 }
 
                 processedCount++;
@@ -1293,6 +1302,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
 
             State.StopProcessingWithProgress();
+            
+            // Final statistics update with full UI notifications after batch processing completes
+            State.UpdateBatchStatistics();
             
             // Create detailed summary
             var successfulFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Completed).ToList();
@@ -1507,7 +1519,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
 
                 var batchFile = new BatchFile { FilePath = filePath };
-                batchFile.UpdateFromFileSystem();
+                batchFile.UpdateFromFileSystem(_fileCacheService);
                 
                 // Update network detection
                 var isNetwork = _networkDetectionService.IsNetworkPath(filePath);

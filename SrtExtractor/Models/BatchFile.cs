@@ -1,5 +1,6 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SrtExtractor.Services.Interfaces;
 
 namespace SrtExtractor.Models;
 
@@ -71,18 +72,53 @@ public partial class BatchFile : ObservableObject
     /// </summary>
     public void UpdateFromFileSystem()
     {
+        UpdateFromFileSystem(null);
+    }
+
+    /// <summary>
+    /// Updates the file properties from the file system using file cache service.
+    /// </summary>
+    /// <param name="fileCacheService">Optional file cache service for performance</param>
+    public async void UpdateFromFileSystem(IFileCacheService? fileCacheService)
+    {
         try
         {
-            if (!File.Exists(FilePath))
+            bool fileExists;
+            long fileSize;
+            string fileName;
+
+            if (fileCacheService != null)
+            {
+                // Use cached file operations for better performance
+                fileExists = await fileCacheService.FileExistsAsync(FilePath);
+                fileSize = await fileCacheService.GetFileSizeAsync(FilePath);
+                fileName = Path.GetFileName(FilePath);
+            }
+            else
+            {
+                // Fallback to direct file operations
+                fileExists = File.Exists(FilePath);
+                if (!fileExists)
+                {
+                    Status = BatchFileStatus.Error;
+                    StatusMessage = "File not found";
+                    return;
+                }
+
+                var fileInfo = new FileInfo(FilePath);
+                fileSize = fileInfo.Length;
+                fileName = fileInfo.Name;
+            }
+
+            if (!fileExists)
             {
                 Status = BatchFileStatus.Error;
                 StatusMessage = "File not found";
                 return;
             }
 
-            var fileInfo = new FileInfo(FilePath);
-            FileSizeBytes = fileInfo.Length;
-            FileName = fileInfo.Name;
+            FileSizeBytes = fileSize;
+            FileName = fileName;
 
             // Format file size
             const long kb = 1024;
