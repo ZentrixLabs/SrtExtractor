@@ -11,7 +11,12 @@
             Icon="pack://application:,,,/SrtExtractor.ico"
             Title="SrtExtractor - MKV/MP4 Subtitle Extractor"
             Height="700" Width="1100"
-            MinHeight="600" MinWidth="900">
+            MinHeight="600" MinWidth="900"
+            AllowDrop="True"
+            DragEnter="Window_DragEnter"
+            DragLeave="Window_DragLeave"
+            DragOver="Window_DragOver"
+            Drop="Window_Drop">
     
     <!-- Keyboard Shortcuts -->
     <Window.InputBindings>
@@ -72,12 +77,41 @@
             <Setter Property="Margin" Value="{StaticResource ThicknessXS}"/>
             <Setter Property="Padding" Value="{StaticResource ThicknessS}"/>
         </Style>
+        
+        <!-- ListBox Style for Batch Queue -->
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <!-- ListBoxItem Style for Batch Queue -->
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource BackgroundAltBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <!-- Main Container -->
-    <DockPanel>
-        <!-- Menu Bar -->
-        <Menu DockPanel.Dock="Top">
+    <Grid>
+        <!-- Main Content -->
+        <DockPanel>
+            <!-- Menu Bar -->
+            <Menu DockPanel.Dock="Top">
         <MenuItem Header="_File">
             <MenuItem Header="_Open Video File..." 
                       Command="{Binding PickMkvCommand}"
@@ -772,12 +806,7 @@
                   Visibility="{Binding State.QueueColumnWidth, Converter={StaticResource DoubleToVisibilityConverter}}"
                   Background="{StaticResource BackgroundAltBrush}"
                   BorderBrush="{StaticResource BorderBrush}"
-                  BorderThickness="1"
-                  AllowDrop="True"
-                  Drop="QueuePanel_Drop"
-                  DragEnter="QueuePanel_DragEnter"
-                  DragOver="QueuePanel_DragOver"
-                  DragLeave="QueuePanel_DragLeave">
+                  BorderThickness="1">
             <GroupBox.Header>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
@@ -826,77 +855,83 @@
                 
                 <!-- Queue Header -->
                 <Grid Grid.Row="1" Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     
-                    <!-- Queue Count -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Queue Count and Statistics -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
                         <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
                                    FontWeight="Bold" 
                                    Foreground="{StaticResource PrimaryBrush}"
                                    VerticalAlignment="Center"
-                                   Margin="4,0,0,0"/>
-                    </StackPanel>
-                    
-                    <!-- Batch Statistics -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                   Margin="4,0,12,0"/>
+                        
+                        <!-- Batch Statistics -->
                         <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                    Text="{StaticResource IconCheckmark}" 
                                    Foreground="{StaticResource SuccessBrush}"
-                                   FontSize="14"
+                                   FontSize="12"
                                    VerticalAlignment="Center" 
-                                   Margin="0,0,4,0"/>
+                                   Margin="0,0,2,0"/>
                         <TextBlock Text="{Binding State.BatchCompletedCount}" 
                                    VerticalAlignment="Center" 
-                                   Margin="0,0,12,0"
+                                   Margin="0,0,8,0"
+                                   FontSize="11"
                                    ToolTip="Completed files"/>
                         <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                    Text="{StaticResource IconError}" 
                                    Foreground="{StaticResource ErrorBrush}"
-                                   FontSize="14"
+                                   FontSize="12"
                                    VerticalAlignment="Center" 
-                                   Margin="0,0,4,0"/>
+                                   Margin="0,0,2,0"/>
                         <TextBlock Text="{Binding State.BatchErrorCount}" 
                                    VerticalAlignment="Center" 
-                                   Margin="0,0,12,0"
+                                   Margin="0,0,8,0"
+                                   FontSize="11"
                                    ToolTip="Failed files"/>
                         <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                    Text="{StaticResource IconPending}" 
                                    Foreground="{StaticResource PrimaryBrush}"
-                                   FontSize="14"
+                                   FontSize="12"
                                    VerticalAlignment="Center" 
-                                   Margin="0,0,4,0"/>
+                                   Margin="0,0,2,0"/>
                         <TextBlock Text="{Binding State.BatchPendingCount}" 
                                    VerticalAlignment="Center"
+                                   FontSize="11"
                                    ToolTip="Pending files"/>
                     </StackPanel>
                     
                     <!-- Action Buttons -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Content="Resume Batch" 
                                 Command="{Binding ResumeBatchCommand}"
                                 Style="{StaticResource AccentButton}"
                                 Margin="0,0,4,0"
-                                Padding="8,4"
-                                FontSize="{StaticResource FontSizeCaption}"
+                                Padding="3,1"
+                                FontSize="10"
+                                MinWidth="0"
+                                Height="20"
                                 Visibility="{Binding State.ShowResumeBatchButton, Converter={StaticResource BoolToVisibilityConverter}}"
                                 ToolTip="Resume batch processing from where it was interrupted"/>
                         <Button Content="Clear Completed" 
                                 Command="{Binding ClearCompletedBatchItemsCommand}"
                                 Style="{StaticResource SuccessButton}"
                                 Margin="0,0,4,0"
-                                Padding="8,4"
-                                FontSize="{StaticResource FontSizeCaption}"
+                                Padding="3,1"
+                                FontSize="10"
+                                MinWidth="0"
+                                Height="20"
                                 ToolTip="Remove only completed files from the queue"/>
                         <Button Content="Clear All" 
                                 Command="{Binding ClearBatchQueueCommand}"
                                 Style="{StaticResource DangerButton}"
-                                Padding="8,4"
-                                FontSize="{StaticResource FontSizeCaption}"
+                                Padding="3,1"
+                                FontSize="10"
+                                MinWidth="0"
+                                Height="20"
                                 Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
                                 ToolTip="Remove all files from the batch queue"/>
                     </StackPanel>
@@ -905,15 +940,12 @@
                 <!-- Queue List -->
                 <Grid Grid.Row="2">
                     <ListBox ItemsSource="{Binding State.BatchQueue}"
-                             Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
-                             BorderBrush="{DynamicResource BorderBrush}"
+                             Background="{DynamicResource BackgroundBrush}"
+                             BorderBrush="{StaticResource BorderBrush}"
                              BorderThickness="1"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             AllowDrop="True"
-                             Drop="BatchQueueListBox_Drop"
-                             DragOver="BatchQueueListBox_DragOver"
-                             DragLeave="BatchQueueListBox_DragLeave"
+                             AllowDrop="False"
                              PreviewMouseLeftButtonDown="BatchQueueListBox_PreviewMouseLeftButtonDown"
                              PreviewMouseMove="BatchQueueListBox_PreviewMouseMove"
                              PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp">
@@ -1050,12 +1082,18 @@
                     </ListBox>
                     
                     <!-- Empty Queue Placeholder -->
-                    <Border Background="{StaticResource BackgroundBrush}" 
+                    <Border Background="{DynamicResource BackgroundAltBrush}" 
                             BorderBrush="{StaticResource BorderBrush}" 
-                            BorderThickness="1" 
+                            BorderThickness="2" 
                             CornerRadius="{StaticResource RadiusM}" 
                             Padding="{StaticResource ThicknessXL}"
                             Visibility="{Binding State.HasBatchQueue, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <Border.Effect>
+                            <DropShadowEffect Color="{Binding Source={StaticResource PrimaryColor}}"
+                                              BlurRadius="10"
+                                              ShadowDepth="0"
+                                              Opacity="0.3"/>
+                        </Border.Effect>
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                        Text="{StaticResource IconFolder}" 
@@ -1066,12 +1104,12 @@
                             <TextBlock Text="No files in queue" 
                                        FontSize="{StaticResource FontSizeBody}" 
                                        FontWeight="{StaticResource FontWeightSemiBold}" 
-                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Drag &amp; drop video files here to add them to the queue" 
                                        FontSize="{StaticResource FontSizeSmall}" 
                                        FontStyle="Italic" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" 
+                                       Foreground="{DynamicResource TextSecondaryBrush}" 
                                        HorizontalAlignment="Center"
                                        Margin="0,4,0,0"
                                        TextWrapping="Wrap"/>
@@ -1100,5 +1138,44 @@
         </GroupBox>
     </Grid>
     
-    </DockPanel>
+        </DockPanel>
+        
+        <!-- Drag & Drop Overlay -->
+        <Border x:Name="DragDropOverlay"
+                Background="#CC1E1E1E"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Border BorderBrush="{StaticResource PrimaryBrush}"
+                    BorderThickness="4"
+                    CornerRadius="{StaticResource RadiusL}"
+                    Margin="20"
+                    Background="#40000000">
+                <Border.Effect>
+                    <DropShadowEffect Color="{Binding Source={StaticResource PrimaryColor}}"
+                                      BlurRadius="20"
+                                      ShadowDepth="0"
+                                      Opacity="0.8"/>
+                </Border.Effect>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}"
+                               Text="{StaticResource IconFolder}"
+                               FontSize="96"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,20"/>
+                    <TextBlock x:Name="DragDropMessage"
+                               Text="Drop MKV/MP4 files here"
+                               FontSize="32"
+                               FontWeight="{StaticResource FontWeightBold}"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <TextBlock Text="to add to batch queue"
+                               FontSize="20"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
 </Window>

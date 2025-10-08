@@ -209,114 +209,139 @@ namespace SrtExtractor.Views
             }
         }
 
-        private void QueuePanel_DragEnter(object sender, DragEventArgs e)
+        private void Window_DragEnter(object sender, DragEventArgs e)
         {
-            // Only allow drag & drop if batch mode is enabled
-            if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                e.Effects = DragDropEffects.Copy;
-                // Change the queue panel appearance to indicate drop target
-                if (sender is GroupBox queuePanel)
-                {
-                    queuePanel.Background = System.Windows.Media.Brushes.LightBlue;
-                    queuePanel.BorderBrush = System.Windows.Media.Brushes.Blue;
-                    queuePanel.BorderThickness = new Thickness(2);
-                }
-            }
-            else
-            {
-                e.Effects = DragDropEffects.None;
-            }
-        }
+            if (DataContext is not MainViewModel viewModel)
+                return;
 
-        private void QueuePanel_DragOver(object sender, DragEventArgs e)
-        {
-            // Only allow drag & drop if batch mode is enabled
-            if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
+            // Only show overlay if batch mode is enabled and files are being dragged
+            if (viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                e.Effects = DragDropEffects.Copy;
-            }
-            else
-            {
-                e.Effects = DragDropEffects.None;
-            }
-        }
-
-        private void QueuePanel_DragLeave(object sender, DragEventArgs e)
-        {
-            // Restore original queue panel appearance
-            if (sender is GroupBox queuePanel)
-            {
-                queuePanel.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F8FAFC"));
-                queuePanel.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E2E8F0"));
-                queuePanel.BorderThickness = new Thickness(1);
-            }
-        }
-
-        private void QueuePanel_Drop(object sender, DragEventArgs e)
-        {
-            try
-            {
-                // Restore original queue panel appearance
-                if (sender is GroupBox queuePanel)
-                {
-                    queuePanel.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F8FAFC"));
-                    queuePanel.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E2E8F0"));
-                    queuePanel.BorderThickness = new Thickness(1);
-                }
-                
-                if (DataContext is not MainViewModel viewModel)
-                    return;
-
-                if (!e.Data.GetDataPresent(DataFormats.FileDrop))
-                    return;
-
-                // Check if batch mode is enabled
-                if (!viewModel.State.IsBatchMode)
-                {
-                    MessageBox.Show("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", "Batch Mode Required", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
                 var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                if (files == null || files.Length == 0)
-                    return;
-
-                // Filter for supported video files only
                 var videoExtensions = new[] { ".mkv", ".mp4" };
-                var videoFiles = files.Where(file =>
+                var hasValidFiles = files?.Any(file => videoExtensions.Contains(Path.GetExtension(file)?.ToLower())) ?? false;
+
+                if (hasValidFiles)
                 {
-                    if (string.IsNullOrEmpty(file))
-                        return false;
-
-                    var extension = Path.GetExtension(file).ToLowerInvariant();
-                    return File.Exists(file) && videoExtensions.Contains(extension);
-                }).ToArray();
-
-                if (videoFiles.Length == 0)
-                {
-                    MessageBox.Show("No valid video files found. Please drag MKV or MP4 files.", "Invalid Files", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // Add files to batch queue
-                viewModel.AddFilesToBatchQueue(videoFiles);
-
-                // Show feedback
-                if (videoFiles.Length == 1)
-                {
-                    MessageBox.Show($"Added {Path.GetFileName(videoFiles[0])} to the batch queue.", "File Added", MessageBoxButton.OK, MessageBoxImage.Information);
+                    DragDropOverlay.Visibility = Visibility.Visible;
+                    DragDropMessage.Text = "Drop MKV/MP4 files here";
+                    e.Effects = DragDropEffects.Copy;
                 }
                 else
                 {
-                    MessageBox.Show($"Added {videoFiles.Length} files to the batch queue.", "Files Added", MessageBoxButton.OK, MessageBoxImage.Information);
+                    DragDropOverlay.Visibility = Visibility.Visible;
+                    DragDropMessage.Text = "Only MKV/MP4 files supported";
+                    DragDropMessage.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.OrangeRed);
+                    e.Effects = DragDropEffects.None;
                 }
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Error processing dropped files:\n{ex.Message}", "Drag & Drop Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                e.Effects = DragDropEffects.None;
             }
         }
+
+        private void Window_DragOver(object sender, DragEventArgs e)
+        {
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            if (viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                var videoExtensions = new[] { ".mkv", ".mp4" };
+                var hasValidFiles = files?.Any(file => videoExtensions.Contains(Path.GetExtension(file)?.ToLower())) ?? false;
+                
+                e.Effects = hasValidFiles ? DragDropEffects.Copy : DragDropEffects.None;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void Window_DragLeave(object sender, DragEventArgs e)
+        {
+            // Hide overlay when drag leaves
+            DragDropOverlay.Visibility = Visibility.Collapsed;
+            DragDropMessage.Foreground = System.Windows.Media.Brushes.White;
+        }
+
+        private void Window_Drop(object sender, DragEventArgs e)
+        {
+            // Hide overlay
+            DragDropOverlay.Visibility = Visibility.Collapsed;
+            DragDropMessage.Foreground = System.Windows.Media.Brushes.White;
+
+            // Let the existing queue panel drop handler process the files
+            // (The files will be handled by QueuePanel_Drop or existing logic)
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
+            // Check if batch mode is enabled
+            if (!viewModel.State.IsBatchMode)
+            {
+                MessageBox.Show("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", 
+                              "Batch Mode Required", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Information);
+                return;
+            }
+
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files == null || files.Length == 0)
+                return;
+
+            // Filter for supported video files only
+            var videoExtensions = new[] { ".mkv", ".mp4" };
+            var videoFiles = files.Where(file =>
+            {
+                if (string.IsNullOrEmpty(file))
+                    return false;
+                var ext = Path.GetExtension(file)?.ToLower();
+                return videoExtensions.Contains(ext);
+            }).ToList();
+
+            if (videoFiles.Count == 0)
+            {
+                MessageBox.Show("No valid video files found. Only MKV and MP4 files are supported.", 
+                              "Invalid File Type", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Warning);
+                return;
+            }
+
+            // Add files to batch queue (use network detection service)
+            var networkDetectionService = _serviceProvider.GetRequiredService<INetworkDetectionService>();
+            
+            foreach (var file in videoFiles)
+            {
+                var batchFile = new BatchFile
+                {
+                    FilePath = file
+                };
+                batchFile.UpdateFromFileSystem();
+                
+                // Detect network status
+                var isNetwork = networkDetectionService.IsNetworkPath(file);
+                var estimatedTime = networkDetectionService.GetEstimatedProcessingTime(file);
+                batchFile.UpdateNetworkStatus(isNetwork, estimatedTime);
+                
+                viewModel.State.BatchQueue.Add(batchFile);
+            }
+
+            _loggingService.LogInfo($"Added {videoFiles.Count} file(s) to batch queue via window drag & drop");
+            
+            // Mark event as handled to prevent QueuePanel_Drop from processing the same files
+            e.Handled = true;
+        }
+
+        // Removed QueuePanel_DragEnter, QueuePanel_DragOver, QueuePanel_DragLeave - now handled at window level
+
+        // Removed QueuePanel_Drop method - now handled at window level
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {

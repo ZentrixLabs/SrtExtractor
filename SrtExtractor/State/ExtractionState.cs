@@ -91,7 +91,20 @@ public partial class ExtractionState : ObservableObject
     private double _queueColumnWidth = 0;
 
     [ObservableProperty]
-    private ObservableCollection<BatchFile> _batchQueue = new();
+    private ObservableCollection<BatchFile> _batchQueue;
+
+    public ExtractionState()
+    {
+        // Initialize BatchQueue with CollectionChanged handler
+        _batchQueue = new ObservableCollection<BatchFile>();
+        _batchQueue.CollectionChanged += (sender, e) =>
+        {
+            // Update computed properties when batch queue changes
+            OnPropertyChanged(nameof(HasBatchQueue));
+            OnPropertyChanged(nameof(CanProcessBatch));
+            OnPropertyChanged(nameof(CanResumeBatch));
+        };
+    }
 
     [ObservableProperty]
     private int _batchCompletedCount = 0;
