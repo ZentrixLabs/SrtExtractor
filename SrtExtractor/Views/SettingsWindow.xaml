@@ -58,7 +58,7 @@
                         
                         <TextBlock Text="SrtExtractor requires these external tools to function properly. Install or configure them below:" 
                                    TextWrapping="Wrap" 
-                                   Foreground="Gray" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" 
                                    Margin="0,0,0,20"/>
 
                         <!-- MKVToolNix Status -->
@@ -70,7 +70,7 @@
                                                Margin="4,0"/>
                                     <TextBlock Text="{Binding State.MkvToolNixStatus.Version, StringFormat='v{0}'}" 
                                                FontStyle="Italic" 
-                                               Foreground="Gray" 
+                                               Foreground="{StaticResource TextSecondaryBrush}" 
                                                Margin="8,0"/>
                                 </StackPanel>
                                 
@@ -78,7 +78,7 @@
                                     <TextBlock Text="Path:" FontWeight="Bold" Width="80"/>
                                     <TextBlock Text="{Binding State.MkvToolNixStatus.Path}" 
                                                TextWrapping="Wrap" 
-                                               Foreground="Gray"/>
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                                 
                                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
@@ -103,7 +103,7 @@
                                                Margin="4,0"/>
                                     <TextBlock Text="{Binding State.SubtitleEditStatus.Version, StringFormat='v{0}'}" 
                                                FontStyle="Italic" 
-                                               Foreground="Gray" 
+                                               Foreground="{StaticResource TextSecondaryBrush}" 
                                                Margin="8,0"/>
                                 </StackPanel>
                                 
@@ -111,12 +111,12 @@
                                     <TextBlock Text="Path:" FontWeight="Bold" Width="80"/>
                                     <TextBlock Text="{Binding State.SubtitleEditStatus.Path}" 
                                                TextWrapping="Wrap" 
-                                               Foreground="Gray"/>
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                                 
                                 <TextBlock Text="(Auto-built during development)" 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
@@ -130,7 +130,7 @@
                                                Margin="4,0"/>
                                     <TextBlock Text="{Binding State.FfmpegStatus.Version, StringFormat='v{0}'}" 
                                                FontStyle="Italic" 
-                                               Foreground="Gray" 
+                                               Foreground="{StaticResource TextSecondaryBrush}" 
                                                Margin="8,0"/>
                                 </StackPanel>
                                 
@@ -138,12 +138,12 @@
                                     <TextBlock Text="Path:" FontWeight="Bold" Width="80"/>
                                     <TextBlock Text="{Binding State.FfmpegStatus.Path}" 
                                                TextWrapping="Wrap" 
-                                               Foreground="Gray"/>
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                                 
                                 <TextBlock Text="(Auto-downloaded during development)" 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
@@ -198,7 +198,7 @@
                                              Margin="0,5"/>
                                 <TextBlock Text="Choose which type of subtitles to prioritize when multiple options are available." 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
@@ -214,7 +214,7 @@
                                 </StackPanel>
                                 <TextBlock Text="Language code for OCR processing (e.g., 'eng' for English, 'spa' for Spanish)" 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
@@ -228,7 +228,7 @@
                                           Margin="0,5"/>
                                 <TextBlock Text="Performs multiple correction passes to catch different OCR errors that may be missed in a single pass." 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,5,0,10"/>
                                 
                                 <StackPanel Orientation="Horizontal" Margin="0,5">
@@ -296,11 +296,11 @@
                                 </StackPanel>
                                 <TextBlock Text="Available variables: {basename}, {lang}, {forced}, {cc}" 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,5,0,0"/>
                                 <TextBlock Text="Example: Movie.eng.forced.srt" 
                                            FontStyle="Italic" 
-                                           Foreground="Gray"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>
@@ -334,7 +334,7 @@
                                           Margin="0,5"/>
                                 <TextBlock Text="When enabled, allows processing multiple files simultaneously with drag &amp; drop support." 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
@@ -348,7 +348,7 @@
                                         HorizontalAlignment="Left"/>
                                 <TextBlock Text="Clear the application log window." 
                                            FontStyle="Italic" 
-                                           Foreground="Gray" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
                                            Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>

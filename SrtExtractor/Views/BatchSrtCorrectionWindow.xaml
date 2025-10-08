@@ -113,8 +113,7 @@
                           CanUserDeleteRows="False"
                           GridLinesVisibility="Horizontal"
                           HeadersVisibility="Column"
-                          SelectionMode="Single"
-                          Background="White">
+                          SelectionMode="Single">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="File Name" 
                                             Binding="{Binding FileName}" 

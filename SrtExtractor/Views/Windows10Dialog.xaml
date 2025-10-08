@@ -27,7 +27,7 @@
             <TextBlock Text="Automatic tool installation requires Windows 10 version 1809 or later" 
                        FontSize="14" 
                        HorizontalAlignment="Center" 
-                       Foreground="Gray"/>
+                       Foreground="{StaticResource TextSecondaryBrush}"/>
         </StackPanel>
         
         <!-- Content -->

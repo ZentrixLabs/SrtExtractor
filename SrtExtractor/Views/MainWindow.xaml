@@ -968,7 +968,7 @@
                         </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Margin="2" Padding="8">
+                                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusM}" Margin="2" Padding="8">
                                     <Border.Background>
                                         <Binding Path="Status" Converter="{StaticResource StatusToBackgroundConverter}"/>
                                     </Border.Background>
@@ -1004,7 +1004,7 @@
                                         <TextBlock Grid.Row="1" Grid.Column="1" 
                                                    Text="{Binding FormattedFileSize}" 
                                                    FontSize="10" 
-                                                   Foreground="Gray"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                    Margin="0,2,0,0"/>
                                         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,2,0,0">
                                             <TextBlock Text="{Binding NetworkIndicator}" FontSize="12"/>
@@ -1015,7 +1015,7 @@
                                         <TextBlock Grid.Row="3" Grid.Column="1" 
                                                    Text="{Binding StatusMessage}" 
                                                    FontSize="9" 
-                                                   Foreground="DarkGray"
+                                                   Foreground="{StaticResource TextTertiaryBrush}"
                                                    FontStyle="Italic"
                                                    Margin="0,2,0,0"
                                                    TextWrapping="Wrap"/>

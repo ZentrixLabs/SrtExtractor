@@ -71,7 +71,7 @@
                     
                     <TextBlock Text="Select an SRT file to apply automatic corrections for common OCR errors like extra spaces, missing spaces, character substitutions, and more." 
                                TextWrapping="Wrap" 
-                               Foreground="Gray" 
+                               Foreground="{StaticResource TextSecondaryBrush}" 
                                Margin="0,0,0,20"/>
 
                     <!-- File Selection -->
@@ -85,12 +85,12 @@
                                 <TextBlock Text="No file selected" 
                                            Name="SingleFileStatus"
                                            VerticalAlignment="Center"
-                                           Foreground="Gray"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                             
                             <TextBlock Name="SingleFilePath" 
                                        TextWrapping="Wrap" 
-                                       Foreground="DarkBlue" 
+                                       Foreground="{StaticResource PrimaryBrush}" 
                                        Margin="0,10,0,0"
                                        Visibility="Collapsed"/>
                         </StackPanel>
@@ -105,7 +105,7 @@
                                       Margin="0,5"/>
                             <TextBlock Text="Creates a .bak file before applying corrections" 
                                        FontStyle="Italic" 
-                                       Foreground="Gray" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" 
                                        Margin="0,10,0,0"/>
                         </StackPanel>
                     </GroupBox>
@@ -166,7 +166,7 @@
                     
                     <TextBlock Text="Select a folder to automatically find and correct all SRT files. This is perfect for processing large collections of subtitle files." 
                                TextWrapping="Wrap" 
-                               Foreground="Gray" 
+                               Foreground="{StaticResource TextSecondaryBrush}" 
                                Margin="0,0,0,20"/>
 
                     <!-- Folder Selection -->
@@ -180,12 +180,12 @@
                                 <TextBlock Text="No folder selected" 
                                            Name="FolderStatus"
                                            VerticalAlignment="Center"
-                                           Foreground="Gray"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                             
                             <TextBlock Name="FolderPath" 
                                        TextWrapping="Wrap" 
-                                       Foreground="DarkBlue" 
+                                       Foreground="{StaticResource PrimaryBrush}" 
                                        Margin="0,10,0,0"
                                        Visibility="Collapsed"/>
                         </StackPanel>
@@ -204,7 +204,7 @@
                                       Margin="0,5"/>
                             <TextBlock Text="Options for batch processing multiple SRT files" 
                                        FontStyle="Italic" 
-                                       Foreground="Gray" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" 
                                        Margin="0,10,0,0"/>
                         </StackPanel>
                     </GroupBox>
@@ -240,8 +240,8 @@
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding FileName}" FontWeight="Bold" Width="200"/>
-                                            <TextBlock Text="{Binding FormattedSize}" Foreground="Gray" Width="80"/>
-                                            <TextBlock Text="{Binding Status}" Foreground="DarkBlue" Width="150"/>
+                                            <TextBlock Text="{Binding FormattedSize}" Foreground="{StaticResource TextSecondaryBrush}" Width="80"/>
+                                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource PrimaryBrush}" Width="150"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
