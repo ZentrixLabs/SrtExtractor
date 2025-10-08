@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
-        ui:WindowHelper.UseModernWindowStyle="True"
         Icon="pack://application:,,,/SrtExtractor.ico"
         Title="SrtExtractor - User Guide"
         Height="800" Width="1000"
