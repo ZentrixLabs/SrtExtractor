@@ -5,40 +5,31 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtExtractor.Views"
         xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
         Title="Batch SRT Correction" 
         Height="600" Width="900"
         MinHeight="500" MinWidth="700"
-        Background="White"
         WindowStartupLocation="CenterOwner">
     
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
-        
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="MinWidth" Value="100"/>
-        </Style>
-        
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Padding" Value="8"/>
-        </Style>
-        
-        <!-- DataGrid Selection Style -->
         <Style TargetType="DataGridRow">
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#FF0078D4"/>
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                    <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FFE3F2FD"/>
+                    <Setter Property="Background" Value="{StaticResource BackgroundAltBrush}"/>
                 </Trigger>
             </Style.Triggers>
+        </Style>
+        
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="{StaticResource ThicknessXS}"/>
+            <Setter Property="Padding" Value="{StaticResource ThicknessS}"/>
         </Style>
     </Window.Resources>
 
@@ -116,25 +107,27 @@
                 </DataGrid>
                 
                 <!-- Empty State -->
-                <Border Background="#F9FAFB" 
-                        BorderBrush="#E5E7EB" 
+                <Border Background="{StaticResource BackgroundBrush}" 
+                        BorderBrush="{StaticResource BorderBrush}" 
                         BorderThickness="1" 
-                        CornerRadius="6" 
-                        Padding="40"
+                        CornerRadius="{StaticResource RadiusM}" 
+                        Padding="{StaticResource ThicknessXXL}"
                         Visibility="{Binding HasSrtFiles, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="📂" 
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="{StaticResource IconFolder}" 
                                    FontSize="48" 
+                                   Foreground="{StaticResource TextTertiaryBrush}"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,16"/>
                         <TextBlock Text="No SRT files found" 
-                                   FontSize="16" 
-                                   FontWeight="SemiBold" 
-                                   Foreground="#374151"
+                                   FontSize="{StaticResource FontSizeSubtitle}" 
+                                   FontWeight="{StaticResource FontWeightSemiBold}" 
+                                   Foreground="{StaticResource TextPrimaryBrush}"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="Select a folder and click 'Scan for SRT Files' to find subtitle files" 
-                                   FontSize="12" 
-                                   Foreground="#6B7280" 
+                                   FontSize="{StaticResource FontSizeSmall}" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" 
                                    HorizontalAlignment="Center"
                                    Margin="0,8,0,0"
                                    TextWrapping="Wrap"/>
@@ -144,8 +137,18 @@
         </GroupBox>
 
         <!-- Progress -->
-        <GroupBox Header="📊 Progress" Grid.Row="3" 
+        <GroupBox Grid.Row="3" 
                   Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+            <GroupBox.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="{StaticResource IconPending}" 
+                               FontSize="14" 
+                               Margin="0,0,6,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Progress" VerticalAlignment="Center"/>
+                </StackPanel>
+            </GroupBox.Header>
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <TextBlock Text="Processing:" VerticalAlignment="Center" Margin="0,0,8,0"/>
