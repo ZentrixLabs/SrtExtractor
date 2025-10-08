@@ -22,18 +22,23 @@
                             </ResourceDictionary.MergedDictionaries>
                             
                             <!-- Override System Colors for Readable Dark Theme (VS Code inspired) -->
+                            <!-- Main backgrounds - VS Code charcoal -->
                             <Color x:Key="SystemAltHighColor">#FF1E1E1E</Color>
                             <Color x:Key="SystemAltLowColor">#FF1E1E1E</Color>
-                            <Color x:Key="SystemAltMediumColor">#FF1E1E1E</Color>
-                            <Color x:Key="SystemAltMediumHighColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemAltMediumColor">#FF252526</Color>
+                            <Color x:Key="SystemAltMediumHighColor">#FF2D2D30</Color>
                             <Color x:Key="SystemAltMediumLowColor">#FF2D2D30</Color>
+                            
+                            <!-- Text colors - high contrast on charcoal -->
                             <Color x:Key="SystemBaseHighColor">#FFFFFFFF</Color>
                             <Color x:Key="SystemBaseLowColor">#FF3E3E42</Color>
                             <Color x:Key="SystemBaseMediumColor">#FFB0B0B0</Color>
                             <Color x:Key="SystemBaseMediumHighColor">#FFD0D0D0</Color>
                             <Color x:Key="SystemBaseMediumLowColor">#FF7F7F7F</Color>
+                            
+                            <!-- Chrome/UI element colors -->
                             <Color x:Key="SystemChromeLowColor">#FF2D2D30</Color>
-                            <Color x:Key="SystemChromeMediumColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemChromeMediumColor">#FF252526</Color>
                             <Color x:Key="SystemChromeMediumLowColor">#FF3E3E42</Color>
                             <Color x:Key="SystemChromeHighColor">#FF7F7F7F</Color>
                             <Color x:Key="SystemChromeAltLowColor">#FFFFFFFF</Color>
@@ -41,12 +46,20 @@
                             <Color x:Key="SystemChromeDisabledLowColor">#FFB0B0B0</Color>
                             <Color x:Key="SystemChromeGrayColor">#FF7F7F7F</Color>
                             <Color x:Key="SystemChromeWhiteColor">#FFFFFFFF</Color>
-                            <Color x:Key="SystemListLowColor">#FF1E1E1E</Color>
-                            <Color x:Key="SystemListMediumColor">#FF3E3E42</Color>
                             
-                            <!-- Background colors for better contrast -->
+                            <!-- List/control backgrounds -->
+                            <Color x:Key="SystemListLowColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemListMediumColor">#FF252526</Color>
+                            
+                            <!-- Additional background overrides to prevent pure black -->
                             <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF2D2D30"/>
                             <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#FF1E1E1E"/>
+                            <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#FF1E1E1E"/>
+                            <SolidColorBrush x:Key="SystemControlPageBackgroundBrush" Color="#FF1E1E1E"/>
+                            
+                            <!-- Window chrome background -->
+                            <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumLowBrush" Color="#FF2D2D30"/>
+                            <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF1E1E1E"/>
                         </ResourceDictionary>
                     </ui:ThemeResources.ThemeDictionaries>
                 </ui:ThemeResources>

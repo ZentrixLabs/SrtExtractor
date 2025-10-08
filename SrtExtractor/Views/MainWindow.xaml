@@ -27,6 +27,8 @@
     <Window.Resources>
         <!-- DataGrid Selection Style -->
         <Style TargetType="DataGridRow">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
@@ -35,6 +37,32 @@
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{StaticResource BackgroundAltBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- DataGrid Column Header Style -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource BackgroundAltBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        </Style>
+        
+        <!-- DataGrid Cell Style -->
+        <Style TargetType="DataGridCell">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -484,7 +512,16 @@
                           HeadersVisibility="Column"
                           SelectionMode="Single"
                           MaxHeight="200"
+                          Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
+                          Foreground="{DynamicResource TextPrimaryBrush}"
+                          BorderBrush="{DynamicResource BorderBrush}"
                           Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                <DataGrid.RowBackground>
+                    <SolidColorBrush Color="{DynamicResource SystemAltHighColor}"/>
+                </DataGrid.RowBackground>
+                <DataGrid.AlternatingRowBackground>
+                    <SolidColorBrush Color="{DynamicResource SystemChromeLowColor}"/>
+                </DataGrid.AlternatingRowBackground>
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Select Track" 
@@ -526,7 +563,7 @@
                                         Binding="{Binding Id}" 
                                         Width="40">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Track ID number from the video file"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -535,7 +572,7 @@
                                         Binding="{Binding Codec}" 
                                         Width="120">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Subtitle format (SRT, ASS, VOBSUB, etc.)"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -544,7 +581,7 @@
                                         Binding="{Binding Language}" 
                                         Width="80">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Subtitle language code (en, es, fr, etc.)"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -553,7 +590,7 @@
                                         Binding="{Binding TrackType}" 
                                         Width="80">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Subtitle track type (subtitles, captions, etc.)"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -562,7 +599,7 @@
                                             Binding="{Binding Forced}" 
                                             Width="60">
                         <DataGridCheckBoxColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Indicates if this is a forced subtitle track"/>
                             </Style>
                         </DataGridCheckBoxColumn.HeaderStyle>
@@ -571,7 +608,7 @@
                                         Binding="{Binding IsRecommended}" 
                                         Width="100">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Shows if this track matches your preferences"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -594,7 +631,7 @@
                                         Binding="{Binding Bitrate, StringFormat='{}{0:N0} bps'}" 
                                         Width="100">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Data rate in bits per second"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -603,7 +640,7 @@
                                         Binding="{Binding FrameCount}" 
                                         Width="70">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Number of subtitle frames/segments"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -612,7 +649,7 @@
                                         Binding="{Binding Duration, Converter={StaticResource DurationConverter}}" 
                                         Width="100">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Total duration of the subtitle track"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -621,7 +658,7 @@
                                         Binding="{Binding Name}" 
                                         Width="*">
                         <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="ToolTip" Value="Custom name or title of the subtitle track"/>
                             </Style>
                         </DataGridTextColumn.HeaderStyle>
@@ -640,7 +677,7 @@
                          AcceptsReturn="True"
                          VerticalScrollBarVisibility="Disabled"
                          HorizontalScrollBarVisibility="Disabled"
-                         Background="#1E1E1E" 
+                         Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" 
                          Foreground="#4EC9B0"
                          FontFamily="{StaticResource MonospaceFontFamily}"
                          FontSize="{StaticResource FontSizeCaption}">
@@ -829,8 +866,8 @@
                 <!-- Queue List -->
                 <Grid Grid.Row="2">
                     <ListBox ItemsSource="{Binding State.BatchQueue}"
-                             Background="White"
-                             BorderBrush="Gray"
+                             Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}"
                              BorderThickness="1"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -948,8 +985,8 @@
                                                 Content="×" 
                                                 Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}"
-                                                Background="LightCoral"
-                                                Foreground="White"
+                                                Background="{DynamicResource ErrorBrush}"
+                                                Foreground="{DynamicResource SystemAltHighColor}"
                                                 FontWeight="Bold"
                                                 Width="20" Height="20"
                                                 Margin="4,0,0,0"
