@@ -143,6 +143,20 @@ namespace SrtExtractor.Views
             }
         }
 
+        private void ThemeLight_Click(object sender, RoutedEventArgs e)
+        {
+            var themeService = _serviceProvider.GetRequiredService<IThemeService>();
+            themeService.SetTheme("Light");
+            _loggingService.LogInfo("User switched to Light theme");
+        }
+
+        private void ThemeDark_Click(object sender, RoutedEventArgs e)
+        {
+            var themeService = _serviceProvider.GetRequiredService<IThemeService>();
+            themeService.SetTheme("Dark");
+            _loggingService.LogInfo("User switched to Dark theme");
+        }
+
         private void SrtCorrection_Click(object sender, RoutedEventArgs e)
         {
             try
