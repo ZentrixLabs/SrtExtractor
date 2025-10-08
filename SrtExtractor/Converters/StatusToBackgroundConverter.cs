@@ -17,16 +17,16 @@ public class StatusToBackgroundConverter : IValueConverter
         {
             return status switch
             {
-                BatchFileStatus.Pending => new SolidColorBrush(Colors.White),
-                BatchFileStatus.Processing => new SolidColorBrush(Color.FromRgb(255, 248, 220)), // Light yellow
-                BatchFileStatus.Completed => new SolidColorBrush(Color.FromRgb(240, 255, 240)), // Light green
-                BatchFileStatus.Error => new SolidColorBrush(Color.FromRgb(255, 240, 240)), // Light red
-                BatchFileStatus.Cancelled => new SolidColorBrush(Color.FromRgb(248, 248, 248)), // Light gray
-                _ => new SolidColorBrush(Colors.White)
+                BatchFileStatus.Pending => new SolidColorBrush(Color.FromRgb(255, 255, 255)),      // #FFFFFF (StatusPendingColor)
+                BatchFileStatus.Processing => new SolidColorBrush(Color.FromRgb(255, 248, 220)),  // #FFF8DC (StatusProcessingColor)
+                BatchFileStatus.Completed => new SolidColorBrush(Color.FromRgb(240, 255, 240)),   // #F0FFF0 (StatusCompletedColor)
+                BatchFileStatus.Error => new SolidColorBrush(Color.FromRgb(255, 240, 240)),       // #FFF0F0 (StatusErrorColor)
+                BatchFileStatus.Cancelled => new SolidColorBrush(Color.FromRgb(248, 248, 248)),   // #F8F8F8 (StatusCancelledColor)
+                _ => new SolidColorBrush(Color.FromRgb(255, 255, 255))
             };
         }
         
-        return new SolidColorBrush(Colors.White);
+        return new SolidColorBrush(Color.FromRgb(255, 255, 255));
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

@@ -30,6 +30,7 @@ namespace SrtExtractor
         {
         // Register services
         services.AddSingleton<ILoggingService, LoggingService>();
+        services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();

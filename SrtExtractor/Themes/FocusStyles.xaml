@@ -1,0 +1,58 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================ -->
+    <!-- FOCUS VISUAL STYLES (Accessibility)         -->
+    <!-- ============================================ -->
+    
+    <!-- Default Focus Visual Style -->
+    <Style x:Key="DefaultFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="2"
+                              StrokeThickness="2"
+                              Stroke="{StaticResource PrimaryBrush}"
+                              StrokeDashArray="2 2"
+                              SnapsToDevicePixels="True"
+                              RadiusX="4"
+                              RadiusY="4"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Button Focus Visual Style -->
+    <Style x:Key="ButtonFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="-2"
+                              StrokeThickness="2"
+                              Stroke="{StaticResource PrimaryBrush}"
+                              SnapsToDevicePixels="True"
+                              RadiusX="6"
+                              RadiusY="6"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- TextBox/ComboBox Focus Visual Style -->
+    <Style x:Key="InputFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="0"
+                              StrokeThickness="2"
+                              Stroke="{StaticResource PrimaryBrush}"
+                              SnapsToDevicePixels="True"
+                              RadiusX="4"
+                              RadiusY="4"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
+

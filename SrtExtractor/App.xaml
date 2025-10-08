@@ -3,11 +3,56 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:SrtExtractor"
              xmlns:converters="clr-namespace:SrtExtractor.Converters"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
              Startup="Application_Startup">
     <Application.Resources>
-        <converters:DurationConverter x:Key="DurationConverter"/>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- ModernWPF UI -->
+                <ui:ThemeResources>
+                    <ui:ThemeResources.ThemeDictionaries>
+                        <ResourceDictionary x:Key="Light">
+                            <ResourceDictionary.MergedDictionaries>
+                                <ui:ColorPaletteResources Accent="#FF0078D4" />
+                            </ResourceDictionary.MergedDictionaries>
+                        </ResourceDictionary>
+                        <ResourceDictionary x:Key="Dark">
+                            <ResourceDictionary.MergedDictionaries>
+                                <ui:ColorPaletteResources Accent="#FF0078D4" />
+                            </ResourceDictionary.MergedDictionaries>
+                        </ResourceDictionary>
+                    </ui:ThemeResources.ThemeDictionaries>
+                </ui:ThemeResources>
+                <ui:XamlControlsResources />
+                
+                <!-- Custom Design System (Extends ModernWPF) -->
+                <ResourceDictionary Source="Themes/DesignTokens.xaml"/>
+                <ResourceDictionary Source="Themes/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="Themes/FocusStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Converters -->
+            <converters:DurationConverter x:Key="DurationConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+            <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+            <converters:DoubleToVisibilityConverter x:Key="DoubleToVisibilityConverter"/>
+            <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
+            <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            
+            <!-- Default Control Styles -->
+            <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}"/>
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Style>
+            <Style TargetType="Window">
+                <Setter Property="FontFamily" Value="{StaticResource PrimaryFontFamily}"/>
+                <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+                <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
+            </Style>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
