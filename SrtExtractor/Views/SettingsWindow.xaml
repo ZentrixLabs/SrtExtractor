@@ -5,33 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtExtractor.Views"
         xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
         Title="Settings - SrtExtractor" 
         Height="600" Width="700"
         MinHeight="500" MinWidth="600"
-        Background="White"
         WindowStartupLocation="CenterOwner">
     
     <Window.Resources>
-        <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
-        <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
-        <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="MinWidth" Value="100"/>
-        </Style>
-        
         <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Padding" Value="8"/>
-        </Style>
-        
-        <Style TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="{StaticResource ThicknessXS}"/>
+            <Setter Property="Padding" Value="{StaticResource ThicknessS}"/>
         </Style>
     </Window.Resources>
 
@@ -53,7 +38,17 @@
         <!-- Settings Content -->
         <TabControl Grid.Row="1">
             <!-- Tools Tab -->
-            <TabItem Header="🔧 Tools">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="{StaticResource IconSettings}" 
+                                   FontSize="14" 
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="Tools" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <TextBlock Text="External Tools Status" 
@@ -90,11 +85,11 @@
                                     <Button Content="Install via winget" 
                                             Command="{Binding InstallMkvToolNixCommand}"
                                             Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                                            Background="LightGreen"
+                                            Style="{StaticResource SuccessButton}"
                                             Margin="0,0,10,0"/>
                                     <Button Content="Browse..." 
                                             Command="{Binding BrowseMkvToolNixCommand}"
-                                            Background="LightBlue"/>
+                                            Style="{StaticResource SecondaryButton}"/>
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
@@ -155,17 +150,34 @@
 
                         <!-- Tool Management Actions -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
-                            <Button Content="🔄 Re-detect Tools" 
-                                    Command="{Binding ReDetectToolsCommand}"
-                                    Background="LightBlue" 
-                                    FontWeight="Bold"/>
+                            <Button Command="{Binding ReDetectToolsCommand}"
+                                    Style="{StaticResource AccentButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconRefresh}" 
+                                               FontSize="14" 
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Re-detect Tools" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
             <!-- Preferences Tab -->
-            <TabItem Header="⚙️ Preferences">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="&#xE115;" 
+                                   FontSize="14" 
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="Preferences" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <TextBlock Text="Subtitle Extraction Preferences" 
@@ -238,27 +250,35 @@
                                           IsChecked="{Binding State.UseSmartConvergence}"
                                           Margin="0,5"/>
                                 
-                                <Border Background="#E3F2FD" 
-                                        BorderBrush="#2196F3" 
+                                <Border Background="{StaticResource BackgroundAltBrush}" 
+                                        BorderBrush="{StaticResource PrimaryBrush}" 
                                         BorderThickness="1" 
-                                        CornerRadius="4" 
-                                        Padding="8" 
+                                        CornerRadius="{StaticResource RadiusS}" 
+                                        Padding="{StaticResource ThicknessS}" 
                                         Margin="0,10,0,0">
                                     <StackPanel>
-                                        <TextBlock Text="📊 Correction Modes:" 
-                                                   FontWeight="SemiBold" 
-                                                   Foreground="#1976D2"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconInfo}" 
+                                                       FontSize="14" 
+                                                       Foreground="{StaticResource PrimaryBrush}"
+                                                       Margin="0,0,8,0"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Text="Correction Modes:" 
+                                                       FontWeight="{StaticResource FontWeightSemiBold}" 
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        </StackPanel>
                                         <TextBlock Text="• Quick: 1 pass (fastest)" 
-                                                   FontSize="11" 
-                                                   Foreground="#1976D2"
+                                                   FontSize="{StaticResource FontSizeCaption}" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                    Margin="0,2,0,0"/>
                                         <TextBlock Text="• Standard: 3 passes with smart convergence (recommended)" 
-                                                   FontSize="11" 
-                                                   Foreground="#1976D2"
+                                                   FontSize="{StaticResource FontSizeCaption}" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                    Margin="0,2,0,0"/>
                                         <TextBlock Text="• Thorough: 5 passes without convergence (best quality)" 
-                                                   FontSize="11" 
-                                                   Foreground="#1976D2"
+                                                   FontSize="{StaticResource FontSizeCaption}" 
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                    Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
@@ -288,7 +308,17 @@
             </TabItem>
 
             <!-- Advanced Tab -->
-            <TabItem Header="🔧 Advanced">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="&#xE90F;" 
+                                   FontSize="14" 
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="Advanced" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <TextBlock Text="Advanced Settings" 
@@ -312,9 +342,9 @@
                         <!-- Logging -->
                         <GroupBox Header="Logging" Margin="0,0,0,15">
                             <StackPanel>
-                                <Button Content="🧹 Clear Application Log" 
+                                <Button Content="Clear Application Log" 
                                         Click="ClearLog_Click"
-                                        Background="LightGray" 
+                                        Style="{StaticResource SecondaryButton}" 
                                         HorizontalAlignment="Left"/>
                                 <TextBlock Text="Clear the application log window." 
                                            FontStyle="Italic" 
@@ -332,13 +362,12 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="OK" 
                     Click="OkButton_Click"
-                    Background="LightGreen"
-                    FontWeight="Bold"
+                    Style="{StaticResource PrimaryButton}"
                     Padding="20,8"
                     Margin="0,0,10,0"/>
             <Button Content="Cancel" 
                     Click="CancelButton_Click"
-                    Background="LightGray"
+                    Style="{StaticResource SecondaryButton}"
                     Padding="20,8"/>
         </StackPanel>
     </Grid>
