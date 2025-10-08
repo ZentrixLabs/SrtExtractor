@@ -8,8 +8,8 @@ param(
 
 Write-Host "Building SubtitleEdit CLI..." -ForegroundColor Green
 
-# Navigate to the CLI directory - using local fork with fixes
-$cliPath = "e:\github\subtitleedit-cli\src\se-cli"
+# Navigate to the CLI directory - using submodule from ZentrixLabs fork
+$cliPath = Join-Path $PSScriptRoot "..\SubtitleEdit-CLI\src\se-cli"
 if (-not (Test-Path $cliPath)) {
     Write-Error "SubtitleEdit-CLI not found at $cliPath"
     exit 1
