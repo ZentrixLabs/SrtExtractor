@@ -4,13 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtExtractor.Views"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
         Title="About SrtExtractor" 
         Height="700" Width="900"
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize"
-            Background="White">
+        ResizeMode="CanResize">
     
     <local:AboutView/>
 </Window>

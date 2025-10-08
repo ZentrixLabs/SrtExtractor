@@ -5,11 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtExtractor.Views"
         xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
         Title="VobSub Track Analyzer" 
         Height="700" Width="1100"
         MinHeight="600" MinWidth="900"
-        Background="White"
         WindowStartupLocation="CenterOwner">
     
     <Window.Resources>
