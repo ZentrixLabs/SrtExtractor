@@ -14,12 +14,32 @@ namespace SrtExtractor
     {
         private ServiceProvider? _serviceProvider;
 
-        private void Application_Startup(object sender, StartupEventArgs e)
+        private async void Application_Startup(object sender, StartupEventArgs e)
         {
             // Configure services
             var services = new ServiceCollection();
             ConfigureServices(services);
             _serviceProvider = services.BuildServiceProvider();
+
+            // Check if we should show the welcome screen
+            var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+            var loggingService = _serviceProvider.GetRequiredService<ILoggingService>();
+            
+            try
+            {
+                var settings = await settingsService.LoadSettingsAsync();
+                
+                if (settings.ShowWelcomeScreen)
+                {
+                    loggingService.LogInfo("First run detected - showing welcome screen");
+                    var welcomeWindow = _serviceProvider.GetRequiredService<WelcomeWindow>();
+                    welcomeWindow.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                loggingService.LogError("Failed to check welcome screen setting", ex);
+            }
 
             // Create and show main window
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
@@ -50,6 +70,7 @@ namespace SrtExtractor
             services.AddTransient<MainViewModel>();
             services.AddTransient<BatchSrtCorrectionViewModel>();
             services.AddTransient<VobSubTrackAnalyzerViewModel>();
+            services.AddTransient<WelcomeViewModel>();
 
             // Register Views
             services.AddTransient<MainWindow>();
@@ -57,6 +78,7 @@ namespace SrtExtractor
             services.AddTransient<VobSubTrackAnalyzerWindow>();
             services.AddTransient<SettingsWindow>();
             services.AddTransient<SrtCorrectionWindow>();
+            services.AddTransient<WelcomeWindow>();
         }
 
         protected override void OnExit(ExitEventArgs e)

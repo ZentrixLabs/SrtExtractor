@@ -126,6 +126,16 @@
             <MenuItem Header="_VobSub Track Analyzer..." 
                       Click="VobSubTrackAnalyzer_Click"
                       ToolTip="Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit"/>
+            <Separator/>
+            <MenuItem Header="Show _Welcome Screen (Debug)" 
+                      Click="ShowWelcome_Click"
+                      ToolTip="Display the first-run welcome screen (for testing)">
+                <MenuItem.Icon>
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="👋" 
+                               FontSize="14"/>
+                </MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         
         <MenuItem Header="_Options">

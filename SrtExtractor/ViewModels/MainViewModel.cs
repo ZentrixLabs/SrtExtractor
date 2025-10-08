@@ -988,6 +988,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
+            // Load existing settings to preserve ShowWelcomeScreen preference
+            var existingSettings = await _settingsService.LoadSettingsAsync();
+            
             var settings = new AppSettings(
                 MkvMergePath: null, // These will be updated when tools are detected
                 MkvExtractPath: null,
@@ -998,7 +1001,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     PreferForced: State.PreferForced,
                     PreferClosedCaptions: State.PreferClosedCaptions,
                     DefaultOcrLanguage: State.OcrLanguage,
-                    FileNamePattern: State.FileNamePattern
+                    FileNamePattern: State.FileNamePattern,
+                    ShowWelcomeScreen: existingSettings.ShowWelcomeScreen
             );
 
             await _settingsService.SaveSettingsAsync(settings);

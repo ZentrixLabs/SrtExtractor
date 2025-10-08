@@ -188,6 +188,27 @@ namespace SrtExtractor.Views
             }
         }
 
+        private void ShowWelcome_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _loggingService.LogInfo("User manually opened welcome screen (debug)");
+                
+                // Create the welcome window with dependency injection
+                var welcomeWindow = _serviceProvider.GetRequiredService<WelcomeWindow>();
+                welcomeWindow.Owner = this;
+                welcomeWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error opening welcome screen", ex);
+                MessageBox.Show($"Error opening welcome screen:\n{ex.Message}", 
+                              "Welcome Screen Error", 
+                              MessageBoxButton.OK, 
+                              MessageBoxImage.Error);
+            }
+        }
+
         private void QueuePanel_DragEnter(object sender, DragEventArgs e)
         {
             // Only allow drag & drop if batch mode is enabled

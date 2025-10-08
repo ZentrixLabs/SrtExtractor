@@ -13,6 +13,7 @@ namespace SrtExtractor.Models;
 /// <param name="PreferClosedCaptions">Whether to prefer closed caption tracks</param>
 /// <param name="DefaultOcrLanguage">Default language for OCR processing</param>
 /// <param name="FileNamePattern">Pattern for output file naming</param>
+/// <param name="ShowWelcomeScreen">Whether to show the welcome screen on startup</param>
     public record AppSettings(
         string? MkvMergePath,
         string? MkvExtractPath,
@@ -23,7 +24,8 @@ namespace SrtExtractor.Models;
         bool PreferForced,
         bool PreferClosedCaptions,
         string DefaultOcrLanguage,
-        string FileNamePattern
+        string FileNamePattern,
+        bool ShowWelcomeScreen
     )
 {
     /// <summary>
@@ -39,6 +41,7 @@ namespace SrtExtractor.Models;
             PreferForced: true,
             PreferClosedCaptions: false,
             DefaultOcrLanguage: "eng",
-            FileNamePattern: "{basename}.{lang}{forced}.srt"
+            FileNamePattern: "{basename}.{lang}{forced}.srt",
+            ShowWelcomeScreen: true
     );
 }
