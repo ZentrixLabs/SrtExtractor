@@ -7,6 +7,7 @@
             xmlns:converters="clr-namespace:SrtExtractor.Converters"
             xmlns:ui="http://schemas.modernwpf.com/2019"
             mc:Ignorable="d"
+            ui:WindowHelper.UseModernWindowStyle="True"
             Icon="pack://application:,,,/SrtExtractor.ico"
             Title="SrtExtractor - MKV/MP4 Subtitle Extractor"
             Height="700" Width="1100"

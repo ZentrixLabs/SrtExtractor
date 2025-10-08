@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:SrtExtractor.Views"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
         Icon="pack://application:,,,/SrtExtractor.ico"
         Title="About SrtExtractor" 
         Height="700" Width="900"
