@@ -18,34 +18,35 @@
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Dark">
                             <ResourceDictionary.MergedDictionaries>
-                                <ui:ColorPaletteResources 
-                                    Accent="#FF0078D4"
-                                    AltHigh="#FF1E1E1E"
-                                    AltLow="#FF1E1E1E"
-                                    AltMedium="#FF1E1E1E"
-                                    AltMediumHigh="#FF1E1E1E"
-                                    AltMediumLow="#FF2D2D30"
-                                    BaseHigh="#FFFFFFFF"
-                                    BaseLow="#FF3E3E42"
-                                    BaseMedium="#FFB0B0B0"
-                                    BaseMediumHigh="#FFD0D0D0"
-                                    BaseMediumLow="#FF7F7F7F"
-                                    ChromeAltLow="#FFFFFFFF"
-                                    ChromeBlackHigh="#FF000000"
-                                    ChromeBlackLow="#FFFFFFFF"
-                                    ChromeBlackMedium="#FF000000"
-                                    ChromeBlackMediumLow="#FF000000"
-                                    ChromeDisabledHigh="#FF3E3E42"
-                                    ChromeDisabledLow="#FFB0B0B0"
-                                    ChromeGray="#FF7F7F7F"
-                                    ChromeHigh="#FF7F7F7F"
-                                    ChromeLow="#FF2D2D30"
-                                    ChromeMedium="#FF1E1E1E"
-                                    ChromeMediumLow="#FF3E3E42"
-                                    ChromeWhite="#FFFFFFFF"
-                                    ListLow="#FF1E1E1E"
-                                    ListMedium="#FF3E3E42" />
+                                <ui:ColorPaletteResources Accent="#FF0078D4" />
                             </ResourceDictionary.MergedDictionaries>
+                            
+                            <!-- Override System Colors for Readable Dark Theme (VS Code inspired) -->
+                            <Color x:Key="SystemAltHighColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemAltLowColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemAltMediumColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemAltMediumHighColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemAltMediumLowColor">#FF2D2D30</Color>
+                            <Color x:Key="SystemBaseHighColor">#FFFFFFFF</Color>
+                            <Color x:Key="SystemBaseLowColor">#FF3E3E42</Color>
+                            <Color x:Key="SystemBaseMediumColor">#FFB0B0B0</Color>
+                            <Color x:Key="SystemBaseMediumHighColor">#FFD0D0D0</Color>
+                            <Color x:Key="SystemBaseMediumLowColor">#FF7F7F7F</Color>
+                            <Color x:Key="SystemChromeLowColor">#FF2D2D30</Color>
+                            <Color x:Key="SystemChromeMediumColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemChromeMediumLowColor">#FF3E3E42</Color>
+                            <Color x:Key="SystemChromeHighColor">#FF7F7F7F</Color>
+                            <Color x:Key="SystemChromeAltLowColor">#FFFFFFFF</Color>
+                            <Color x:Key="SystemChromeDisabledHighColor">#FF3E3E42</Color>
+                            <Color x:Key="SystemChromeDisabledLowColor">#FFB0B0B0</Color>
+                            <Color x:Key="SystemChromeGrayColor">#FF7F7F7F</Color>
+                            <Color x:Key="SystemChromeWhiteColor">#FFFFFFFF</Color>
+                            <Color x:Key="SystemListLowColor">#FF1E1E1E</Color>
+                            <Color x:Key="SystemListMediumColor">#FF3E3E42</Color>
+                            
+                            <!-- Background colors for better contrast -->
+                            <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF2D2D30"/>
+                            <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#FF1E1E1E"/>
                         </ResourceDictionary>
                     </ui:ThemeResources.ThemeDictionaries>
                 </ui:ThemeResources>

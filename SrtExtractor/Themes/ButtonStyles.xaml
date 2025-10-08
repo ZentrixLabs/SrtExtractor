@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ============================================ -->
-    <!-- BASE BUTTON STYLE                           -->
+    <!-- BASE BUTTON STYLE (Theme-Aware)             -->
     <!-- ============================================ -->
     
     <Style x:Key="BaseButtonStyle" TargetType="Button">
@@ -31,19 +31,15 @@
                                         VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                         Focusable="False"
                                         RecognizesAccessKey="True"
+                                        TextElement.Foreground="{TemplateBinding Foreground}"
                                         SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            <Setter TargetName="border" Property="Opacity" Value="0.9"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="RenderTransform">
-                                <Setter.Value>
-                                    <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter TargetName="border" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                            <Setter TargetName="border" Property="Opacity" Value="0.8"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
@@ -72,10 +68,21 @@
     <!-- ============================================ -->
     
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-        <Setter Property="Tag" Value="{StaticResource BackgroundAltBrush}"/>
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource SystemChromeMediumLowColor}"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Foreground">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource SystemBaseHighColor}"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource SystemBaseMediumLowColor}"/>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ============================================ -->
