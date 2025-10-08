@@ -695,8 +695,8 @@
                          AcceptsReturn="True"
                          VerticalScrollBarVisibility="Disabled"
                          HorizontalScrollBarVisibility="Disabled"
-                         Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" 
-                         Foreground="#4EC9B0"
+                         Background="{DynamicResource LogBackgroundBrush}" 
+                         Foreground="{DynamicResource LogForegroundBrush}"
                          FontFamily="{StaticResource MonospaceFontFamily}"
                          FontSize="{StaticResource FontSizeCaption}">
                     <TextBox.ContextMenu>

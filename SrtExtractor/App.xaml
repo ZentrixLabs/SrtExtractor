@@ -15,6 +15,10 @@
                             <ResourceDictionary.MergedDictionaries>
                                 <ui:ColorPaletteResources Accent="#FF0078D4" />
                             </ResourceDictionary.MergedDictionaries>
+                            
+                            <!-- Log/Console Colors for Light Theme -->
+                            <SolidColorBrush x:Key="LogBackgroundBrush" Color="#FFF5F5F5"/>
+                            <SolidColorBrush x:Key="LogForegroundBrush" Color="#FF1E1E1E"/>
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Dark">
                             <ResourceDictionary.MergedDictionaries>
@@ -60,6 +64,10 @@
                             <!-- Window chrome background -->
                             <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumLowBrush" Color="#FF2D2D30"/>
                             <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF1E1E1E"/>
+                            
+                            <!-- Log/Console Colors for Dark Theme (VS Code Terminal style) -->
+                            <SolidColorBrush x:Key="LogBackgroundBrush" Color="#FF1E1E1E"/>
+                            <SolidColorBrush x:Key="LogForegroundBrush" Color="#FF4EC9B0"/>
                         </ResourceDictionary>
                     </ui:ThemeResources.ThemeDictionaries>
                 </ui:ThemeResources>

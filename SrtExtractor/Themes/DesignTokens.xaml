@@ -58,6 +58,8 @@
     <SolidColorBrush x:Key="StatusErrorBrush" Color="#40EF4444"/>
     <SolidColorBrush x:Key="StatusCancelledBrush" Color="{DynamicResource SystemChromeLowColor}"/>
     
+    <!-- Log/Console Brushes defined per-theme in App.xaml Light/Dark dictionaries -->
+    
     <!-- ============================================ -->
     <!-- TYPOGRAPHY                                  -->
     <!-- ============================================ -->
