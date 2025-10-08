@@ -71,14 +71,14 @@
             
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="8,0,8,8">
-                    <Button Content="🏠 Getting Started" Style="{StaticResource NavigationButton}" Click="NavigateToGettingStarted" Tag="getting-started"/>
-                    <Button Content="🎬 Single File Mode" Style="{StaticResource NavigationButton}" Click="NavigateToSingleFile" Tag="single-file"/>
-                    <Button Content="📁 Batch Mode" Style="{StaticResource NavigationButton}" Click="NavigateToBatchMode" Tag="batch-mode"/>
-                    <Button Content="⚙️ Settings &amp; Options" Style="{StaticResource NavigationButton}" Click="NavigateToSettings" Tag="settings"/>
-                    <Button Content="🔧 SRT Correction" Style="{StaticResource NavigationButton}" Click="NavigateToSrtCorrection" Tag="srt-correction"/>
-                    <Button Content="⌨️ Keyboard Shortcuts" Style="{StaticResource NavigationButton}" Click="NavigateToShortcuts" Tag="shortcuts"/>
-                    <Button Content="❓ Troubleshooting" Style="{StaticResource NavigationButton}" Click="NavigateToTroubleshooting" Tag="troubleshooting"/>
-                    <Button Content="📋 Supported Formats" Style="{StaticResource NavigationButton}" Click="NavigateToFormats" Tag="formats"/>
+                    <Button Content="Getting Started" Style="{StaticResource NavigationButton}" Click="NavigateToGettingStarted" Tag="getting-started"/>
+                    <Button Content="Single File Mode" Style="{StaticResource NavigationButton}" Click="NavigateToSingleFile" Tag="single-file"/>
+                    <Button Content="Batch Mode" Style="{StaticResource NavigationButton}" Click="NavigateToBatchMode" Tag="batch-mode"/>
+                    <Button Content="Settings &amp; Options" Style="{StaticResource NavigationButton}" Click="NavigateToSettings" Tag="settings"/>
+                    <Button Content="SRT Correction" Style="{StaticResource NavigationButton}" Click="NavigateToSrtCorrection" Tag="srt-correction"/>
+                    <Button Content="Keyboard Shortcuts" Style="{StaticResource NavigationButton}" Click="NavigateToShortcuts" Tag="shortcuts"/>
+                    <Button Content="Troubleshooting" Style="{StaticResource NavigationButton}" Click="NavigateToTroubleshooting" Tag="troubleshooting"/>
+                    <Button Content="Supported Formats" Style="{StaticResource NavigationButton}" Click="NavigateToFormats" Tag="formats"/>
                 </StackPanel>
             </ScrollViewer>
             </StackPanel>

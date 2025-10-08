@@ -216,14 +216,18 @@
                                       Click="CopyFilePath_Click"
                                       ToolTip="Copy the full file path to clipboard">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="📋" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconCopy}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="Copy File Name" 
                                       Click="CopyFileName_Click"
                                       ToolTip="Copy just the file name to clipboard">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="📄" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconDocument}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
@@ -231,14 +235,18 @@
                                       Click="OpenFileLocation_Click"
                                       ToolTip="Open the folder containing this file">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="📁" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconFolder}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="Show File Properties" 
                                       Click="ShowFileProperties_Click"
                                       ToolTip="View detailed properties of this file">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="ℹ️" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconInfo}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
@@ -246,7 +254,9 @@
                                       Command="{Binding PickMkvCommand}"
                                       ToolTip="Select a different video file (Ctrl+O)">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="🎬" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconVideo}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                         </ContextMenu>
@@ -529,7 +539,9 @@
                                   IsEnabled="{Binding State.CanExtract}"
                                   ToolTip="Extract this subtitle track to SRT format (Ctrl+E)">
                             <MenuItem.Icon>
-                                <TextBlock Text="🎬" FontSize="14"/>
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconSubtitles}" 
+                                           FontSize="14"/>
                             </MenuItem.Icon>
                         </MenuItem>
                         <Separator/>
@@ -537,14 +549,18 @@
                                   Click="ShowTrackDetails_Click"
                                   ToolTip="View detailed information about this subtitle track">
                             <MenuItem.Icon>
-                                <TextBlock Text="ℹ️" FontSize="14"/>
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconInfo}" 
+                                           FontSize="14"/>
                             </MenuItem.Icon>
                         </MenuItem>
                         <MenuItem Header="Copy Track Info" 
                                   Click="CopyTrackInfo_Click"
                                   ToolTip="Copy track information to clipboard">
                             <MenuItem.Icon>
-                                <TextBlock Text="📋" FontSize="14"/>
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconCopy}" 
+                                           FontSize="14"/>
                             </MenuItem.Icon>
                         </MenuItem>
                         <Separator/>
@@ -553,7 +569,9 @@
                                   IsEnabled="{Binding State.CanProbe}"
                                   ToolTip="Re-analyze the video file for subtitle tracks (Ctrl+P)">
                             <MenuItem.Icon>
-                                <TextBlock Text="🔄" FontSize="14"/>
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconRefresh}" 
+                                           FontSize="14"/>
                             </MenuItem.Icon>
                         </MenuItem>
                     </ContextMenu>
@@ -687,14 +705,18 @@
                                       Click="CopyLogText_Click"
                                       ToolTip="Copy all log text to clipboard">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="📋" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconCopy}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="Copy Selection" 
                                       Click="CopyLogSelection_Click"
                                       ToolTip="Copy selected text to clipboard">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="📝" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconCopy}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
@@ -702,7 +724,9 @@
                                       Click="ClearLog_Click"
                                       ToolTip="Clear the log display">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="🗑️" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconDelete}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
@@ -710,14 +734,18 @@
                                       Click="SaveLogToFile_Click"
                                       ToolTip="Save log content to a text file">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="💾" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconSave}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="Open Log Folder" 
                                       Click="OpenLogFolder_Click"
                                       ToolTip="Open the folder containing log files">
                                 <MenuItem.Icon>
-                                    <TextBlock Text="📁" FontSize="14"/>
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconFolder}" 
+                                               FontSize="14"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                         </ContextMenu>
@@ -884,7 +912,9 @@
                                           Command="{Binding DataContext.ProcessSingleBatchFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                           ToolTip="Process only this file from the batch queue">
                                     <MenuItem.Icon>
-                                        <TextBlock Text="▶️" FontSize="14"/>
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconPlay}" 
+                                                   FontSize="14"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
@@ -892,21 +922,27 @@
                                           Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                           ToolTip="Remove this file from the batch queue">
                                     <MenuItem.Icon>
-                                        <TextBlock Text="❌" FontSize="14"/>
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconRemove}" 
+                                                   FontSize="14"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <MenuItem Header="Move to Top" 
                                           Click="MoveBatchItemToTop_Click"
                                           ToolTip="Move this file to the top of the queue">
                                     <MenuItem.Icon>
-                                        <TextBlock Text="⬆️" FontSize="14"/>
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconChevronUp}" 
+                                                   FontSize="14"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <MenuItem Header="Move to Bottom" 
                                           Click="MoveBatchItemToBottom_Click"
                                           ToolTip="Move this file to the bottom of the queue">
                                     <MenuItem.Icon>
-                                        <TextBlock Text="⬇️" FontSize="14"/>
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconChevronDown}" 
+                                                   FontSize="14"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
@@ -914,14 +950,18 @@
                                           Click="OpenBatchFileLocation_Click"
                                           ToolTip="Open the folder containing this file">
                                     <MenuItem.Icon>
-                                        <TextBlock Text="📁" FontSize="14"/>
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconFolder}" 
+                                                   FontSize="14"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <MenuItem Header="Show File Properties" 
                                           Click="ShowBatchFileProperties_Click"
                                           ToolTip="View detailed properties of this file">
                                     <MenuItem.Icon>
-                                        <TextBlock Text="ℹ️" FontSize="14"/>
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconInfo}" 
+                                                   FontSize="14"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                             </ContextMenu>

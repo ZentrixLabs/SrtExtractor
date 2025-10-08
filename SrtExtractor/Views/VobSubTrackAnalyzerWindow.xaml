@@ -176,14 +176,16 @@
                             Padding="40"
                             Visibility="{Binding HasVobSubTracks, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="🔍" 
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                       Text="{StaticResource IconSearch}" 
                                        FontSize="48" 
+                                       Foreground="{StaticResource TextTertiaryBrush}"
                                        HorizontalAlignment="Center"
                                        Margin="0,0,0,16"/>
                             <TextBlock Text="No VobSub tracks found" 
-                                       FontSize="16" 
-                                       FontWeight="SemiBold" 
-                                       Foreground="#374151"
+                                       FontSize="{StaticResource FontSizeSubtitle}" 
+                                       FontWeight="{StaticResource FontWeightSemiBold}" 
+                                       Foreground="{StaticResource TextPrimaryBrush}"
                                        HorizontalAlignment="Center"/>
                             <TextBlock Text="Select a file or folder and scan to find VobSub subtitle tracks" 
                                        FontSize="12" 
