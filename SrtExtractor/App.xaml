@@ -25,13 +25,18 @@
                                 <ui:ColorPaletteResources Accent="#FF0078D4" />
                             </ResourceDictionary.MergedDictionaries>
                             
-                            <!-- Override System Colors for Readable Dark Theme (VS Code inspired) -->
-                            <!-- Main backgrounds - VS Code charcoal -->
-                            <Color x:Key="SystemAltHighColor">#FF1E1E1E</Color>
-                            <Color x:Key="SystemAltLowColor">#FF1E1E1E</Color>
-                            <Color x:Key="SystemAltMediumColor">#FF252526</Color>
-                            <Color x:Key="SystemAltMediumHighColor">#FF2D2D30</Color>
-                            <Color x:Key="SystemAltMediumLowColor">#FF2D2D30</Color>
+                            <!-- ============================================ -->
+                            <!-- FIXED DARK THEME COLORS (NO THEME SWITCHING) -->
+                            <!-- ============================================ -->
+                            <!-- This application uses a fixed dark theme inspired by VS Code. -->
+                            <!-- These colors are intentionally lighter than the original dark theme -->
+                            <!-- to provide a more pleasant user experience. -->
+                            <!-- Main backgrounds - VS Code charcoal (lighter) -->
+                            <Color x:Key="SystemAltHighColor">#FF2D2D30</Color>
+                            <Color x:Key="SystemAltLowColor">#FF2D2D30</Color>
+                            <Color x:Key="SystemAltMediumColor">#FF37373D</Color>
+                            <Color x:Key="SystemAltMediumHighColor">#FF3C3C3C</Color>
+                            <Color x:Key="SystemAltMediumLowColor">#FF3C3C3C</Color>
                             
                             <!-- Text colors - high contrast on charcoal -->
                             <Color x:Key="SystemBaseHighColor">#FFFFFFFF</Color>
@@ -41,9 +46,9 @@
                             <Color x:Key="SystemBaseMediumLowColor">#FF7F7F7F</Color>
                             
                             <!-- Chrome/UI element colors -->
-                            <Color x:Key="SystemChromeLowColor">#FF2D2D30</Color>
-                            <Color x:Key="SystemChromeMediumColor">#FF252526</Color>
-                            <Color x:Key="SystemChromeMediumLowColor">#FF3E3E42</Color>
+                            <Color x:Key="SystemChromeLowColor">#FF3C3C3C</Color>
+                            <Color x:Key="SystemChromeMediumColor">#FF37373D</Color>
+                            <Color x:Key="SystemChromeMediumLowColor">#FF4A4A4A</Color>
                             <Color x:Key="SystemChromeHighColor">#FF7F7F7F</Color>
                             <Color x:Key="SystemChromeAltLowColor">#FFFFFFFF</Color>
                             <Color x:Key="SystemChromeDisabledHighColor">#FF3E3E42</Color>
@@ -52,21 +57,21 @@
                             <Color x:Key="SystemChromeWhiteColor">#FFFFFFFF</Color>
                             
                             <!-- List/control backgrounds -->
-                            <Color x:Key="SystemListLowColor">#FF1E1E1E</Color>
-                            <Color x:Key="SystemListMediumColor">#FF252526</Color>
+                            <Color x:Key="SystemListLowColor">#FF2D2D30</Color>
+                            <Color x:Key="SystemListMediumColor">#FF37373D</Color>
                             
                             <!-- Additional background overrides to prevent pure black -->
-                            <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF2D2D30"/>
-                            <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#FF1E1E1E"/>
-                            <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#FF1E1E1E"/>
-                            <SolidColorBrush x:Key="SystemControlPageBackgroundBrush" Color="#FF1E1E1E"/>
+                            <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#FF3C3C3C"/>
+                            <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#FF2D2D30"/>
+                            <SolidColorBrush x:Key="SystemControlPageBackgroundAltHighBrush" Color="#FF2D2D30"/>
+                            <SolidColorBrush x:Key="SystemControlPageBackgroundBrush" Color="#FF2D2D30"/>
                             
                             <!-- Window chrome background -->
-                            <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumLowBrush" Color="#FF2D2D30"/>
-                            <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF1E1E1E"/>
+                            <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumLowBrush" Color="#FF3C3C3C"/>
+                            <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#FF2D2D30"/>
                             
                             <!-- Log/Console Colors for Dark Theme (VS Code Terminal style) -->
-                            <SolidColorBrush x:Key="LogBackgroundBrush" Color="#FF1E1E1E"/>
+                            <SolidColorBrush x:Key="LogBackgroundBrush" Color="#FF2D2D30"/>
                             <SolidColorBrush x:Key="LogForegroundBrush" Color="#FF4EC9B0"/>
                         </ResourceDictionary>
                     </ui:ThemeResources.ThemeDictionaries>

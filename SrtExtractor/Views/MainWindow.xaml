@@ -193,16 +193,6 @@
                           ToolTip="Prioritize closed caption subtitles (usually full dialogue)"/>
             </MenuItem>
             <Separator/>
-            <MenuItem Header="_Theme"
-                      ToolTip="Switch between Light and Dark theme">
-                <MenuItem Header="_Light Mode" 
-                          Click="ThemeLight_Click"
-                          ToolTip="Switch to light theme"/>
-                <MenuItem Header="_Dark Mode" 
-                          Click="ThemeDark_Click"
-                          ToolTip="Switch to dark theme"/>
-            </MenuItem>
-            <Separator/>
             <MenuItem Header="_Settings..." 
                       Click="SettingsMenuItem_Click"
                       ToolTip="Open application settings and preferences"/>

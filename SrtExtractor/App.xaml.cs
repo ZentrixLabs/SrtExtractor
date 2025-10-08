@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using ModernWpf;
 using SrtExtractor.Services.Implementations;
 using SrtExtractor.Services.Interfaces;
 using SrtExtractor.ViewModels;
@@ -16,6 +17,15 @@ namespace SrtExtractor
 
         private async void Application_Startup(object sender, StartupEventArgs e)
         {
+            // ============================================
+            // THEME POLICY: Fixed Dark Theme Only
+            // ============================================
+            // This application uses a fixed dark theme inspired by VS Code.
+            // We do NOT support theme switching to keep the UI consistent
+            // and avoid the complexity of dynamic theming systems.
+            // All theme-related UI has been removed from the application.
+            ThemeManager.Current.ApplicationTheme = ApplicationTheme.Dark;
+            
             // Configure services
             var services = new ServiceCollection();
             ConfigureServices(services);
@@ -51,7 +61,6 @@ namespace SrtExtractor
         // Register services
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<INotificationService, NotificationService>();
-        services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();

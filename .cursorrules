@@ -30,6 +30,13 @@ Key folders:
 
 ## 🚫 Critical Rules
 
+### **NO THEME SWITCHING**
+- **NEVER** add theme switching functionality
+- **ALWAYS** use the fixed dark theme (VS Code inspired)
+- **NEVER** use `DynamicResource` for theme-aware colors
+- **ALWAYS** use `StaticResource` for consistent appearance
+- **Theme Policy**: Fixed dark theme only - no light/dark switching
+
 ### **NO PRINT STATEMENTS**
 - **NEVER** use `Console.WriteLine()`, `Debug.WriteLine()`, or `print()`
 - **ALWAYS** use `ILoggingService` for all output
@@ -67,6 +74,13 @@ Key folders:
 - Use `{Binding CommandName}` for button actions
 - Use value converters for UI transformations
 - Define styles and templates in App.xaml
+
+### **UI/Theme Standards**
+- **Fixed Dark Theme**: Use VS Code-inspired dark theme colors only
+- **No Dynamic Resources**: Use `StaticResource` for all colors and brushes
+- **ModernWPF**: Use ModernWPF controls and styling for professional appearance
+- **Consistent Colors**: Use defined color palette from App.xaml
+- **No Theme Switching**: Never add light/dark theme toggle functionality
 
 ## 📝 Logging Examples
 
