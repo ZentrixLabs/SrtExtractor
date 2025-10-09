@@ -18,13 +18,13 @@ namespace SrtExtractor
         private async void Application_Startup(object sender, StartupEventArgs e)
         {
             // ============================================
-            // THEME POLICY: Fixed Dark Theme Only
+            // THEME POLICY: Fixed Light Theme Only
             // ============================================
-            // This application uses a fixed dark theme inspired by VS Code.
+            // This application uses a fixed light theme inspired by Microsoft 365.
             // We do NOT support theme switching to keep the UI consistent
             // and avoid the complexity of dynamic theming systems.
             // All theme-related UI has been removed from the application.
-            ThemeManager.Current.ApplicationTheme = ApplicationTheme.Dark;
+            ThemeManager.Current.ApplicationTheme = ApplicationTheme.Light;
             
             // Configure services
             var services = new ServiceCollection();
