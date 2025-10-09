@@ -238,13 +238,13 @@
                 <Button Content="Pick Video..." 
                         Command="{Binding PickMkvCommand}"
                         IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                        ToolTip="Select a video file to extract subtitles from (Ctrl+O)"/>
+                        ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
                 <TextBox Text="{Binding State.MkvPath}" 
                          IsReadOnly="True" 
                          Margin="4,0"
                          VerticalAlignment="Center"
                          MinWidth="300"
-                         ToolTip="Path to the selected video file">
+                         ToolTip="Path to the selected video file&#x0a;Right-click for more options (copy path, open location, etc.)">
                     <TextBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Copy File Path" 
@@ -309,7 +309,7 @@
                           VerticalAlignment="Center"
                           FontWeight="{StaticResource FontWeightSemiBold}"
                           Margin="0,5"
-                          ToolTip="Enable batch processing mode for multiple files (Ctrl+B)">
+                          ToolTip="Enable batch mode to process multiple video files at once&#x0a;Drag and drop files anywhere on this window&#x0a;Keyboard Shortcut: Ctrl+B">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                    Text="{StaticResource IconVideo}" 
@@ -328,13 +328,13 @@
                                  GroupName="SubtitlePreference"
                                  VerticalAlignment="Center"
                                  Margin="0,0,20,0"
-                                 ToolTip="Prioritize forced subtitles (usually foreign dialogue)"/>
+                                 ToolTip="Prioritize forced subtitles when multiple tracks are available&#x0a;Forced subtitles typically contain only foreign dialogue or on-screen text&#x0a;Best for movies with occasional non-English dialogue"/>
                     <RadioButton Content="Prefer CC (Closed Captions)" 
                                  IsChecked="{Binding State.PreferClosedCaptions}"
                                  GroupName="SubtitlePreference"
                                  VerticalAlignment="Center"
                                  Margin="0,0,20,0"
-                                 ToolTip="Prioritize closed caption subtitles (usually full dialogue)"/>
+                                 ToolTip="Prioritize closed captions when multiple tracks are available&#x0a;CCs typically include all dialogue and sound effects descriptions&#x0a;Best for accessibility or when you want complete transcription"/>
                 </StackPanel>
                 
                 <!-- Batch Mode Instructions -->
@@ -394,11 +394,11 @@
                               ItemsSource="{Binding State.AvailableLanguages}"
                               Width="80"
                               Margin="0,0,20,0"
-                              ToolTip="Select the language for OCR text recognition"/>
+                              ToolTip="Language for OCR text recognition when extracting image-based subtitles (PGS format)&#x0a;Only used when converting images to text&#x0a;Common: eng (English), spa (Spanish), fra (French)"/>
                     <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBox Text="{Binding State.FileNamePattern}" 
                              Width="200"
-                             ToolTip="Pattern: {basename}.{lang}{forced}{cc}.srt"/>
+                             ToolTip="Output filename pattern for extracted subtitles&#x0a;Available variables:&#x0a;  {basename} - Video filename without extension&#x0a;  {lang} - Subtitle language code&#x0a;  {forced} - Adds '.forced' if applicable&#x0a;  {cc} - Adds '.cc' if applicable&#x0a;Example: Movie.eng.forced.srt"/>
                 </StackPanel>
 
                 <!-- Network Warning -->
@@ -442,18 +442,18 @@
                             Command="{Binding ProbeCommand}"
                             IsEnabled="{Binding State.CanProbe}"
                             Style="{StaticResource SecondaryButton}"
-                            ToolTip="Analyze the video file to find available subtitle tracks (Ctrl+P)"/>
+                            ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P"/>
                     <Button Content="Extract to SRT" 
                             Command="{Binding ExtractCommand}"
                             IsEnabled="{Binding State.CanExtract}"
                             Style="{StaticResource PrimaryButton}"
-                            ToolTip="Extract the selected subtitle track to SRT format (Ctrl+E)"/>
+                            ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E"/>
                     <Button Content="Cancel" 
                             Command="{Binding CancelCommand}"
                             IsEnabled="{Binding State.IsProcessing}"
                             Style="{StaticResource WarningButton}"
                             Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="Cancel the current operation (Ctrl+C or Esc)"/>
+                            ToolTip="Cancel the current extraction operation&#x0a;Temporary files will be cleaned up automatically&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
                 </StackPanel>
                 
                 <!-- Batch Mode Actions -->
@@ -465,7 +465,7 @@
                             FontSize="{StaticResource FontSizeSubtitle}"
                             Padding="{StaticResource ThicknessL}"
                             Margin="0,0,10,0"
-                            ToolTip="Process all files in the batch queue with current settings">
+                            ToolTip="Process all files in the batch queue&#x0a;Uses your current subtitle preferences and OCR settings&#x0a;Each file is analyzed and best track is selected automatically&#x0a;Progress is displayed in real-time with status updates">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                        Text="{StaticResource IconPlay}" 
@@ -481,7 +481,7 @@
                             Style="{StaticResource WarningButton}"
                             Padding="{StaticResource ThicknessL}"
                             Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="Cancel the current batch operation (Ctrl+C or Esc)"/>
+                            ToolTip="Cancel the current batch processing operation&#x0a;Files already completed will remain processed&#x0a;Current file being processed will stop gracefully&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
                 </StackPanel>
                 
                 <!-- Common Actions -->
@@ -489,7 +489,7 @@
                     <Button Content="Clear Log" 
                             Click="ClearLog_Click"
                             Style="{StaticResource SecondaryButton}"
-                            ToolTip="Clear the log display"/>
+                            ToolTip="Clear the log display window&#x0a;Log history is preserved in the file log&#x0a;Location: C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
@@ -568,7 +568,8 @@
                           Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
                           Foreground="{DynamicResource TextPrimaryBrush}"
                           BorderBrush="{DynamicResource BorderBrush}"
-                          Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                          Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                          ToolTip="Click to select a subtitle track for extraction&#x0a;⭐ Recommended tracks are automatically identified based on your preferences&#x0a;Right-click for additional options">
                 <DataGrid.RowBackground>
                     <SolidColorBrush Color="{DynamicResource SystemAltHighColor}"/>
                 </DataGrid.RowBackground>
@@ -742,7 +743,8 @@
                          Foreground="{DynamicResource LogForegroundBrush}"
                          FontFamily="{StaticResource MonospaceFontFamily}"
                          FontSize="{StaticResource FontSizeCaption}"
-                         MinHeight="150">
+                         MinHeight="150"
+                         ToolTip="Real-time operation log showing all activities&#x0a;Right-click for options: Copy, Save, Open log folder&#x0a;Full logs saved to: C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\">
                     <TextBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Copy All" 
@@ -914,7 +916,7 @@
                                 MinWidth="0"
                                 Height="20"
                                 Visibility="{Binding State.ShowResumeBatchButton, Converter={StaticResource BoolToVisibilityConverter}}"
-                                ToolTip="Resume batch processing from where it was interrupted"/>
+                                ToolTip="Resume batch processing from where it was interrupted&#x0a;Skips already completed files and continues with remaining files"/>
                         <Button Content="Clear Completed" 
                                 Command="{Binding ClearCompletedBatchItemsCommand}"
                                 Style="{StaticResource SuccessButton}"
@@ -923,7 +925,7 @@
                                 FontSize="10"
                                 MinWidth="0"
                                 Height="20"
-                                ToolTip="Remove only completed files from the queue"/>
+                                ToolTip="Remove only completed files from the queue&#x0a;Keeps pending and failed files for re-processing"/>
                         <Button Content="Clear All" 
                                 Command="{Binding ClearBatchQueueCommand}"
                                 Style="{StaticResource DangerButton}"
@@ -932,7 +934,7 @@
                                 MinWidth="0"
                                 Height="20"
                                 Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
-                                ToolTip="Remove all files from the batch queue"/>
+                                ToolTip="Remove all files from the batch queue&#x0a;This will clear completed, pending, and failed files"/>
                     </StackPanel>
                 </Grid>
                 
@@ -947,7 +949,8 @@
                              AllowDrop="False"
                              PreviewMouseLeftButtonDown="BatchQueueListBox_PreviewMouseLeftButtonDown"
                              PreviewMouseMove="BatchQueueListBox_PreviewMouseMove"
-                             PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp">
+                             PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp"
+                             ToolTip="Batch processing queue&#x0a;Drag files from Windows Explorer to add them&#x0a;Right-click files for more options&#x0a;Click and drag to reorder files in the queue">
                         <ListBox.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="Process This File" 
@@ -1126,7 +1129,7 @@
                     <ProgressBar Value="{Binding State.BatchProgressPercentage}" 
                                  Height="15" 
                                  Margin="0,4,0,0"
-                                 ToolTip="Batch processing progress"/>
+                                 ToolTip="Batch processing progress&#x0a;Shows overall completion percentage for all files in queue&#x0a;Updated in real-time as each file is processed"/>
                     <TextBlock Text="{Binding State.BatchProgressMessage}" 
                                HorizontalAlignment="Center" 
                                FontStyle="Italic" 
