@@ -209,6 +209,9 @@ public partial class ExtractionState : ObservableObject
 
     [ObservableProperty]
     private bool _isProcessing = false;
+    
+    // Event to request opening settings dialog from toast notifications
+    public event EventHandler? RequestOpenSettings;
 
     [ObservableProperty]
     private string _processingMessage = "";
@@ -218,6 +221,14 @@ public partial class ExtractionState : ObservableObject
     
     // Internal log message list to prevent string concatenation memory issues
     private readonly List<string> _logMessages = new(1000);
+    
+    /// <summary>
+    /// Triggers the RequestOpenSettings event to open settings dialog immediately.
+    /// </summary>
+    public void TriggerOpenSettings()
+    {
+        RequestOpenSettings?.Invoke(this, EventArgs.Empty);
+    }
 
     // Enhanced Progress Information
     [ObservableProperty]

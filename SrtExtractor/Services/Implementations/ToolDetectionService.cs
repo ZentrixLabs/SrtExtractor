@@ -88,7 +88,7 @@ public class ToolDetectionService : IToolDetectionService
         // Also check if it's in PATH
         try
         {
-            var (exitCode, _, _) = await _processRunner.RunAsync("seconv", "--help");
+            var (exitCode, _, _) = await _processRunner.RunAsync("seconv", new[] { "--help" });
             if (exitCode == 0 || exitCode == 1) // Help usually returns 1
             {
                 _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, "seconv", "Unknown", null));
@@ -136,7 +136,7 @@ public class ToolDetectionService : IToolDetectionService
         // Also check if it's in PATH
         try
         {
-            var (exitCode, _, _) = await _processRunner.RunAsync("ffmpeg", "-version");
+            var (exitCode, _, _) = await _processRunner.RunAsync("ffmpeg", new[] { "-version" });
             if (exitCode == 0)
             {
                 _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, "ffmpeg", "Unknown", null));
@@ -170,7 +170,7 @@ public class ToolDetectionService : IToolDetectionService
         // Check PATH environment variable
         try
         {
-            var whereResult = await _processRunner.RunAsync("where", toolName);
+            var whereResult = await _processRunner.RunAsync("where", new[] { toolName });
             if (whereResult.ExitCode == 0 && !string.IsNullOrEmpty(whereResult.StdOut))
             {
                 var path = whereResult.StdOut.Trim().Split('\n')[0].Trim();
@@ -192,7 +192,7 @@ public class ToolDetectionService : IToolDetectionService
         try
         {
             _loggingService.LogInfo($"Checking for dotnet tool: {toolName}");
-            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", $"tool list --global");
+            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", new[] { "tool", "list", "--global" });
             
             if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
             {
@@ -225,7 +225,7 @@ public class ToolDetectionService : IToolDetectionService
         try
         {
             // Get the dotnet tools directory
-            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", "tool list --global");
+            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", new[] { "tool", "list", "--global" });
             
             if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
             {
@@ -252,7 +252,7 @@ public class ToolDetectionService : IToolDetectionService
                     // If not found in common locations, try to run it directly
                     try
                     {
-                        var (testExitCode, _, _) = await _processRunner.RunAsync(toolName, "--help");
+                        var (testExitCode, _, _) = await _processRunner.RunAsync(toolName, new[] { "--help" });
                         if (testExitCode == 0 || testExitCode == 1) // Help usually returns 1
                         {
                             return toolName; // Tool is in PATH
@@ -288,7 +288,7 @@ public class ToolDetectionService : IToolDetectionService
             if (toolName.Contains("mkvmerge") || toolName.Contains("mkvextract"))
             {
                 // MKVToolNix tools - try --version
-                var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, "--version");
+                var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { "--version" });
                 if (exitCode == 0)
                 {
                     _loggingService.LogInfo($"MKVToolNix validation successful: {toolPath}");
@@ -317,7 +317,7 @@ public class ToolDetectionService : IToolDetectionService
                 {
                     try
                     {
-                        var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, flag);
+                        var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { flag });
                         if (exitCode == 0)
                         {
                             _loggingService.LogInfo($"Tool validation successful with {flag}: {toolPath}");
@@ -345,7 +345,7 @@ public class ToolDetectionService : IToolDetectionService
     {
         try
         {
-            var (exitCode, stdout, _) = await _processRunner.RunAsync(toolPath, "--version");
+            var (exitCode, stdout, _) = await _processRunner.RunAsync(toolPath, new[] { "--version" });
             if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
             {
                 // Extract version from output (first line usually contains version)

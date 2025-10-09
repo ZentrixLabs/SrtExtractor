@@ -164,298 +164,354 @@
             
             <!-- Page 2: Quick Start -->
             <Grid x:Name="Page2" Visibility="{Binding Page2Visibility}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                              HorizontalScrollBarVisibility="Disabled"
-                              Padding="40,20">
-                    <StackPanel HorizontalAlignment="Center" MaxWidth="700">
-                        <TextBlock Text="Quick Start Guide" 
-                                   Style="{StaticResource PageTitle}"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="700">
+                    <TextBlock Text="Quick Start Guide" 
+                               FontSize="28"
+                               FontWeight="{StaticResource FontWeightBold}"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,10,0,5"/>
+                    
+                    <TextBlock Text="Extract subtitles in just 4 simple steps:"
+                               FontSize="14"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="40,0,40,15"/>
+                    
+                    <!-- Steps -->
+                    <Grid Margin="0,10,0,10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
                         
-                        <TextBlock Text="Extract subtitles in just 4 simple steps:"
-                                   Style="{StaticResource PageSubtitle}"/>
+                        <!-- Step 1 -->
+                        <Border Grid.Row="0" Grid.Column="0" 
+                                Width="32" Height="32" CornerRadius="16"
+                                Background="{StaticResource PrimaryBrush}"
+                                HorizontalAlignment="Center" VerticalAlignment="Top"
+                                Margin="0,0,0,10">
+                            <TextBlock Text="1" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightBold}"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,12">
+                            <TextBlock Text="Select Your Video File" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="18">
+                                <Run Text="Click "/>
+                                <Run Text="'Pick Video...'" FontWeight="Bold"/>
+                                <Run Text=" or press "/>
+                                <Run Text="Ctrl+O" FontFamily="Consolas" Background="{StaticResource BackgroundAltBrush}"/>
+                                <Run Text=" to choose your MKV or MP4 file."/>
+                            </TextBlock>
+                        </StackPanel>
                         
-                        <!-- Steps -->
-                        <Grid Margin="0,20,0,40">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <!-- Step 1 -->
-                            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource StepNumber}" Margin="0,0,0,15">
-                                <TextBlock Text="1" Style="{StaticResource StepNumberText}"/>
-                            </Border>
-                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,20">
-                                <TextBlock Text="Select Your Video File" Style="{StaticResource FeatureTitle}"/>
-                                <TextBlock Style="{StaticResource FeatureDescription}">
-                                    <Run Text="Click "/>
-                                    <Run Text="'Pick Video...'" FontWeight="Bold"/>
-                                    <Run Text=" or press "/>
-                                    <Run Text="Ctrl+O" FontFamily="Consolas" Background="{StaticResource BackgroundAltBrush}"/>
-                                    <Run Text=" to choose your MKV or MP4 file."/>
-                                </TextBlock>
-                            </StackPanel>
-                            
-                            <!-- Step 2 -->
-                            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource StepNumber}" Margin="0,0,0,15">
-                                <TextBlock Text="2" Style="{StaticResource StepNumberText}"/>
-                            </Border>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,20">
-                                <TextBlock Text="Analyze Subtitle Tracks" Style="{StaticResource FeatureTitle}"/>
-                                <TextBlock Style="{StaticResource FeatureDescription}">
-                                    <Run Text="Click "/>
-                                    <Run Text="'Probe Tracks'" FontWeight="Bold"/>
-                                    <Run Text=" or press "/>
-                                    <Run Text="Ctrl+P" FontFamily="Consolas" Background="{StaticResource BackgroundAltBrush}"/>
-                                    <Run Text=" to scan for available subtitles. Recommended tracks are marked with a ⭐ star."/>
-                                </TextBlock>
-                            </StackPanel>
-                            
-                            <!-- Step 3 -->
-                            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource StepNumber}" Margin="0,0,0,15">
-                                <TextBlock Text="3" Style="{StaticResource StepNumberText}"/>
-                            </Border>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,20">
-                                <TextBlock Text="Choose a Subtitle Track" Style="{StaticResource FeatureTitle}"/>
-                                <TextBlock Style="{StaticResource FeatureDescription}">
-                                    <Run Text="Select your preferred subtitle track from the list. The app will suggest the best option based on your preferences."/>
-                                </TextBlock>
-                            </StackPanel>
-                            
-                            <!-- Step 4 -->
-                            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource StepNumber}">
-                                <TextBlock Text="4" Style="{StaticResource StepNumberText}"/>
-                            </Border>
-                            <StackPanel Grid.Row="3" Grid.Column="1">
-                                <TextBlock Text="Extract to SRT" Style="{StaticResource FeatureTitle}"/>
-                                <TextBlock Style="{StaticResource FeatureDescription}">
-                                    <Run Text="Click "/>
-                                    <Run Text="'Extract Selected → SRT'" FontWeight="Bold"/>
-                                    <Run Text=" or press "/>
-                                    <Run Text="Ctrl+E" FontFamily="Consolas" Background="{StaticResource BackgroundAltBrush}"/>
-                                    <Run Text=". The SRT file will be saved next to your video file."/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </ScrollViewer>
+                        <!-- Step 2 -->
+                        <Border Grid.Row="1" Grid.Column="0" 
+                                Width="32" Height="32" CornerRadius="16"
+                                Background="{StaticResource PrimaryBrush}"
+                                HorizontalAlignment="Center" VerticalAlignment="Top"
+                                Margin="0,0,0,10">
+                            <TextBlock Text="2" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightBold}"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,12">
+                            <TextBlock Text="Analyze Subtitle Tracks" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="18">
+                                <Run Text="Click "/>
+                                <Run Text="'Probe Tracks'" FontWeight="Bold"/>
+                                <Run Text=" or press "/>
+                                <Run Text="Ctrl+P" FontFamily="Consolas" Background="{StaticResource BackgroundAltBrush}"/>
+                                <Run Text=" to scan. Recommended tracks are marked with a ⭐ star."/>
+                            </TextBlock>
+                        </StackPanel>
+                        
+                        <!-- Step 3 -->
+                        <Border Grid.Row="2" Grid.Column="0" 
+                                Width="32" Height="32" CornerRadius="16"
+                                Background="{StaticResource PrimaryBrush}"
+                                HorizontalAlignment="Center" VerticalAlignment="Top"
+                                Margin="0,0,0,10">
+                            <TextBlock Text="3" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightBold}"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,12">
+                            <TextBlock Text="Choose a Subtitle Track" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock Text="Select your preferred subtitle track from the list. The app will suggest the best option based on your preferences."
+                                       FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="18"/>
+                        </StackPanel>
+                        
+                        <!-- Step 4 -->
+                        <Border Grid.Row="3" Grid.Column="0" 
+                                Width="32" Height="32" CornerRadius="16"
+                                Background="{StaticResource PrimaryBrush}"
+                                HorizontalAlignment="Center" VerticalAlignment="Top">
+                            <TextBlock Text="4" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightBold}"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Row="3" Grid.Column="1">
+                            <TextBlock Text="Extract to SRT" 
+                                       FontSize="16" FontWeight="{StaticResource FontWeightSemiBold}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="18">
+                                <Run Text="Click "/>
+                                <Run Text="'Extract Selected → SRT'" FontWeight="Bold"/>
+                                <Run Text=" or press "/>
+                                <Run Text="Ctrl+E" FontFamily="Consolas" Background="{StaticResource BackgroundAltBrush}"/>
+                                <Run Text=". The SRT file will be saved next to your video file."/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
             </Grid>
             
             <!-- Page 3: Batch Mode -->
             <Grid x:Name="Page3" Visibility="{Binding Page3Visibility}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                              HorizontalScrollBarVisibility="Disabled"
-                              Padding="40,20">
-                    <StackPanel HorizontalAlignment="Center" MaxWidth="700">
-                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                   Text="{StaticResource IconFolder}" 
-                                   FontSize="64" 
-                                   Foreground="{StaticResource PrimaryBrush}"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,15"/>
-                        
-                        <TextBlock Text="Batch Mode" 
-                                   Style="{StaticResource PageTitle}"
-                                   Margin="0,0,0,5"/>
-                        
-                        <TextBlock Text="Process multiple files at once with powerful batch processing"
-                                   Style="{StaticResource PageSubtitle}"
-                                   Margin="40,0,40,15"/>
-                        
-                        <!-- Batch Features -->
-                        <Border Background="{StaticResource BackgroundAltBrush}" 
-                                BorderBrush="{StaticResource BorderBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="{StaticResource RadiusL}" 
-                                Padding="{StaticResource ThicknessL}" 
-                                Margin="0,10,0,0">
-                            <StackPanel>
-                                <!-- Feature 1 -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="✓" 
-                                               FontSize="20" 
-                                               Foreground="{StaticResource SuccessBrush}"
-                                               Margin="0,0,12,0"
-                                               VerticalAlignment="Top"/>
-                                    <StackPanel MaxWidth="580">
-                                        <TextBlock Text="Drag &amp; Drop Support" 
-                                                   Style="{StaticResource FeatureTitle}"
-                                                   Margin="0,0,0,4"
-                                                   TextWrapping="Wrap"/>
-                                        <TextBlock Style="{StaticResource FeatureDescription}"
-                                                   TextWrapping="Wrap">
-                                            <Run Text="Simply drag MKV/MP4 files onto the window to add them to the batch queue. No clicking required!"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </StackPanel>
-                                
-                                <!-- Feature 2 -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="✓" 
-                                               FontSize="20" 
-                                               Foreground="{StaticResource SuccessBrush}"
-                                               Margin="0,0,12,0"
-                                               VerticalAlignment="Top"/>
-                                    <StackPanel MaxWidth="580">
-                                        <TextBlock Text="Smart Network Detection" 
-                                                   Style="{StaticResource FeatureTitle}"
-                                                   Margin="0,0,0,4"
-                                                   TextWrapping="Wrap"/>
-                                        <TextBlock Style="{StaticResource FeatureDescription}"
-                                                   TextWrapping="Wrap">
-                                            <Run Text="Files on network drives are automatically detected with realistic time estimates. The 🌐 icon shows which files are on the network."/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </StackPanel>
-                                
-                                <!-- Feature 3 -->
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="✓" 
-                                               FontSize="20" 
-                                               Foreground="{StaticResource SuccessBrush}"
-                                               Margin="0,0,12,0"
-                                               VerticalAlignment="Top"/>
-                                    <StackPanel MaxWidth="580">
-                                        <TextBlock Text="Progress Tracking" 
-                                                   Style="{StaticResource FeatureTitle}"
-                                                   Margin="0,0,0,4"
-                                                   TextWrapping="Wrap"/>
-                                        <TextBlock Style="{StaticResource FeatureDescription}"
-                                                   TextWrapping="Wrap">
-                                            <Run Text="Monitor real-time progress with detailed status updates for each file. See exactly what's happening at every step."/>
-                                        </TextBlock>
-                                    </StackPanel>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="700">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="{StaticResource IconFolder}" 
+                               FontSize="48" 
+                               Foreground="{StaticResource PrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    
+                    <TextBlock Text="Batch Mode" 
+                               FontSize="28"
+                               FontWeight="{StaticResource FontWeightBold}"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,5"/>
+                    
+                    <TextBlock Text="Process multiple files at once with powerful batch processing"
+                               FontSize="14"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="40,0,40,10"/>
+                    
+                    <!-- Batch Features -->
+                    <Border Background="{StaticResource BackgroundAltBrush}" 
+                            BorderBrush="{StaticResource BorderBrush}" 
+                            BorderThickness="1" 
+                            CornerRadius="{StaticResource RadiusL}" 
+                            Padding="15" 
+                            Margin="0,8,0,0">
+                        <StackPanel>
+                            <!-- Feature 1 -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="✓" 
+                                           FontSize="16" 
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Margin="0,0,10,0"
+                                           VerticalAlignment="Top"/>
+                                <StackPanel MaxWidth="600">
+                                    <TextBlock Text="Drag &amp; Drop Support" 
+                                               FontSize="15"
+                                               FontWeight="{StaticResource FontWeightSemiBold}"
+                                               Margin="0,0,0,3"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock FontSize="13"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               LineHeight="18">
+                                        <Run Text="Simply drag MKV/MP4 files onto the window to add them to the batch queue. No clicking required!"/>
+                                    </TextBlock>
                                 </StackPanel>
                             </StackPanel>
-                        </Border>
-                        
-                        <TextBlock Margin="0,20,0,30" 
-                                   HorizontalAlignment="Center" 
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   Foreground="{StaticResource TextSecondaryBrush}">
-                            <Run Text="Enable Batch Mode with "/>
-                            <Run Text="Ctrl+B" FontFamily="Consolas" FontWeight="Bold" Background="{StaticResource BackgroundAltBrush}"/>
-                            <Run Text=" or check the setting in the main window"/>
-                        </TextBlock>
-                    </StackPanel>
-                </ScrollViewer>
+                            
+                            <!-- Feature 2 -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="✓" 
+                                           FontSize="16" 
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Margin="0,0,10,0"
+                                           VerticalAlignment="Top"/>
+                                <StackPanel MaxWidth="600">
+                                    <TextBlock Text="Smart Network Detection" 
+                                               FontSize="15"
+                                               FontWeight="{StaticResource FontWeightSemiBold}"
+                                               Margin="0,0,0,3"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock FontSize="13"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               LineHeight="18">
+                                        <Run Text="Files on network drives are automatically detected with realistic time estimates. The 🌐 icon shows which files are on the network."/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Feature 3 -->
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="✓" 
+                                           FontSize="16" 
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Margin="0,0,10,0"
+                                           VerticalAlignment="Top"/>
+                                <StackPanel MaxWidth="600">
+                                    <TextBlock Text="Progress Tracking" 
+                                               FontSize="15"
+                                               FontWeight="{StaticResource FontWeightSemiBold}"
+                                               Margin="0,0,0,3"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock FontSize="13"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               LineHeight="18">
+                                        <Run Text="Monitor real-time progress with detailed status updates for each file. See exactly what's happening at every step."/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Margin="0,12,0,0" 
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               FontSize="13"
+                               Foreground="{StaticResource TextSecondaryBrush}">
+                        <Run Text="Enable Batch Mode with "/>
+                        <Run Text="Ctrl+B" FontFamily="Consolas" FontWeight="Bold" Background="{StaticResource BackgroundAltBrush}"/>
+                        <Run Text=" or check the setting in the main window"/>
+                    </TextBlock>
+                </StackPanel>
             </Grid>
             
             <!-- Page 4: SRT Correction -->
             <Grid x:Name="Page4" Visibility="{Binding Page4Visibility}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                              HorizontalScrollBarVisibility="Disabled"
-                              Padding="40,20">
-                    <StackPanel HorizontalAlignment="Center" MaxWidth="700">
-                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                   Text="🔧" 
-                                   FontSize="64" 
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,15"/>
-                        
-                        <TextBlock Text="SRT Correction" 
-                                   Style="{StaticResource PageTitle}"
-                                   Margin="0,0,0,5"/>
-                        
-                        <TextBlock Text="Fix OCR errors automatically with advanced multi-pass correction"
-                                   Style="{StaticResource PageSubtitle}"
-                                   Margin="40,0,40,15"/>
-                        
-                        <!-- Correction Info -->
-                        <Border Background="{StaticResource BackgroundAltBrush}" 
-                                BorderBrush="{StaticResource BorderBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="{StaticResource RadiusL}" 
-                                Padding="{StaticResource ThicknessL}" 
-                                Margin="0,10,0,0">
-                            <StackPanel>
-                                <TextBlock Text="What Gets Corrected?" 
-                                           Style="{StaticResource FeatureTitle}"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,0,0,15"/>
-                                
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    
-                                    <!-- Left Column -->
-                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
-                                            <Run Text="• Extra Spaces: " FontWeight="Bold"/>
-                                            <Run Text="'T he' → 'The'" Foreground="{StaticResource SuccessBrush}"/>
-                                        </TextBlock>
-                                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
-                                            <Run Text="• Missing Spaces: " FontWeight="Bold"/>
-                                            <Run Text="'Yougot' → 'You got'" Foreground="{StaticResource SuccessBrush}"/>
-                                        </TextBlock>
-                                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
-                                            <Run Text="• Wrong Characters: " FontWeight="Bold"/>
-                                            <Run Text="'Rip1ey' → 'Ripley'" Foreground="{StaticResource SuccessBrush}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                    
-                                    <!-- Right Column -->
-                                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
-                                            <Run Text="• Bad Apostrophes: " FontWeight="Bold"/>
-                                            <Run Text="'won)t' → 'won't'" Foreground="{StaticResource SuccessBrush}"/>
-                                        </TextBlock>
-                                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
-                                            <Run Text="• Common Phrases: " FontWeight="Bold"/>
-                                            <Run Text="'Whatyoudoing' → 'What you doing'" Foreground="{StaticResource SuccessBrush}"/>
-                                        </TextBlock>
-                                        <TextBlock Margin="0,0,0,10" TextWrapping="Wrap">
-                                            <Run Text="• And More: " FontWeight="Bold"/>
-                                            <Run Text="100+ correction patterns" Foreground="{StaticResource SuccessBrush}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- Multi-Pass Info -->
-                        <Border Background="{StaticResource BackgroundBrush}" 
-                                BorderBrush="{StaticResource PrimaryBrush}" 
-                                BorderThickness="2" 
-                                CornerRadius="{StaticResource RadiusM}" 
-                                Padding="{StaticResource ThicknessM}" 
-                                Margin="0,15,0,30">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="700">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="🔧" 
+                               FontSize="48" 
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    
+                    <TextBlock Text="SRT Correction" 
+                               FontSize="28"
+                               FontWeight="{StaticResource FontWeightBold}"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,5"/>
+                    
+                    <TextBlock Text="Fix OCR errors automatically with advanced multi-pass correction"
+                               FontSize="14"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="40,0,40,10"/>
+                    
+                    <!-- Correction Info -->
+                    <Border Background="{StaticResource BackgroundAltBrush}" 
+                            BorderBrush="{StaticResource BorderBrush}" 
+                            BorderThickness="1" 
+                            CornerRadius="{StaticResource RadiusL}" 
+                            Padding="15" 
+                            Margin="0,8,0,0">
+                        <StackPanel>
+                            <TextBlock Text="What Gets Corrected?" 
+                                       FontSize="16"
+                                       FontWeight="{StaticResource FontWeightSemiBold}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,10"/>
+                            
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 
-                                <TextBlock Grid.Column="0"
-                                           FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{StaticResource IconInfo}" 
-                                           FontSize="20" 
-                                           Foreground="{StaticResource PrimaryBrush}"
-                                           Margin="0,0,12,0"
-                                           VerticalAlignment="Top"/>
-                                <TextBlock Grid.Column="1"
-                                           VerticalAlignment="Center" 
-                                           TextWrapping="Wrap">
-                                    <Run Text="Correction runs automatically after extraction. Use " Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <Run Text="'Batch SRT Correction'" FontWeight="Bold"/>
-                                    <Run Text=" to process hundreds of existing SRT files at once!" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </TextBlock>
+                                <!-- Left Column -->
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" FontSize="13" LineHeight="18">
+                                        <Run Text="• Extra Spaces: " FontWeight="Bold"/>
+                                        <Run Text="'T he' → 'The'" Foreground="{StaticResource SuccessBrush}"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" FontSize="13" LineHeight="18">
+                                        <Run Text="• Missing Spaces: " FontWeight="Bold"/>
+                                        <Run Text="'Yougot' → 'You got'" Foreground="{StaticResource SuccessBrush}"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" FontSize="13" LineHeight="18">
+                                        <Run Text="• Wrong Characters: " FontWeight="Bold"/>
+                                        <Run Text="'Rip1ey' → 'Ripley'" Foreground="{StaticResource SuccessBrush}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                                
+                                <!-- Right Column -->
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" FontSize="13" LineHeight="18">
+                                        <Run Text="• Bad Apostrophes: " FontWeight="Bold"/>
+                                        <Run Text="'won)t' → 'won't'" Foreground="{StaticResource SuccessBrush}"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" FontSize="13" LineHeight="18">
+                                        <Run Text="• Common Phrases: " FontWeight="Bold"/>
+                                        <Run Text="'Whatyoudoing' → 'What you doing'" Foreground="{StaticResource SuccessBrush}"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" FontSize="13" LineHeight="18">
+                                        <Run Text="• And More: " FontWeight="Bold"/>
+                                        <Run Text="100+ correction patterns" Foreground="{StaticResource SuccessBrush}"/>
+                                    </TextBlock>
+                                </StackPanel>
                             </Grid>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Multi-Pass Info -->
+                    <Border Background="{StaticResource BackgroundBrush}" 
+                            BorderBrush="{StaticResource PrimaryBrush}" 
+                            BorderThickness="2" 
+                            CornerRadius="{StaticResource RadiusM}" 
+                            Padding="12" 
+                            Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0"
+                                       FontFamily="{StaticResource IconFontFamily}" 
+                                       Text="{StaticResource IconInfo}" 
+                                       FontSize="16" 
+                                       Foreground="{StaticResource PrimaryBrush}"
+                                       Margin="0,0,10,0"
+                                       VerticalAlignment="Top"/>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center" 
+                                       TextWrapping="Wrap"
+                                       FontSize="13"
+                                       LineHeight="18">
+                                <Run Text="Correction runs automatically after extraction. Use " Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <Run Text="'Batch SRT Correction'" FontWeight="Bold"/>
+                                <Run Text=" to process hundreds of existing SRT files at once!" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+                </StackPanel>
             </Grid>
             
             <!-- Page 5: Keyboard Shortcuts -->
@@ -463,15 +519,24 @@
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="700">
                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                Text="⌨️" 
-                               FontSize="72" 
+                               FontSize="48" 
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,20"/>
+                               Margin="0,0,0,12"/>
                     
                     <TextBlock Text="Keyboard Shortcuts" 
-                               Style="{StaticResource PageTitle}"/>
+                               FontSize="28"
+                               FontWeight="{StaticResource FontWeightBold}"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,5"/>
                     
                     <TextBlock Text="Work faster with these handy keyboard shortcuts"
-                               Style="{StaticResource PageSubtitle}"/>
+                               FontSize="14"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="40,0,40,12"/>
                     
                     <!-- Shortcuts Grid -->
                     <Border Background="{StaticResource BackgroundAltBrush}" 

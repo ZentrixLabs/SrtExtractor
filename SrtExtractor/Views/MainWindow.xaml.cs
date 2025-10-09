@@ -36,10 +36,11 @@ namespace SrtExtractor.Views
             
             // Note: Drag and drop is now handled by the queue panel specifically
             
-            // Subscribe to recent files changes
+            // Subscribe to recent files changes and settings requests
             if (viewModel.State != null)
             {
                 viewModel.State.PropertyChanged += State_PropertyChanged;
+                viewModel.State.RequestOpenSettings += (s, e) => SettingsMenuItem_Click(this, new RoutedEventArgs());
             }
             
             // Subscribe to window events for state persistence
@@ -368,24 +369,6 @@ namespace SrtExtractor.Views
             {
                 // Populate recent files menu
                 PopulateRecentFilesMenu();
-                
-                // Check if settings should be opened on startup
-                if (viewModel.State.ShowSettingsOnStartup)
-                {
-                    viewModel.State.ShowSettingsOnStartup = false; // Reset the flag
-                    
-                    // Open settings window
-                    try
-                    {
-                        var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
-                        settingsWindow.Owner = this;
-                        settingsWindow.ShowDialog();
-                    }
-                    catch (Exception ex)
-                    {
-                        _notificationService.ShowError($"Error opening settings:\n{ex.Message}", "Settings Error");
-                    }
-                }
             }
         }
 
@@ -409,7 +392,7 @@ namespace SrtExtractor.Views
                 _loggingService.LogError("Unhandled error in State_PropertyChanged", ex);
             }
         }
-
+        
         private void PopulateRecentFilesMenu()
         {
             if (DataContext is not MainViewModel viewModel) return;

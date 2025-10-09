@@ -616,8 +616,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             State.AddLogMessage("Some required tools are missing. Please configure them in Settings.");
             
-            // Show a message directing users to settings
-            Application.Current.Dispatcher.Invoke(async () =>
+            // Show a message directing users to settings (fire and forget)
+            _ = Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 var result = await _notificationService.ShowConfirmationAsync(
                     "Some required tools are missing and need to be configured.\n\nWould you like to open Settings to configure the tools now?",
@@ -625,8 +625,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 
                 if (result)
                 {
-                    // This will be handled by the main window when it opens
-                    State.ShowSettingsOnStartup = true;
+                    // Trigger the event to open settings immediately
+                    State.TriggerOpenSettings();
                 }
             });
         }

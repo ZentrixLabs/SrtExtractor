@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using SrtExtractor.Models;
 using SrtExtractor.Services.Interfaces;
+using SrtExtractor.Utils;
 
 namespace SrtExtractor.Services.Implementations;
 
@@ -32,17 +33,20 @@ public class FfmpegService : IFfmpegService
 
     public async Task<ProbeResult> ProbeAsync(string mp4Path, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Probing MP4 file: {mp4Path}");
+        _loggingService.LogInfo($"Probing MP4 file: {Path.GetFileName(mp4Path)}");
+
+        // SECURITY: Validate and sanitize the input path
+        var validatedMp4Path = PathValidator.ValidateFileExists(mp4Path);
 
         // Check if file exists and is accessible
-        var fileExists = await _asyncFileService.FileExistsAsync(mp4Path, cancellationToken);
+        var fileExists = await _asyncFileService.FileExistsAsync(validatedMp4Path, cancellationToken);
         if (!fileExists)
         {
             throw new FileNotFoundException($"MP4 file not found: {mp4Path}");
         }
 
         // Check if file is locked
-        var isLocked = await _fileLockDetectionService.IsFileLockedAsync(mp4Path, cancellationToken);
+        var isLocked = await _fileLockDetectionService.IsFileLockedAsync(validatedMp4Path, cancellationToken);
         if (isLocked)
         {
             throw new IOException($"MP4 file is locked or in use by another process: {mp4Path}");
@@ -65,8 +69,12 @@ public class FfmpegService : IFfmpegService
                 throw new InvalidOperationException($"ffprobe.exe not found at {ffprobePath}");
             }
 
+            // SECURITY: Use argument array to prevent command injection
             // Run ffprobe to get stream information
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffprobePath, $"-v quiet -print_format json -show_streams \"{mp4Path}\"", cancellationToken);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                ffprobePath, 
+                new[] { "-v", "quiet", "-print_format", "json", "-show_streams", validatedMp4Path }, 
+                cancellationToken);
 
             if (exitCode != 0)
             {
@@ -199,10 +207,14 @@ public class FfmpegService : IFfmpegService
 
     public async Task<string> ExtractSubtitleAsync(string mp4Path, int trackId, string outputPath, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Extracting subtitle track {trackId} from MP4 to: {outputPath}");
+        _loggingService.LogInfo($"Extracting subtitle track {trackId} from MP4");
 
         try
         {
+            // SECURITY: Validate and sanitize paths
+            var validatedMp4Path = PathValidator.ValidateFileExists(mp4Path);
+            var validatedOutputPath = SafeFileOperations.ValidateAndPrepareOutputPath(outputPath);
+
             // Get FFmpeg path
             var ffmpegPath = await FindFfmpegPathAsync();
             if (string.IsNullOrEmpty(ffmpegPath))
@@ -210,35 +222,31 @@ public class FfmpegService : IFfmpegService
                 throw new InvalidOperationException("FFmpeg not found");
             }
 
-            // Ensure output directory exists
-            var outputDir = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(outputDir))
-            {
-                await _asyncFileService.EnsureDirectoryExistsAsync(outputDir, cancellationToken);
-            }
-
             // Get the stream index from the track ID
             // We need to re-probe to get the track information since we don't have access to the original probe result
-            var actualStreamIndex = await FindStreamIndexForTrackAsync(mp4Path, trackId, cancellationToken);
+            var actualStreamIndex = await FindStreamIndexForTrackAsync(validatedMp4Path, trackId, cancellationToken);
             
+            // SECURITY: Use argument array to prevent command injection
             // Extract the subtitle using FFmpeg
             _loggingService.LogInfo($"Extracting subtitle track {trackId} from MP4...");
-            var ffmpegArgs = $"-i \"{mp4Path}\" -map 0:{actualStreamIndex} -c:s srt \"{outputPath}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffmpegPath, ffmpegArgs, cancellationToken);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                ffmpegPath, 
+                new[] { "-i", validatedMp4Path, "-map", $"0:{actualStreamIndex}", "-c:s", "srt", validatedOutputPath }, 
+                cancellationToken);
             
             if (exitCode != 0)
             {
                 throw new InvalidOperationException($"ffmpeg failed with exit code {exitCode}: {stderr}");
             }
 
-            var outputExists = await _asyncFileService.FileExistsAsync(outputPath, cancellationToken);
+            var outputExists = await _asyncFileService.FileExistsAsync(validatedOutputPath, cancellationToken);
             if (!outputExists)
             {
                 throw new InvalidOperationException($"Output file was not created: {outputPath}");
             }
 
-            _loggingService.LogInfo($"Subtitle extracted successfully: {outputPath}");
-            return outputPath;
+            _loggingService.LogInfo($"Subtitle extracted successfully");
+            return validatedOutputPath;
         }
         catch (Exception ex)
         {
@@ -254,6 +262,9 @@ public class FfmpegService : IFfmpegService
     {
         _loggingService.LogInfo($"Finding stream index for track ID {trackId}");
         
+        // SECURITY: Validate path (should already be validated by caller, but extra safety)
+        var validatedMp4Path = PathValidator.ValidateFileExists(mp4Path);
+        
         // Get FFmpeg path and construct ffprobe path
         var ffmpegPath = await FindFfmpegPathAsync(cancellationToken);
         if (string.IsNullOrEmpty(ffmpegPath))
@@ -263,8 +274,12 @@ public class FfmpegService : IFfmpegService
 
         var ffprobePath = Path.Combine(Path.GetDirectoryName(ffmpegPath) ?? "", "ffprobe.exe");
         
+        // SECURITY: Use argument array to prevent command injection
         // Run ffprobe to get stream information with a timeout
-        var (exitCode, stdout, stderr) = await _processRunner.RunAsync(ffprobePath, $"-v quiet -print_format json -show_streams \"{mp4Path}\"", cancellationToken);
+        var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+            ffprobePath, 
+            new[] { "-v", "quiet", "-print_format", "json", "-show_streams", validatedMp4Path }, 
+            cancellationToken);
 
         if (exitCode != 0)
         {
