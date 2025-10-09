@@ -90,6 +90,10 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private double _queueColumnWidth = 0;
 
+    // Window Title
+    [ObservableProperty]
+    private string _windowTitle = "SrtExtractor - MKV/MP4 Subtitle Extractor";
+
     [ObservableProperty]
     private ObservableCollection<BatchFile> _batchQueue;
 
@@ -163,6 +167,11 @@ public partial class ExtractionState : ObservableObject
 
     partial void OnIsBatchModeChanged(bool value)
     {
+        // Update window title to reflect current mode
+        WindowTitle = value 
+            ? "SrtExtractor - Batch Mode" 
+            : "SrtExtractor - MKV/MP4 Subtitle Extractor";
+        
         // Notify computed properties that depend on IsBatchMode
         OnPropertyChanged(nameof(ShowBatchMode));
         OnPropertyChanged(nameof(ShowSingleFileMode));

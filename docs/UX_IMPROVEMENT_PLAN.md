@@ -602,19 +602,33 @@ These can be done in a single afternoon and have high visible impact.
 
 ---
 
-### Quick Win 3: Mode Indicator in Title Bar ✅
+### Quick Win 3: Mode Indicator in Title Bar ✅ COMPLETED
 **Effort:** 5 minutes  
-**Impact:** Users always know which mode they're in
+**Impact:** Users always know which mode they're in  
+**Status:** ✅ Completed October 9, 2025
 
+**What was implemented:**
+- Added `WindowTitle` property to `ExtractionState`
+- Window title updates automatically when batch mode toggles
+- Default: "SrtExtractor - MKV/MP4 Subtitle Extractor"
+- Batch Mode: "SrtExtractor - Batch Mode"
+- Bound `Window.Title` to `State.WindowTitle` in XAML
+
+**Implementation:**
 ```csharp
-// In MainViewModel.cs
+// In ExtractionState.cs
 partial void OnIsBatchModeChanged(bool value)
 {
-    Application.Current.MainWindow.Title = value 
+    WindowTitle = value 
         ? "SrtExtractor - Batch Mode" 
-        : "SrtExtractor - Extract Mode";
+        : "SrtExtractor - MKV/MP4 Subtitle Extractor";
+    // ... other updates
 }
 ```
+
+**Files Modified:**
+- `SrtExtractor/State/ExtractionState.cs` - Lines 93-95, 168-178
+- `SrtExtractor/Views/MainWindow.xaml` - Line 12
 
 ---
 
