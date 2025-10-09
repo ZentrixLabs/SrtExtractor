@@ -561,22 +561,27 @@ These improvements add polish but can be deferred to v2.1 if needed.
 
 These can be done in a single afternoon and have high visible impact.
 
-### Quick Win 1: Larger Extract Button ✅
+### Quick Win 1: Larger Extract Button ✅ COMPLETED
 **Effort:** 15 minutes  
-**Impact:** Makes primary action obvious
+**Impact:** Makes primary action obvious  
+**Status:** ✅ Completed October 9, 2025
 
-```xaml
-<Button Content="🚀 Extract to SRT" 
-        Command="{Binding ExtractCommand}"
-        Style="{StaticResource PrimaryButton}"
-        Height="48"
-        Width="200"
-        FontSize="16"
-        FontWeight="SemiBold"
-        Margin="0,10,0,0"/>
-```
+**What was implemented:**
+- Extract button increased to 52px height (was ~32px)
+- Added Segoe Fluent Icons subtitle icon (IconSubtitles)
+- Increased font size to 16px with SemiBold weight
+- Added minimum width of 220px
+- Enhanced padding for better touch targets (20,12)
+- Improved visual hierarchy with icon + text layout
 
-**File:** `SrtExtractor/Views/MainWindow.xaml` (Line 446)
+**Visual Improvements:**
+- Probe Tracks: 38px height with consistent padding
+- Extract to SRT: 52px height (PRIMARY - 36% larger)
+- Cancel: 38px height with warning style
+- Clear visual hierarchy establishes Extract as main action
+
+**Files Modified:**
+- `SrtExtractor/Views/MainWindow.xaml` - Lines 441-478
 
 ---
 

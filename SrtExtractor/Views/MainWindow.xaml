@@ -442,16 +442,38 @@
                             Command="{Binding ProbeCommand}"
                             IsEnabled="{Binding State.CanProbe}"
                             Style="{StaticResource SecondaryButton}"
+                            Height="38"
+                            Padding="16,8"
+                            FontSize="14"
+                            Margin="0,0,12,0"
                             ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P"/>
-                    <Button Content="Extract to SRT" 
-                            Command="{Binding ExtractCommand}"
+                    <Button Command="{Binding ExtractCommand}"
                             IsEnabled="{Binding State.CanExtract}"
                             Style="{StaticResource PrimaryButton}"
-                            ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E"/>
+                            Height="52"
+                            MinWidth="220"
+                            FontSize="16"
+                            FontWeight="{StaticResource FontWeightSemiBold}"
+                            Padding="20,12"
+                            ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                       Text="{StaticResource IconSubtitles}" 
+                                       FontSize="20" 
+                                       Margin="0,0,12,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="Extract to SRT" 
+                                       VerticalAlignment="Center"
+                                       FontSize="16"/>
+                        </StackPanel>
+                    </Button>
                     <Button Content="Cancel" 
                             Command="{Binding CancelCommand}"
                             IsEnabled="{Binding State.IsProcessing}"
                             Style="{StaticResource WarningButton}"
+                            Height="38"
+                            Padding="16,8"
+                            FontSize="14"
                             Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
                             ToolTip="Cancel the current extraction operation&#x0a;Temporary files will be cleaned up automatically&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
                 </StackPanel>
