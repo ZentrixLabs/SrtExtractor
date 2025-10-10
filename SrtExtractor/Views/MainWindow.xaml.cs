@@ -424,7 +424,7 @@ namespace SrtExtractor.Views
                 var isFirstRun = windowState.Width == 1250 && windowState.Height == 900 && 
                                 windowState.Left == 100 && windowState.Top == 100;
                 
-                // Apply window state on UI thread
+                // Apply window state on UI thread (including DataContext access)
                 Dispatcher.Invoke(() =>
                 {
                     // Apply window state
@@ -445,13 +445,13 @@ namespace SrtExtractor.Views
                     }
                     
                     WindowState = windowState.WindowStateEnum;
+                    
+                    // Apply selected tab index if available (must be on UI thread - DataContext is a DependencyObject)
+                    if (DataContext is MainViewModel viewModel)
+                    {
+                        viewModel.State.SelectedTabIndex = windowState.SelectedTabIndex;
+                    }
                 });
-                
-                // Apply selected tab index if available (this can be done on any thread)
-                if (DataContext is MainViewModel viewModel)
-                {
-                    viewModel.State.SelectedTabIndex = windowState.SelectedTabIndex;
-                }
                 
                 if (isFirstRun)
                 {

@@ -171,10 +171,12 @@ public class ToolDetectionService : IToolDetectionService
             }
         }
 
-        // Check PATH environment variable
+        // Check PATH environment variable using Windows where command
         try
         {
-            var whereResult = await _processRunner.RunAsync("where", new[] { toolName });
+            // Use full path to where.exe to avoid ProcessRunner looking in current directory
+            var whereExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "where.exe");
+            var whereResult = await _processRunner.RunAsync(whereExe, new[] { toolName });
             if (whereResult.ExitCode == 0 && !string.IsNullOrEmpty(whereResult.StdOut))
             {
                 var path = whereResult.StdOut.Trim().Split('\n')[0].Trim();
