@@ -287,7 +287,7 @@ namespace SrtExtractor.Views
             DragDropMessage.Foreground = System.Windows.Media.Brushes.White;
         }
 
-        private void Window_Drop(object sender, DragEventArgs e)
+        private async void Window_Drop(object sender, DragEventArgs e)
         {
             // Hide overlay
             DragDropOverlay.Visibility = Visibility.Collapsed;
@@ -328,25 +328,8 @@ namespace SrtExtractor.Views
                 return;
             }
 
-          // Add files to batch queue (use network detection service and file cache)
-          var networkDetectionService = _serviceProvider.GetRequiredService<INetworkDetectionService>();
-          var fileCacheService = _serviceProvider.GetRequiredService<IFileCacheService>();
-          
-          foreach (var file in videoFiles)
-          {
-              var batchFile = new BatchFile
-              {
-                  FilePath = file
-              };
-              batchFile.UpdateFromFileSystem(fileCacheService);
-              
-              // Detect network status
-              var isNetwork = networkDetectionService.IsNetworkPath(file);
-              var estimatedTime = networkDetectionService.GetEstimatedProcessingTime(file);
-              batchFile.UpdateNetworkStatus(isNetwork, estimatedTime);
-              
-              viewModel.State.BatchQueue.Add(batchFile);
-          }
+          // Add files to batch queue using the ViewModel's async method
+          await viewModel.AddFilesToBatchQueueAsync(videoFiles.ToArray());
 
             _loggingService.LogInfo($"Added {videoFiles.Count} file(s) to batch queue via window drag & drop");
             

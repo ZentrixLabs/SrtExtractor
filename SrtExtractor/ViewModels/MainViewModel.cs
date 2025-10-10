@@ -791,7 +791,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         // Default: Prefer SubRip/SRT tracks first, then Full tracks, then by quality
-        var subripTracks = languageTracks.Where(t => IsSubRipTrack(t.Codec)).ToList();
+        var subripTracks = languageTracks.Where(t => t.IsSubRip).ToList();
         if (subripTracks.Any())
         {
             _loggingService.LogInfo($"Found {subripTracks.Count} SubRip/SRT tracks, prioritizing over HDMV PGS");
@@ -811,6 +811,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Select the best quality track from a list of tracks based on bitrate, frame count, and codec type.
+    /// Now uses the SubtitleTrack model's cached codec properties for better performance.
     /// </summary>
     /// <param name="tracks">List of tracks to choose from</param>
     /// <returns>Best quality track</returns>
@@ -819,7 +820,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (!tracks.Any()) return tracks.First();
 
         // Priority order: SubRip/SRT > Other text-based > HDMV PGS > Other PGS
-        var subripTracks = tracks.Where(t => IsSubRipTrack(t.Codec)).ToList();
+        // Use the track's built-in codec properties instead of parsing strings
+        var subripTracks = tracks.Where(t => t.IsSubRip).ToList();
         if (subripTracks.Any())
         {
             _loggingService.LogInfo($"Selecting from {subripTracks.Count} SubRip/SRT tracks (highest priority)");
@@ -828,7 +830,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         else
         {
             // If no SubRip/SRT, prefer other text-based subtitles over PGS
-            var textTracks = tracks.Where(t => IsTextBasedTrack(t.Codec)).ToList();
+            var textTracks = tracks.Where(t => t.IsTextBased).ToList();
             if (textTracks.Any())
             {
                 _loggingService.LogInfo($"No SubRip/SRT found, selecting from {textTracks.Count} text-based tracks");
@@ -840,51 +842,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
-        // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec preference
+        // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec priority
+        // Use the track's CodecPriority property instead of helper method
         return tracks.OrderByDescending(t => t.Bitrate)
                      .ThenByDescending(t => t.FrameCount)
-                     .ThenByDescending(t => GetCodecPriority(t.Codec))
+                     .ThenByDescending(t => t.CodecPriority)
                      .First();
     }
 
-    /// <summary>
-    /// Check if a codec is SubRip/SRT format.
-    /// </summary>
-    /// <param name="codec">Codec string to check</param>
-    /// <returns>True if SubRip/SRT</returns>
-    private static bool IsSubRipTrack(string codec)
-    {
-        return codec.Contains("S_TEXT/UTF8") || 
-               codec.Contains("SubRip/SRT") || 
-               codec.Contains("subrip") ||
-               codec.Contains("srt");
-    }
-
-    /// <summary>
-    /// Check if a codec is text-based (not PGS).
-    /// </summary>
-    /// <param name="codec">Codec string to check</param>
-    /// <returns>True if text-based</returns>
-    private static bool IsTextBasedTrack(string codec)
-    {
-        return codec.Contains("S_TEXT") || 
-               codec.Contains("ASS") || 
-               codec.Contains("SSA") || 
-               codec.Contains("VTT");
-    }
-
-    /// <summary>
-    /// Get codec priority for sorting (higher number = higher priority).
-    /// </summary>
-    /// <param name="codec">Codec string</param>
-    /// <returns>Priority value</returns>
-    private static int GetCodecPriority(string codec)
-    {
-        if (IsSubRipTrack(codec)) return 100;  // Highest priority
-        if (IsTextBasedTrack(codec)) return 50; // Medium priority
-        if (codec.Contains("PGS") || codec.Contains("S_HDMV/PGS")) return 10; // Lower priority
-        return 0; // Lowest priority
-    }
+    // Codec helper methods removed - now using SubtitleTrack.CodecType, .IsSubRip, .IsTextBased, and .CodecPriority properties
 
     /// <summary>
     /// Test method to verify recommendation logic prioritizes SubRip/SRT over HDMV PGS.
@@ -1518,7 +1484,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Uses bulk add to prevent excessive UI updates.
     /// </summary>
     /// <param name="filePaths">Array of file paths to add</param>
-    public void AddFilesToBatchQueue(string[] filePaths)
+    public async Task AddFilesToBatchQueueAsync(string[] filePaths)
     {
         try
         {
@@ -1538,7 +1504,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
 
                 var batchFile = new BatchFile { FilePath = filePath };
-                batchFile.UpdateFromFileSystem(_fileCacheService);
+                await batchFile.UpdateFromFileSystemAsync(_fileCacheService);
                 
                 // Update network detection
                 var isNetwork = _networkDetectionService.IsNetworkPath(filePath);

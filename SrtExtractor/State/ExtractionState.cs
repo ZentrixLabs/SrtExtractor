@@ -314,9 +314,9 @@ public partial class ExtractionState : ObservableObject
     public bool ShowResumeBatchButton => CanResumeBatch && BatchCompletedCount > 0;
 
     // Enhanced Progress Computed Properties
-    public string FormattedBytesProcessed => FormatBytes(BytesProcessed);
+    public string FormattedBytesProcessed => Utils.FileUtilities.FormatFileSize(BytesProcessed);
 
-    public string FormattedTotalBytes => FormatBytes(TotalBytes);
+    public string FormattedTotalBytes => Utils.FileUtilities.FormatFileSize(TotalBytes);
 
     public string ProgressDetails => $"({FormattedBytesProcessed} / {FormattedTotalBytes})";
 
@@ -482,6 +482,8 @@ public partial class ExtractionState : ObservableObject
 
     /// <summary>
     /// Add a file to the batch queue.
+    /// NOTE: This method is kept for backwards compatibility but is discouraged.
+    /// Use the async version from ViewModel that properly initializes file data.
     /// </summary>
     /// <param name="filePath">Path to the file to add</param>
     /// <returns>True if file was added, false if already exists</returns>
@@ -492,8 +494,14 @@ public partial class ExtractionState : ObservableObject
             return false;
         }
 
-        var batchFile = new BatchFile { FilePath = filePath };
-        batchFile.UpdateFromFileSystem();
+        var batchFile = new BatchFile 
+        { 
+            FilePath = filePath,
+            FileName = Path.GetFileName(filePath),
+            Status = BatchFileStatus.Pending
+        };
+        
+        // Note: File size is not populated here. Use MainViewModel.AddFilesToBatchQueueAsync instead.
         BatchQueue.Add(batchFile);
 
         TotalBatchFiles = BatchQueue.Count;
@@ -620,27 +628,7 @@ public partial class ExtractionState : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Format bytes as a human-readable string.
-    /// </summary>
-    /// <param name="bytes">Number of bytes</param>
-    /// <returns>Formatted byte string</returns>
-    private static string FormatBytes(long bytes)
-    {
-        if (bytes == 0) return "0 B";
-        
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        int suffixIndex = 0;
-        double size = bytes;
-        
-        while (size >= 1024 && suffixIndex < suffixes.Length - 1)
-        {
-            size /= 1024;
-            suffixIndex++;
-        }
-        
-        return $"{size:F1} {suffixes[suffixIndex]}";
-    }
+    // FormatBytes method removed - now using shared Utils.FileUtilities.FormatFileSize
 
     /// <summary>
     /// Format a TimeSpan as a human-readable string.
@@ -700,7 +688,7 @@ public partial class ExtractionState : ObservableObject
         if (elapsed.TotalSeconds > 0)
         {
             var speedBytesPerSecond = bytesProcessed / elapsed.TotalSeconds;
-            ProcessingSpeed = FormatBytes((long)speedBytesPerSecond) + "/s";
+            ProcessingSpeed = Utils.FileUtilities.FormatFileSize((long)speedBytesPerSecond) + "/s";
             
             // Estimate time remaining
             if (TotalBytes > 0 && speedBytesPerSecond > 0)
@@ -754,7 +742,7 @@ public partial class ExtractionState : ObservableObject
         {
             var process = System.Diagnostics.Process.GetCurrentProcess();
             var memoryBytes = process.WorkingSet64;
-            return FormatBytes(memoryBytes);
+            return Utils.FileUtilities.FormatFileSize(memoryBytes);
         }
         catch
         {

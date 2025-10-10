@@ -378,13 +378,22 @@ public class MkvToolService : IMkvToolService
 
                         // Detect track type based on characteristics
                         var trackType = DetectTrackType(bitrate, frameCount, duration, forced, isClosedCaption);
+                        
+                        // Convert TrackType enum to string for constructor (backwards compatibility)
+                        var trackTypeString = trackType switch
+                        {
+                            TrackType.Forced => "Forced",
+                            TrackType.ClosedCaption => "CC",
+                            TrackType.ClosedCaptionForced => "CC Forced",
+                            _ => "Full"
+                        };
 
                         // Create track with:
                         // - trackNumber (actual Matroska track number) for display
                         // - id (mkvmerge zero-based index) for extraction commands
                         tracks.Add(new SubtitleTrack(trackNumber, codec, language, false, forced, 
                             name ?? "", bitrate ?? 0, frameCount ?? 0, 0, "", false, 
-                            forced, isClosedCaption, false, trackType, frameCount ?? 0, extractionId: id));
+                            forced, isClosedCaption, false, trackTypeString, frameCount ?? 0, extractionId: id));
                     }
                 }
             }
@@ -435,57 +444,38 @@ public class MkvToolService : IMkvToolService
 
     /// <summary>
     /// Detect track type based on characteristics like bitrate, frame count, and duration.
+    /// Uses type-safe enum instead of strings for better maintainability.
     /// </summary>
     /// <param name="bitrate">Track bitrate in bits per second</param>
     /// <param name="frameCount">Number of subtitle frames</param>
     /// <param name="duration">Track duration in seconds</param>
     /// <param name="forced">Whether track is marked as forced</param>
     /// <param name="isClosedCaption">Whether track is closed caption</param>
-    /// <returns>Detected track type</returns>
-    private static string DetectTrackType(long? bitrate, int? frameCount, double? duration, bool forced, bool isClosedCaption)
+    /// <returns>Detected track type as enum</returns>
+    private static TrackType DetectTrackType(long? bitrate, int? frameCount, double? duration, bool forced, bool isClosedCaption)
     {
-        // Handle closed captions first
-        if (isClosedCaption)
-        {
-            return forced ? "CC Forced" : "CC";
-        }
+        // Definitive flags take precedence
+        if (isClosedCaption && forced) 
+            return TrackType.ClosedCaptionForced;
+        if (isClosedCaption) 
+            return TrackType.ClosedCaption;
+        if (forced) 
+            return TrackType.Forced;
 
-        // Handle explicitly forced tracks
-        if (forced)
-        {
-            return "Forced";
-        }
-
+        // Heuristics only if no definitive flags
         // Analyze characteristics for PGS tracks (which don't always have forced_track: true)
         if (bitrate.HasValue && frameCount.HasValue)
         {
-            // Very low bitrate and frame count = likely forced/partial
-            if (bitrate < 1000 && frameCount < 50)
-            {
-                return "Forced";
-            }
-
-            // Low bitrate and few frames = likely forced
-            if (bitrate < 10000 && frameCount < 200)
-            {
-                return "Forced";
-            }
-
-            // High bitrate and many frames = likely full subtitles
-            if (bitrate > 20000 && frameCount > 1000)
-            {
-                return "Full";
-            }
-
-            // Medium characteristics = likely full subtitles
-            if (bitrate > 10000 && frameCount > 500)
-            {
-                return "Full";
-            }
+            // Use single boolean expression for forced heuristic
+            var isForcedLikely = (bitrate < 1000 && frameCount < 50) || 
+                                 (bitrate < 10000 && frameCount < 200);
+            
+            if (isForcedLikely)
+                return TrackType.Forced;
         }
 
-        // Default to Full for text-based subtitles (S_TEXT/UTF8)
-        return "Full";
+        // Default to Full for text-based subtitles (S_TEXT/UTF8) or unclear cases
+        return TrackType.Full;
     }
 
     /// <summary>

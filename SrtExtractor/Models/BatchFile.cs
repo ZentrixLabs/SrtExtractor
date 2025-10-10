@@ -68,48 +68,18 @@ public partial class BatchFile : ObservableObject
     }
 
     /// <summary>
-    /// Updates the file properties from the file system.
-    /// </summary>
-    public void UpdateFromFileSystem()
-    {
-        UpdateFromFileSystem(null);
-    }
-
-    /// <summary>
     /// Updates the file properties from the file system using file cache service.
+    /// Now requires IFileCacheService to be provided (no nullable fallback).
     /// </summary>
-    /// <param name="fileCacheService">Optional file cache service for performance</param>
-    public async void UpdateFromFileSystem(IFileCacheService? fileCacheService)
+    /// <param name="fileCacheService">File cache service for file operations</param>
+    public async Task UpdateFromFileSystemAsync(IFileCacheService fileCacheService)
     {
+        if (fileCacheService == null)
+            throw new ArgumentNullException(nameof(fileCacheService));
+            
         try
         {
-            bool fileExists;
-            long fileSize;
-            string fileName;
-
-            if (fileCacheService != null)
-            {
-                // Use cached file operations for better performance
-                fileExists = await fileCacheService.FileExistsAsync(FilePath);
-                fileSize = await fileCacheService.GetFileSizeAsync(FilePath);
-                fileName = Path.GetFileName(FilePath);
-            }
-            else
-            {
-                // Fallback to direct file operations
-                fileExists = File.Exists(FilePath);
-                if (!fileExists)
-                {
-                    Status = BatchFileStatus.Error;
-                    StatusMessage = "File not found";
-                    return;
-                }
-
-                var fileInfo = new FileInfo(FilePath);
-                fileSize = fileInfo.Length;
-                fileName = fileInfo.Name;
-            }
-
+            var fileExists = await fileCacheService.FileExistsAsync(FilePath);
             if (!fileExists)
             {
                 Status = BatchFileStatus.Error;
@@ -117,30 +87,11 @@ public partial class BatchFile : ObservableObject
                 return;
             }
 
-            FileSizeBytes = fileSize;
-            FileName = fileName;
-
-            // Format file size
-            const long kb = 1024;
-            const long mb = kb * 1024;
-            const long gb = mb * 1024;
-
-            if (FileSizeBytes >= gb)
-            {
-                FormattedFileSize = $"{FileSizeBytes / (double)gb:F1} GB";
-            }
-            else if (FileSizeBytes >= mb)
-            {
-                FormattedFileSize = $"{FileSizeBytes / (double)mb:F1} MB";
-            }
-            else if (FileSizeBytes >= kb)
-            {
-                FormattedFileSize = $"{FileSizeBytes / (double)kb:F1} KB";
-            }
-            else
-            {
-                FormattedFileSize = $"{FileSizeBytes} bytes";
-            }
+            FileSizeBytes = await fileCacheService.GetFileSizeAsync(FilePath);
+            FileName = Path.GetFileName(FilePath);
+            
+            // Use shared utility for consistent file size formatting
+            FormattedFileSize = Utils.FileUtilities.FormatFileSize(FileSizeBytes);
         }
         catch (Exception)
         {
