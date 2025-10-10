@@ -39,6 +39,7 @@
             <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
             <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
             <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+            <converters:BoolToStatusIconConverter x:Key="BoolToStatusIconConverter"/>
             <converters:BoolToPreferenceConverter x:Key="BoolToPreferenceConverter"/>
             <converters:DoubleToVisibilityConverter x:Key="DoubleToVisibilityConverter"/>
             <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>

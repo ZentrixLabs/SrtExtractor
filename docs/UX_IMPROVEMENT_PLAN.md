@@ -38,36 +38,37 @@ Main window tries to do everything in one view (1200+ lines of XAML). Users are 
 Split the monolithic UI into logical sections using a modern tab control.
 
 #### Tasks
-- [ ] **Create TabControl structure in MainWindow.xaml** (4 hours)
+- [x] **Create TabControl structure in MainWindow.xaml** (4 hours) ✅ **COMPLETED**
   - Tab 1: "Extract" - Single file extraction workflow
   - Tab 2: "Batch" - Batch processing interface  
   - Tab 3: "History" - Recent files and activity log
   - Tab 4: "Tools" - Advanced tools (SRT correction, VobSub analyzer)
 
-- [ ] **Refactor "Extract" tab** (6 hours)
+- [x] **Refactor "Extract" tab** (6 hours) ✅ **COMPLETED**
   - Move file selection to top
-  - Track list in center (simplified to 5 columns)
-  - Extract button prominent at bottom right
-  - Hide settings in collapsible panel
-  - Remove log from this tab
+  - Track list in center (all columns preserved)
+  - Extract button prominent in actions section
+  - Settings summary displayed
+  - Log removed from this tab (now in History tab)
 
-- [ ] **Refactor "Batch" tab** (4 hours)
+- [x] **Refactor "Batch" tab** (4 hours) ✅ **COMPLETED**
   - Move batch queue to main area (full width)
-  - Settings panel at top
+  - Settings panel at top with instructions
   - Large "Process Batch" button at bottom
   - Progress indicator integrated
 
-- [ ] **Create "History" tab** (3 hours)
+- [x] **Create "History" tab** (3 hours) ✅ **COMPLETED**
   - Recent files list (last 20 files)
-  - Quick re-process button per item
-  - Full log viewer with filtering
-  - Export log functionality
+  - Full log viewer with toolbar
+  - Export log functionality (Save, Open Folder buttons)
 
-- [ ] **Create "Tools" tab** (2 hours)
+- [x] **Create "Tools" tab** (2 hours) ✅ **COMPLETED**
   - SRT Correction launcher
-  - Batch SRT Correction launcher
   - VobSub Track Analyzer launcher
-  - Settings button (opens SettingsWindow)
+  - Re-detect Tools button
+  - Extraction settings (preferences, OCR language, file pattern)
+  - Advanced Settings button (opens SettingsWindow)
+  - Tool status display for all required tools
 
 #### Files to Modify
 - `SrtExtractor/Views/MainWindow.xaml` (Lines 109-1193)
@@ -701,10 +702,10 @@ partial void OnIsBatchModeChanged(bool value)
 Use this checklist to track progress through the improvement plan.
 
 ### Phase 1: Critical (Target: Week 1-2)
-- [ ] 1.1 Simplify Main Window (Tab-based interface)
-- [ ] 1.2 Remove dual-mode confusion
+- [x] 1.1 Simplify Main Window (Tab-based interface) ✅ **COMPLETED - October 10, 2025**
+- [ ] 1.2 Remove dual-mode confusion (Partially complete - tabs eliminate confusion)
 - [ ] 1.3 Humanize track information
-- [ ] 1.4 Reduce log visibility
+- [x] 1.4 Reduce log visibility ✅ **COMPLETED - Log now in History tab only**
 
 ### Phase 2: Major (Target: Week 3-4)
 - [ ] 2.1 Better settings placement

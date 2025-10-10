@@ -141,6 +141,9 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _recentFiles = new();
 
+    // Tab Navigation
+    [ObservableProperty]
+    private int _selectedTabIndex = 0; // 0=Extract, 1=Batch, 2=History, 3=Tools
 
     // Events
     public event EventHandler? PreferencesChanged;

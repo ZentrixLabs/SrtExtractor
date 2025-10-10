@@ -110,8 +110,8 @@ public class WindowStateService : IWindowStateService
         windowState.Left = Math.Max(windowState.Left, -100);
         windowState.Top = Math.Max(windowState.Top, -100);
 
-        // Ensure queue column width is reasonable
-        windowState.QueueColumnWidth = Math.Max(0, Math.Min(windowState.QueueColumnWidth, 500));
+        // Ensure selected tab index is valid (0-3)
+        windowState.SelectedTabIndex = Math.Max(0, Math.Min(windowState.SelectedTabIndex, 3));
 
         return windowState;
     }

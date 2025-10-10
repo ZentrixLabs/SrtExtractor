@@ -234,8 +234,8 @@ namespace SrtExtractor.Views
             if (DataContext is not MainViewModel viewModel)
                 return;
 
-            // Only show overlay if batch mode is enabled and files are being dragged
-            if (viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
+            // Only show overlay if on Batch tab (index 1) and files are being dragged
+            if (viewModel.State.SelectedTabIndex == 1 && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 var files = (string[])e.Data.GetData(DataFormats.FileDrop);
                 var videoExtensions = new[] { ".mkv", ".mp4" };
@@ -266,7 +266,7 @@ namespace SrtExtractor.Views
             if (DataContext is not MainViewModel viewModel)
                 return;
 
-            if (viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (viewModel.State.SelectedTabIndex == 1 && e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 var files = (string[])e.Data.GetData(DataFormats.FileDrop);
                 var videoExtensions = new[] { ".mkv", ".mp4" };
@@ -293,19 +293,17 @@ namespace SrtExtractor.Views
             DragDropOverlay.Visibility = Visibility.Collapsed;
             DragDropMessage.Foreground = System.Windows.Media.Brushes.White;
 
-            // Let the existing queue panel drop handler process the files
-            // (The files will be handled by QueuePanel_Drop or existing logic)
             if (DataContext is not MainViewModel viewModel)
                 return;
 
             if (!e.Data.GetDataPresent(DataFormats.FileDrop))
                 return;
 
-            // Check if batch mode is enabled
-            if (!viewModel.State.IsBatchMode)
+            // Check if on Batch tab (index 1)
+            if (viewModel.State.SelectedTabIndex != 1)
             {
-                _notificationService.ShowInfo("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", 
-                              "Batch Mode Required");
+                _notificationService.ShowInfo("Please switch to the Batch tab to use drag & drop functionality.\n\nUse Ctrl+B or click the Batch tab.", 
+                              "Batch Tab Required");
                 return;
             }
 
@@ -352,7 +350,7 @@ namespace SrtExtractor.Views
 
             _loggingService.LogInfo($"Added {videoFiles.Count} file(s) to batch queue via window drag & drop");
             
-            // Mark event as handled to prevent QueuePanel_Drop from processing the same files
+            // Mark event as handled
             e.Handled = true;
         }
 
@@ -380,10 +378,9 @@ namespace SrtExtractor.Views
                 {
                     Dispatcher.Invoke(PopulateRecentFilesMenu);
                 }
-                else if (e.PropertyName == nameof(MainViewModel.State.IsBatchMode) || 
-                         e.PropertyName == nameof(MainViewModel.State.QueueColumnWidth))
+                else if (e.PropertyName == nameof(MainViewModel.State.SelectedTabIndex))
                 {
-                    // Save window state when batch mode or queue column width changes
+                    // Save window state when tab index changes
                     await SaveWindowStateAsync().ConfigureAwait(false);
                 }
             }
@@ -467,11 +464,10 @@ namespace SrtExtractor.Views
                     WindowState = windowState.WindowStateEnum;
                 });
                 
-                // Apply batch mode state if available (this can be done on any thread)
+                // Apply selected tab index if available (this can be done on any thread)
                 if (DataContext is MainViewModel viewModel)
                 {
-                    viewModel.State.IsBatchMode = windowState.IsBatchMode;
-                    viewModel.State.QueueColumnWidth = windowState.QueueColumnWidth;
+                    viewModel.State.SelectedTabIndex = windowState.SelectedTabIndex;
                 }
                 
                 if (isFirstRun)
@@ -506,8 +502,7 @@ namespace SrtExtractor.Views
                     Left = Left,
                     Top = Top,
                     WindowStateEnum = WindowState,
-                    QueueColumnWidth = DataContext is MainViewModel viewModel ? viewModel.State.QueueColumnWidth : 0,
-                    IsBatchMode = DataContext is MainViewModel vm ? vm.State.IsBatchMode : false
+                    SelectedTabIndex = DataContext is MainViewModel viewModel ? viewModel.State.SelectedTabIndex : 0
                 };
                 
                 await _windowStateService.SaveWindowStateAsync(windowState).ConfigureAwait(false);

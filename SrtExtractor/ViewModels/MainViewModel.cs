@@ -1750,12 +1750,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            State.IsBatchMode = !State.IsBatchMode;
-            _loggingService.LogInfo($"Batch mode toggled to: {State.IsBatchMode}");
+            // With tab-based interface, Ctrl+B switches to the Batch tab
+            State.SelectedTabIndex = 1; // 0=Extract, 1=Batch, 2=History, 3=Tools
+            _loggingService.LogInfo("Switched to Batch tab via keyboard shortcut (Ctrl+B)");
         }
         catch (Exception ex)
         {
-            _loggingService.LogError("Error toggling batch mode", ex);
+            _loggingService.LogError("Error switching to batch tab", ex);
         }
     }
 

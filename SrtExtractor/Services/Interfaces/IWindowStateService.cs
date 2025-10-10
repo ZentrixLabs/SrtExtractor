@@ -35,6 +35,5 @@ public class WindowState
     public double Left { get; set; } = 100;
     public double Top { get; set; } = 100;
     public System.Windows.WindowState WindowStateEnum { get; set; } = System.Windows.WindowState.Normal;
-    public double QueueColumnWidth { get; set; } = 0;
-    public bool IsBatchMode { get; set; } = false;
+    public int SelectedTabIndex { get; set; } = 0; // 0=Extract, 1=Batch, 2=History, 3=Tools
 }

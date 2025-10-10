@@ -91,8 +91,10 @@ public class ToolDetectionService : IToolDetectionService
             var (exitCode, _, _) = await _processRunner.RunAsync("seconv", new[] { "--help" });
             if (exitCode == 0 || exitCode == 1) // Help usually returns 1
             {
-                _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, "seconv", "Unknown", null));
-                return new ToolStatus(true, "seconv", "Unknown", null);
+                // Try to get version even for PATH tools
+                var version = await GetToolVersionAsync("seconv");
+                _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, "seconv", version, null));
+                return new ToolStatus(true, "seconv", version, null);
             }
         }
         catch
@@ -139,8 +141,10 @@ public class ToolDetectionService : IToolDetectionService
             var (exitCode, _, _) = await _processRunner.RunAsync("ffmpeg", new[] { "-version" });
             if (exitCode == 0)
             {
-                _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, "ffmpeg", "Unknown", null));
-                return new ToolStatus(true, "ffmpeg", "Unknown", null);
+                // Try to get version even for PATH tools
+                var version = await GetToolVersionAsync("ffmpeg");
+                _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, "ffmpeg", version, null));
+                return new ToolStatus(true, "ffmpeg", version, null);
             }
         }
         catch
@@ -345,12 +349,67 @@ public class ToolDetectionService : IToolDetectionService
     {
         try
         {
-            var (exitCode, stdout, _) = await _processRunner.RunAsync(toolPath, new[] { "--version" });
-            if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
+            var toolName = Path.GetFileNameWithoutExtension(toolPath).ToLowerInvariant();
+            
+            // Different tools use different version flags
+            string[] versionArgs;
+            if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
             {
-                // Extract version from output (first line usually contains version)
-                var firstLine = stdout.Split('\n')[0].Trim();
-                return firstLine;
+                versionArgs = new[] { "-version" };
+            }
+            else if (toolName.Contains("seconv"))
+            {
+                versionArgs = new[] { "--version" };
+            }
+            else
+            {
+                versionArgs = new[] { "--version" };
+            }
+            
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolPath, versionArgs);
+            
+            // Some tools return version in stdout, some in stderr, and some use exit code 1
+            if ((exitCode == 0 || exitCode == 1) && !string.IsNullOrEmpty(stdout))
+            {
+                // Extract version from output
+                var lines = stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                if (lines.Length > 0)
+                {
+                    var firstLine = lines[0].Trim();
+                    
+                    // Parse version based on tool type
+                    if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
+                    {
+                        // FFmpeg version format: "ffmpeg version N-xxxxx-gxxxxxxx Copyright..."
+                        // Extract just the version number
+                        var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"ffmpeg version\s+([^\s]+)");
+                        if (versionMatch.Success)
+                        {
+                            return versionMatch.Groups[1].Value;
+                        }
+                    }
+                    else if (toolName.Contains("mkvmerge") || toolName.Contains("mkvextract"))
+                    {
+                        // MKVToolNix format: "mkvmerge v84.0 ('Something') 64-bit"
+                        var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"v(\d+\.\d+(?:\.\d+)?)");
+                        if (versionMatch.Success)
+                        {
+                            return versionMatch.Groups[1].Value;
+                        }
+                    }
+                    else if (toolName.Contains("seconv"))
+                    {
+                        // Try to extract version number from various formats
+                        var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"(\d+\.\d+(?:\.\d+)?)");
+                        if (versionMatch.Success)
+                        {
+                            return versionMatch.Groups[1].Value;
+                        }
+                    }
+                    
+                    // Fallback: return first 50 chars of first line
+                    return firstLine.Length > 50 ? firstLine.Substring(0, 50) + "..." : firstLine;
+                }
             }
         }
         catch (Exception ex)

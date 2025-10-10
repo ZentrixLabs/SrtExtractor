@@ -1,4 +1,4 @@
-﻿    <Window x:Class="SrtExtractor.Views.MainWindow"
+    <Window x:Class="SrtExtractor.Views.MainWindow"
             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -173,12 +173,6 @@
         </MenuItem>
         
         <MenuItem Header="_Options">
-            <MenuItem Header="_Toggle Batch Mode" 
-                      IsCheckable="True"
-                      IsChecked="{Binding State.IsBatchMode}"
-                      InputGestureText="Ctrl+B"
-                      ToolTip="Enable batch processing mode for multiple files"/>
-            <Separator/>
             <MenuItem Header="_Subtitle Preferences"
                       ToolTip="Configure subtitle selection preferences">
                 <MenuItem Header="_Prefer Forced Subtitles" 
@@ -212,990 +206,1204 @@
         </MenuItem>
     </Menu>
 
-    <Grid Margin="10">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="{Binding State.QueueColumnWidth}" x:Name="QueueColumn" MinWidth="0"/>
-        </Grid.ColumnDefinitions>
+    <!-- Tab-Based Interface -->
+    <TabControl Margin="10" SelectedIndex="{Binding State.SelectedTabIndex}">
         
-        <!-- Main Content Area -->
-        <Grid Grid.Column="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-        <!-- File Selection Row -->
-        <GroupBox Header="Video File" Grid.Row="0" Grid.ColumnSpan="2">
-            <StackPanel>
-                <!-- Settings Summary -->
-                <TextBlock Text="{Binding State.SettingsSummary}"
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           FontSize="{StaticResource FontSizeSmall}"
-                           Margin="0,0,0,8"
-                           HorizontalAlignment="Center"
-                           ToolTip="Current extraction settings&#x0a;Click the Settings button to modify these preferences"/>
-                
-                <!-- File Selection -->
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Pick Video..." 
-                            Command="{Binding PickMkvCommand}"
-                            IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolConverter}}"
-                            ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
-                    <TextBox Text="{Binding State.MkvPath}" 
-                             IsReadOnly="True" 
-                             Margin="4,0"
-                             VerticalAlignment="Center"
-                             MinWidth="300"
-                             ToolTip="Path to the selected video file&#x0a;Right-click for more options (copy path, open location, etc.)">
-                    <TextBox.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Copy File Path" 
-                                      Click="CopyFilePath_Click"
-                                      ToolTip="Copy the full file path to clipboard">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconCopy}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Copy File Name" 
-                                      Click="CopyFileName_Click"
-                                      ToolTip="Copy just the file name to clipboard">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconDocument}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Open File Location" 
-                                      Click="OpenFileLocation_Click"
-                                      ToolTip="Open the folder containing this file">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconFolder}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Show File Properties" 
-                                      Click="ShowFileProperties_Click"
-                                      ToolTip="View detailed properties of this file">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconInfo}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Change Video File..." 
-                                      Command="{Binding PickMkvCommand}"
-                                      ToolTip="Select a different video file (Ctrl+O)">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconVideo}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                        </ContextMenu>
-                    </TextBox.ContextMenu>
-                </TextBox>
-                </StackPanel>
-            </StackPanel>
-        </GroupBox>
-
-        <!-- Settings Row -->
-        <GroupBox Header="Settings" Grid.Row="1" Grid.Column="1">
-            <StackPanel>
-                <!-- Batch Mode Checkbox -->
-                <CheckBox IsChecked="{Binding State.IsBatchMode}"
-                          VerticalAlignment="Center"
-                          FontWeight="{StaticResource FontWeightSemiBold}"
-                          Margin="0,5"
-                          ToolTip="Enable batch mode to process multiple video files at once&#x0a;Drag and drop files anywhere on this window&#x0a;Keyboard Shortcut: Ctrl+B">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                   Text="{StaticResource IconVideo}" 
-                                   FontSize="16" 
-                                   Margin="0,0,8,0"
-                                   VerticalAlignment="Center"/>
-                        <TextBlock Text="Enable Batch Mode (Process Multiple Files)" 
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </CheckBox>
-                
-                <!-- Subtitle Preference Radio Buttons -->
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <RadioButton Content="Prefer forced subtitles" 
-                                 IsChecked="{Binding State.PreferForced}"
-                                 GroupName="SubtitlePreference"
-                                 VerticalAlignment="Center"
-                                 Margin="0,0,20,0"
-                                 ToolTip="Prioritize forced subtitles when multiple tracks are available&#x0a;Forced subtitles typically contain only foreign dialogue or on-screen text&#x0a;Best for movies with occasional non-English dialogue"/>
-                    <RadioButton Content="Prefer CC (Closed Captions)" 
-                                 IsChecked="{Binding State.PreferClosedCaptions}"
-                                 GroupName="SubtitlePreference"
-                                 VerticalAlignment="Center"
-                                 Margin="0,0,20,0"
-                                 ToolTip="Prioritize closed captions when multiple tracks are available&#x0a;CCs typically include all dialogue and sound effects descriptions&#x0a;Best for accessibility or when you want complete transcription"/>
-                </StackPanel>
-                
-                <!-- Batch Mode Instructions -->
-                <Border Background="{StaticResource BackgroundAltBrush}" 
-                        BorderBrush="{StaticResource PrimaryBrush}" 
-                        BorderThickness="1" 
-                        CornerRadius="{StaticResource RadiusM}" 
-                        Padding="{StaticResource ThicknessM}" 
-                        Margin="0,10,0,0"
-                        Visibility="{Binding State.IsBatchMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconInfo}" 
-                                       FontSize="16" 
-                                       Foreground="{StaticResource PrimaryBrush}"
-                                       Margin="0,0,8,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="How to use Batch Mode:" 
-                                       FontWeight="{StaticResource FontWeightSemiBold}" 
-                                       FontSize="{StaticResource FontSizeSmall}" 
-                                       Foreground="{StaticResource TextPrimaryBrush}"/>
-                        </StackPanel>
-                        <TextBlock FontSize="{StaticResource FontSizeCaption}" 
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   Margin="0,2,0,0">
-                            <Run Text="1. Enable Batch Mode above"/>
-                        </TextBlock>
-                        <TextBlock FontSize="{StaticResource FontSizeCaption}" 
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   Margin="0,2,0,0">
-                            <Run Text="2. Drag &amp; drop MKV/MP4 files anywhere on this window"/>
-                        </TextBlock>
-                        <TextBlock FontSize="{StaticResource FontSizeCaption}" 
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   Margin="0,2,0,0">
-                            <Run Text="3. Click 'Process Batch' to extract subtitles from all files"/>
-                        </TextBlock>
-                        <TextBlock FontSize="{StaticResource FontSizeCaption}" 
-                                   FontStyle="Italic" 
-                                   Foreground="{StaticResource TextTertiaryBrush}"
-                                   Margin="0,6,0,0"
-                                   TextWrapping="Wrap">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="All files will use your preferred settings: {0} subtitles, {1} language">
-                                    <Binding Path="State.PreferForced" Converter="{StaticResource BoolToPreferenceConverter}"/>
-                                    <Binding Path="State.OcrLanguage"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                    </StackPanel>
-                </Border>
-                
-                <StackPanel Orientation="Horizontal" Margin="0,10">
-                    <TextBlock Text="OCR Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
-                              ItemsSource="{Binding State.AvailableLanguages}"
-                              Width="80"
-                              Margin="0,0,20,0"
-                              ToolTip="Language for OCR text recognition when extracting image-based subtitles (PGS format)&#x0a;Only used when converting images to text&#x0a;Common: eng (English), spa (Spanish), fra (French)"/>
-                    <TextBlock Text="File Pattern:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <TextBox Text="{Binding State.FileNamePattern}" 
-                             Width="200"
-                             ToolTip="Output filename pattern for extracted subtitles&#x0a;Available variables:&#x0a;  {basename} - Video filename without extension&#x0a;  {lang} - Subtitle language code&#x0a;  {forced} - Adds '.forced' if applicable&#x0a;  {cc} - Adds '.cc' if applicable&#x0a;Example: Movie.eng.forced.srt"/>
-                </StackPanel>
-
-                <!-- Network Warning -->
-                <Border Background="{StaticResource BackgroundAltBrush}" 
-                        BorderBrush="{StaticResource WarningBrush}" 
-                        BorderThickness="1" 
-                        CornerRadius="{StaticResource RadiusS}" 
-                        Padding="{StaticResource ThicknessS}" 
-                        Margin="0,10,0,0"
-                        Visibility="{Binding State.ShowNetworkWarning, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconWarning}" 
-                                       FontSize="16" 
-                                       Foreground="{StaticResource WarningBrush}"
-                                       Margin="0,0,8,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="Network File Detected" 
-                                       FontWeight="{StaticResource FontWeightSemiBold}" 
-                                       Foreground="{StaticResource WarningBrush}"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding State.NetworkWarningMessage}" 
-                                   TextWrapping="Wrap" 
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   Margin="24,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                
-            </StackPanel>
-        </GroupBox>
-
-        <!-- Action Buttons -->
-        <GroupBox Header="Actions" Grid.Row="1" Grid.Column="0">
-            <StackPanel>
-                <!-- Single File Mode Actions -->
-                <StackPanel Orientation="Horizontal" 
-                            Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Button Content="Probe Tracks" 
-                            Command="{Binding ProbeCommand}"
-                            IsEnabled="{Binding State.CanProbe}"
-                            Style="{StaticResource SecondaryButton}"
-                            Height="38"
-                            Padding="16,8"
-                            FontSize="14"
-                            Margin="0,0,12,0"
-                            ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P"/>
-                    <Button Command="{Binding ExtractCommand}"
-                            IsEnabled="{Binding State.CanExtract}"
-                            Style="{StaticResource PrimaryButton}"
-                            Height="52"
-                            MinWidth="220"
-                            FontSize="16"
-                            FontWeight="{StaticResource FontWeightSemiBold}"
-                            Padding="20,12"
-                            ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconSubtitles}" 
-                                       FontSize="20" 
-                                       Margin="0,0,12,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="Extract to SRT" 
-                                       VerticalAlignment="Center"
-                                       FontSize="16"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Content="Cancel" 
-                            Command="{Binding CancelCommand}"
-                            IsEnabled="{Binding State.IsProcessing}"
-                            Style="{StaticResource WarningButton}"
-                            Height="38"
-                            Padding="16,8"
-                            FontSize="14"
-                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="Cancel the current extraction operation&#x0a;Temporary files will be cleaned up automatically&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
-                </StackPanel>
-                
-                <!-- Batch Mode Actions -->
-                <StackPanel Orientation="Horizontal" 
-                            Visibility="{Binding State.ShowBatchMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Button Command="{Binding ProcessBatchCommand}"
-                            IsEnabled="{Binding State.HasBatchQueue}"
-                            Style="{StaticResource SuccessButton}"
-                            FontSize="{StaticResource FontSizeSubtitle}"
-                            Padding="{StaticResource ThicknessL}"
-                            Margin="0,0,10,0"
-                            ToolTip="Process all files in the batch queue&#x0a;Uses your current subtitle preferences and OCR settings&#x0a;Each file is analyzed and best track is selected automatically&#x0a;Progress is displayed in real-time with status updates">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconPlay}" 
-                                       FontSize="16" 
-                                       Margin="0,0,8,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="Process Batch" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Content="Cancel Batch" 
-                            Command="{Binding CancelCommand}"
-                            IsEnabled="{Binding State.IsProcessing}"
-                            Style="{StaticResource WarningButton}"
-                            Padding="{StaticResource ThicknessL}"
-                            Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="Cancel the current batch processing operation&#x0a;Files already completed will remain processed&#x0a;Current file being processed will stop gracefully&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
-                </StackPanel>
-                
-                <!-- Common Actions -->
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                    <Button Content="Clear Log" 
-                            Click="ClearLog_Click"
-                            Style="{StaticResource SecondaryButton}"
-                            ToolTip="Clear the log display window&#x0a;Log history is preserved in the file log&#x0a;Location: C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\"/>
-                </StackPanel>
-            </StackPanel>
-        </GroupBox>
-
-        <!-- Processing Indicator -->
-        <GroupBox Header="Processing" Grid.Row="2" Grid.Column="1" Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
-                    <ProgressBar IsIndeterminate="True" 
-                                Width="200" 
-                                Height="20" 
-                                Margin="0,0,10,0"/>
-                    <TextBlock Text="Processing..." 
-                               FontWeight="{StaticResource FontWeightSemiBold}" 
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-                <TextBlock Text="{Binding State.ProcessingMessage}" 
-                           FontWeight="{StaticResource FontWeightSemiBold}" 
-                           TextWrapping="Wrap"
-                           TextAlignment="Center"
-                           MaxWidth="400"
-                           HorizontalAlignment="Center"/>
-            </StackPanel>
-        </GroupBox>
-
-        <!-- Track List -->
-        <GroupBox Header="Subtitle Tracks" Grid.Row="3" Grid.ColumnSpan="2"
-                  Visibility="{Binding State.ShowSingleFileMode, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Grid>
-                <!-- No Tracks Message -->
-                <Border Background="{StaticResource BackgroundAltBrush}" 
-                        BorderBrush="{StaticResource WarningBrush}" 
-                        BorderThickness="1" 
-                        CornerRadius="{StaticResource RadiusM}" 
-                        Padding="{StaticResource ThicknessL}" 
-                        Margin="{StaticResource ThicknessS}"
-                        Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel HorizontalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconWarning}" 
-                                       FontSize="20" 
-                                       Foreground="{StaticResource WarningBrush}"
-                                       Margin="0,0,8,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="No Subtitle Tracks Found" 
-                                       FontSize="{StaticResource FontSizeSubtitle}" 
-                                       FontWeight="{StaticResource FontWeightSemiBold}" 
-                                       Foreground="{StaticResource WarningBrush}"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="This video file does not contain any subtitle tracks." 
-                                   FontSize="{StaticResource FontSizeBody}" 
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="Try selecting a different video file or check if the file has embedded subtitles." 
-                                   FontSize="{StaticResource FontSizeSmall}" 
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   HorizontalAlignment="Center"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Tracks DataGrid -->
-                <DataGrid ItemsSource="{Binding State.Tracks}" 
-                          SelectedItem="{Binding State.SelectedTrack}"
-                          AutoGenerateColumns="False" 
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          SelectionMode="Single"
-                          MinHeight="120"
-                          MaxHeight="300"
-                          Background="{StaticResource BackgroundAltBrush}"
-                          Foreground="{DynamicResource TextPrimaryBrush}"
-                          BorderBrush="{DynamicResource BorderBrush}"
-                          Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                          ToolTip="Click to select a subtitle track for extraction&#x0a;⭐ Recommended tracks are automatically identified based on your preferences&#x0a;Right-click for additional options">
-                <DataGrid.RowBackground>
-                    <SolidColorBrush Color="White"/>
-                </DataGrid.RowBackground>
-                <DataGrid.AlternatingRowBackground>
-                    <SolidColorBrush Color="#F8F8F8"/>
-                </DataGrid.AlternatingRowBackground>
-                <DataGrid.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Select Track" 
-                                  Command="{Binding ExtractCommand}"
-                                  IsEnabled="{Binding State.CanExtract}"
-                                  ToolTip="Extract this subtitle track to SRT format (Ctrl+E)">
-                            <MenuItem.Icon>
-                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{StaticResource IconSubtitles}" 
-                                           FontSize="14"/>
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Show Track Details" 
-                                  Click="ShowTrackDetails_Click"
-                                  ToolTip="View detailed information about this subtitle track">
-                            <MenuItem.Icon>
-                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{StaticResource IconInfo}" 
-                                           FontSize="14"/>
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Copy Track Info" 
-                                  Click="CopyTrackInfo_Click"
-                                  ToolTip="Copy track information to clipboard">
-                            <MenuItem.Icon>
-                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{StaticResource IconCopy}" 
-                                           FontSize="14"/>
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <Separator/>
-                        <MenuItem Header="Refresh Tracks" 
-                                  Command="{Binding ProbeCommand}"
-                                  IsEnabled="{Binding State.CanProbe}"
-                                  ToolTip="Re-analyze the video file for subtitle tracks (Ctrl+P)">
-                            <MenuItem.Icon>
-                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{StaticResource IconRefresh}" 
-                                           FontSize="14"/>
-                            </MenuItem.Icon>
-                        </MenuItem>
-                    </ContextMenu>
-                </DataGrid.ContextMenu>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" 
-                                        Binding="{Binding Id}" 
-                                        Width="40">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Track ID number from the video file"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Codec" 
-                                        Binding="{Binding Codec}" 
-                                        Width="120">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Subtitle format (SRT, ASS, VOBSUB, etc.)"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Language" 
-                                        Binding="{Binding Language}" 
-                                        Width="80">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Subtitle language code (en, es, fr, etc.)"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Type" 
-                                        Binding="{Binding TrackType}" 
-                                        Width="80">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Subtitle track type (subtitles, captions, etc.)"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridCheckBoxColumn Header="Forced" 
-                                            Binding="{Binding Forced}" 
-                                            Width="60">
-                        <DataGridCheckBoxColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Indicates if this is a forced subtitle track"/>
-                            </Style>
-                        </DataGridCheckBoxColumn.HeaderStyle>
-                    </DataGridCheckBoxColumn>
-                    <DataGridTextColumn Header="Recommended" 
-                                        Binding="{Binding IsRecommended}" 
-                                        Width="100">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Shows if this track matches your preferences"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="⭐ Recommended"/>
-                                <Setter Property="Foreground" Value="Green"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRecommended}" Value="False">
-                                        <Setter Property="Text" Value=""/>
-                                        <Setter Property="Foreground" Value="Transparent"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Bitrate" 
-                                        Binding="{Binding Bitrate, StringFormat='{}{0:N0} bps'}" 
-                                        Width="100">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Data rate in bits per second"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Frames" 
-                                        Binding="{Binding FrameCount}" 
-                                        Width="70">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Number of subtitle frames/segments"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Duration" 
-                                        Binding="{Binding Duration, Converter={StaticResource DurationConverter}}" 
-                                        Width="100">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Total duration of the subtitle track"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Name" 
-                                        Binding="{Binding Name}" 
-                                        Width="*">
-                        <DataGridTextColumn.HeaderStyle>
-                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                <Setter Property="ToolTip" Value="Custom name or title of the subtitle track"/>
-                            </Style>
-                        </DataGridTextColumn.HeaderStyle>
-                    </DataGridTextColumn>
-                </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
-        </GroupBox>
-
-        <!-- Log Display -->
-        <Expander Grid.Row="4" Grid.ColumnSpan="2" 
-                  IsExpanded="False"
-                  BorderBrush="{StaticResource BorderBrush}"
-                  BorderThickness="1"
-                  Background="{StaticResource BackgroundBrush}"
-                  Padding="0">
-            <Expander.Header>
+        <!-- ====================================== -->
+        <!-- TAB 1: EXTRACT (Single File) -->
+        <!-- ====================================== -->
+        <TabItem>
+            <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                               Text="{StaticResource IconDocument}" 
-                               FontSize="14" 
+                               Text="{StaticResource IconSubtitles}" 
+                               FontSize="16" 
                                Margin="0,0,8,0"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="Log" 
-                               FontWeight="{StaticResource FontWeightSemiBold}"
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text=" (click to expand)" 
-                               FontSize="{StaticResource FontSizeCaption}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontStyle="Italic"
-                               Margin="8,0,0,0"
+                    <TextBlock Text="Extract" 
+                               FontSize="14"
                                VerticalAlignment="Center"/>
                 </StackPanel>
-            </Expander.Header>
-            <Grid Margin="{StaticResource ThicknessS}">
-                <TextBox Text="{Binding State.LogText}" 
-                         IsReadOnly="True" 
-                         TextWrapping="Wrap" 
-                         AcceptsReturn="True"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto"
-                           Background="{DynamicResource LogBackgroundBrush}"
-                           Foreground="{DynamicResource LogForegroundBrush}"
-                         FontFamily="{StaticResource MonospaceFontFamily}"
-                         FontSize="{StaticResource FontSizeCaption}"
-                         MinHeight="150"
-                         ToolTip="Real-time operation log showing all activities&#x0a;Right-click for options: Copy, Save, Open log folder&#x0a;Full logs saved to: C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\">
-                    <TextBox.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Copy All" 
-                                      Click="CopyLogText_Click"
-                                      ToolTip="Copy all log text to clipboard">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconCopy}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Copy Selection" 
-                                      Click="CopyLogSelection_Click"
-                                      ToolTip="Copy selected text to clipboard">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconCopy}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Clear Log" 
-                                      Click="ClearLog_Click"
-                                      ToolTip="Clear the log display">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconDelete}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Save Log to File" 
-                                      Click="SaveLogToFile_Click"
-                                      ToolTip="Save log content to a text file">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconSave}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Open Log Folder" 
-                                      Click="OpenLogFolder_Click"
-                                      ToolTip="Open the folder containing log files">
-                                <MenuItem.Icon>
-                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                               Text="{StaticResource IconFolder}" 
-                                               FontSize="14"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                        </ContextMenu>
-                    </TextBox.ContextMenu>
-                </TextBox>
-            </Grid>
-        </Expander>
-
-        </Grid>
-
-        <!-- Queue Panel -->
-        <GroupBox Grid.Column="1" 
-                  Visibility="{Binding State.QueueColumnWidth, Converter={StaticResource DoubleToVisibilityConverter}}"
-                  Background="{StaticResource BackgroundAltBrush}"
-                  BorderBrush="{StaticResource BorderBrush}"
-                  BorderThickness="1">
-            <GroupBox.Header>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                               Text="{StaticResource IconVideo}" 
-                               FontSize="16" 
-                               Margin="0,0,6,0"
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text="Batch Queue" VerticalAlignment="Center"/>
-                </StackPanel>
-            </GroupBox.Header>
-            <Grid>
+            </TabItem.Header>
+            
+            <Grid Margin="10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                
-                <!-- Queue Instructions -->
-                <Border Grid.Row="0" 
-                        Background="{StaticResource BackgroundBrush}" 
-                        BorderBrush="{StaticResource BorderBrush}" 
-                        BorderThickness="1" 
-                        CornerRadius="{StaticResource RadiusM}" 
-                        Padding="{StaticResource ThicknessM}" 
-                        Margin="0,0,0,8">
+
+                <!-- File Selection -->
+                <GroupBox Header="Video File" Grid.Row="0">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconFolder}" 
-                                       FontSize="16" 
-                                       Margin="0,0,6,0"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="Drag &amp; drop video files here" 
-                                       FontWeight="{StaticResource FontWeightSemiBold}" 
-                                       FontSize="{StaticResource FontSizeSmall}" 
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="Supports: MKV, MP4" 
-                                   FontSize="{StaticResource FontSizeCaption}" 
-                                   Foreground="{StaticResource TextSecondaryBrush}" 
-                                   Margin="0,4,0,0" 
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Queue Header -->
-                <Grid Grid.Row="1" Margin="0,0,0,8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Queue Count and Statistics -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
-                        <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
-                                   FontWeight="Bold" 
-                                   Foreground="{StaticResource PrimaryBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="4,0,12,0"/>
+                        <!-- Settings Summary -->
+                        <TextBlock Text="{Binding State.SettingsSummary}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   Margin="0,0,0,8"
+                                   HorizontalAlignment="Center"
+                                   ToolTip="Current extraction settings&#x0a;Go to Tools tab to modify these preferences"/>
                         
-                        <!-- Batch Statistics -->
-                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                   Text="{StaticResource IconCheckmark}" 
-                                   Foreground="{StaticResource SuccessBrush}"
-                                   FontSize="12"
-                                   VerticalAlignment="Center" 
-                                   Margin="0,0,2,0"/>
-                        <TextBlock Text="{Binding State.BatchCompletedCount}" 
-                                   VerticalAlignment="Center" 
-                                   Margin="0,0,8,0"
-                                   FontSize="11"
-                                   ToolTip="Completed files"/>
-                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                   Text="{StaticResource IconError}" 
-                                   Foreground="{StaticResource ErrorBrush}"
-                                   FontSize="12"
-                                   VerticalAlignment="Center" 
-                                   Margin="0,0,2,0"/>
-                        <TextBlock Text="{Binding State.BatchErrorCount}" 
-                                   VerticalAlignment="Center" 
-                                   Margin="0,0,8,0"
-                                   FontSize="11"
-                                   ToolTip="Failed files"/>
-                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                   Text="{StaticResource IconPending}" 
-                                   Foreground="{StaticResource PrimaryBrush}"
-                                   FontSize="12"
-                                   VerticalAlignment="Center" 
-                                   Margin="0,0,2,0"/>
-                        <TextBlock Text="{Binding State.BatchPendingCount}" 
-                                   VerticalAlignment="Center"
-                                   FontSize="11"
-                                   ToolTip="Pending files"/>
+                        <!-- File Selection -->
+                        <DockPanel>
+                            <Button Content="Pick Video..." 
+                                    Command="{Binding PickMkvCommand}"
+                                    IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolConverter}}"
+                                    DockPanel.Dock="Left"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
+                            <TextBox Text="{Binding State.MkvPath}" 
+                                     IsReadOnly="True" 
+                                     VerticalAlignment="Center"
+                                     ToolTip="Path to the selected video file&#x0a;Right-click for more options (copy path, open location, etc.)">
+                                <TextBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy File Path" 
+                                                  Click="CopyFilePath_Click"
+                                                  ToolTip="Copy the full file path to clipboard">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconCopy}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Copy File Name" 
+                                                  Click="CopyFileName_Click"
+                                                  ToolTip="Copy just the file name to clipboard">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconDocument}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="Open File Location" 
+                                                  Click="OpenFileLocation_Click"
+                                                  ToolTip="Open the folder containing this file">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconFolder}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Show File Properties" 
+                                                  Click="ShowFileProperties_Click"
+                                                  ToolTip="View detailed properties of this file">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconInfo}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="Change Video File..." 
+                                                  Command="{Binding PickMkvCommand}"
+                                                  ToolTip="Select a different video file (Ctrl+O)">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconVideo}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TextBox.ContextMenu>
+                            </TextBox>
+                        </DockPanel>
+                        
+                        <!-- Network Warning -->
+                        <Border Background="{StaticResource BackgroundAltBrush}" 
+                                BorderBrush="{StaticResource WarningBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusS}" 
+                                Padding="{StaticResource ThicknessS}" 
+                                Margin="0,10,0,0"
+                                Visibility="{Binding State.ShowNetworkWarning, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconWarning}" 
+                                               FontSize="16" 
+                                               Foreground="{StaticResource WarningBrush}"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Network File Detected" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                               Foreground="{StaticResource WarningBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding State.NetworkWarningMessage}" 
+                                           TextWrapping="Wrap" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="24,0,0,0"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                    
-                    <!-- Action Buttons -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="Resume Batch" 
-                                Command="{Binding ResumeBatchCommand}"
-                                Style="{StaticResource AccentButton}"
-                                Margin="0,0,4,0"
-                                Padding="3,1"
-                                FontSize="10"
-                                MinWidth="0"
-                                Height="20"
-                                Visibility="{Binding State.ShowResumeBatchButton, Converter={StaticResource BoolToVisibilityConverter}}"
-                                ToolTip="Resume batch processing from where it was interrupted&#x0a;Skips already completed files and continues with remaining files"/>
-                        <Button Content="Clear Completed" 
-                                Command="{Binding ClearCompletedBatchItemsCommand}"
-                                Style="{StaticResource SuccessButton}"
-                                Margin="0,0,4,0"
-                                Padding="3,1"
-                                FontSize="10"
-                                MinWidth="0"
-                                Height="20"
-                                ToolTip="Remove only completed files from the queue&#x0a;Keeps pending and failed files for re-processing"/>
-                        <Button Content="Clear All" 
-                                Command="{Binding ClearBatchQueueCommand}"
-                                Style="{StaticResource DangerButton}"
-                                Padding="3,1"
-                                FontSize="10"
-                                MinWidth="0"
-                                Height="20"
-                                Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
-                                ToolTip="Remove all files from the batch queue&#x0a;This will clear completed, pending, and failed files"/>
+                </GroupBox>
+
+                <!-- Action Buttons and Processing Indicator -->
+                <GroupBox Header="Actions" Grid.Row="1">
+                    <StackPanel>
+                        <!-- Action Buttons -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="Probe Tracks" 
+                                    Command="{Binding ProbeCommand}"
+                                    IsEnabled="{Binding State.CanProbe}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Height="38"
+                                    Padding="16,8"
+                                    FontSize="14"
+                                    Margin="0,0,12,0"
+                                    ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P"/>
+                            <Button Command="{Binding ExtractCommand}"
+                                    IsEnabled="{Binding State.CanExtract}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Height="52"
+                                    MinWidth="220"
+                                    FontSize="16"
+                                    FontWeight="{StaticResource FontWeightSemiBold}"
+                                    Padding="20,12"
+                                    Margin="0,0,12,0"
+                                    ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconSubtitles}" 
+                                               FontSize="20" 
+                                               Margin="0,0,12,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Extract to SRT" 
+                                               VerticalAlignment="Center"
+                                               FontSize="16"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Content="Cancel" 
+                                    Command="{Binding CancelCommand}"
+                                    IsEnabled="{Binding State.IsProcessing}"
+                                    Style="{StaticResource WarningButton}"
+                                    Height="38"
+                                    Padding="16,8"
+                                    FontSize="14"
+                                    Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="Cancel the current extraction operation&#x0a;Temporary files will be cleaned up automatically&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
+                        </StackPanel>
+                        
+                        <!-- Processing Indicator -->
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,10,0,0"
+                                    Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                <ProgressBar IsIndeterminate="True" 
+                                            Width="200" 
+                                            Height="20" 
+                                            Margin="0,0,10,0"/>
+                                <TextBlock Text="Processing..." 
+                                           FontWeight="{StaticResource FontWeightSemiBold}" 
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding State.ProcessingMessage}" 
+                                       FontWeight="{StaticResource FontWeightSemiBold}" 
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       MaxWidth="400"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
-                </Grid>
-                
-                <!-- Queue List -->
-                <Grid Grid.Row="2">
-                    <ListBox ItemsSource="{Binding State.BatchQueue}"
-                             Background="{DynamicResource BackgroundBrush}"
-                             BorderBrush="{StaticResource BorderBrush}"
-                             BorderThickness="1"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                </GroupBox>
+
+                <!-- Track List -->
+                <GroupBox Header="Subtitle Tracks" Grid.Row="2">
+                    <Grid>
+                        <!-- No Tracks Message -->
+                        <Border Background="{StaticResource BackgroundAltBrush}" 
+                                BorderBrush="{StaticResource WarningBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusM}" 
+                                Padding="{StaticResource ThicknessL}" 
+                                Margin="{StaticResource ThicknessS}"
+                                Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconWarning}" 
+                                               FontSize="20" 
+                                               Foreground="{StaticResource WarningBrush}"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="No Subtitle Tracks Found" 
+                                               FontSize="{StaticResource FontSizeSubtitle}" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                               Foreground="{StaticResource WarningBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="This video file does not contain any subtitle tracks." 
+                                           FontSize="{StaticResource FontSizeBody}" 
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Try selecting a different video file or check if the file has embedded subtitles." 
+                                           FontSize="{StaticResource FontSizeSmall}" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Tracks DataGrid -->
+                        <DataGrid ItemsSource="{Binding State.Tracks}" 
+                                  SelectedItem="{Binding State.SelectedTrack}"
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  SelectionMode="Single"
+                                  Background="{StaticResource BackgroundAltBrush}"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  BorderBrush="{DynamicResource BorderBrush}"
+                                  Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                                  ToolTip="Click to select a subtitle track for extraction&#x0a;⭐ Recommended tracks are automatically identified based on your preferences&#x0a;Right-click for additional options">
+                            <DataGrid.RowBackground>
+                                <SolidColorBrush Color="White"/>
+                            </DataGrid.RowBackground>
+                            <DataGrid.AlternatingRowBackground>
+                                <SolidColorBrush Color="#F8F8F8"/>
+                            </DataGrid.AlternatingRowBackground>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Select Track" 
+                                              Command="{Binding ExtractCommand}"
+                                              IsEnabled="{Binding State.CanExtract}"
+                                              ToolTip="Extract this subtitle track to SRT format (Ctrl+E)">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconSubtitles}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Show Track Details" 
+                                              Click="ShowTrackDetails_Click"
+                                              ToolTip="View detailed information about this subtitle track">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconInfo}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Copy Track Info" 
+                                              Click="CopyTrackInfo_Click"
+                                              ToolTip="Copy track information to clipboard">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconCopy}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Refresh Tracks" 
+                                              Command="{Binding ProbeCommand}"
+                                              IsEnabled="{Binding State.CanProbe}"
+                                              ToolTip="Re-analyze the video file for subtitle tracks (Ctrl+P)">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconRefresh}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" 
+                                                    Binding="{Binding Id}" 
+                                                    Width="40">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Track ID number from the video file"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Codec" 
+                                                    Binding="{Binding Codec}" 
+                                                    Width="120">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Subtitle format (SRT, ASS, VOBSUB, etc.)"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Language" 
+                                                    Binding="{Binding Language}" 
+                                                    Width="80">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Subtitle language code (en, es, fr, etc.)"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Type" 
+                                                    Binding="{Binding TrackType}" 
+                                                    Width="80">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Subtitle track type (subtitles, captions, etc.)"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridCheckBoxColumn Header="Forced" 
+                                                        Binding="{Binding Forced}" 
+                                                        Width="60">
+                                    <DataGridCheckBoxColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Indicates if this is a forced subtitle track"/>
+                                        </Style>
+                                    </DataGridCheckBoxColumn.HeaderStyle>
+                                </DataGridCheckBoxColumn>
+                                <DataGridTextColumn Header="Recommended" 
+                                                    Binding="{Binding IsRecommended}" 
+                                                    Width="100">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Shows if this track matches your preferences"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="⭐ Recommended"/>
+                                            <Setter Property="Foreground" Value="Green"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRecommended}" Value="False">
+                                                    <Setter Property="Text" Value=""/>
+                                                    <Setter Property="Foreground" Value="Transparent"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Bitrate" 
+                                                    Binding="{Binding Bitrate, StringFormat='{}{0:N0} bps'}" 
+                                                    Width="100">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Data rate in bits per second"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Frames" 
+                                                    Binding="{Binding FrameCount}" 
+                                                    Width="70">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Number of subtitle frames/segments"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Duration" 
+                                                    Binding="{Binding Duration, Converter={StaticResource DurationConverter}}" 
+                                                    Width="100">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Total duration of the subtitle track"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Name" 
+                                                    Binding="{Binding Name}" 
+                                                    Width="*">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Custom name or title of the subtitle track"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </GroupBox>
+            </Grid>
+        </TabItem>
+        
+        <!-- ====================================== -->
+        <!-- TAB 2: BATCH (Multi-File Processing) -->
+        <!-- ====================================== -->
+        <TabItem>
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="{StaticResource IconVideo}" 
+                               FontSize="16" 
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Batch" 
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </TabItem.Header>
+            
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Batch Instructions and Settings -->
+                <GroupBox Header="Batch Processing" Grid.Row="0">
+                    <StackPanel>
+                        <!-- Instructions -->
+                        <Border Background="{StaticResource BackgroundAltBrush}" 
+                                BorderBrush="{StaticResource PrimaryBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusM}" 
+                                Padding="{StaticResource ThicknessM}" 
+                                Margin="0,0,0,10">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconInfo}" 
+                                               FontSize="16" 
+                                               Foreground="{StaticResource PrimaryBrush}"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="How to use Batch Mode:" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                                <TextBlock FontSize="{StaticResource FontSizeCaption}" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,2,0,0">
+                                    <Run Text="1. Drag &amp; drop MKV/MP4 files anywhere on this window"/>
+                                </TextBlock>
+                                <TextBlock FontSize="{StaticResource FontSizeCaption}" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,2,0,0">
+                                    <Run Text="2. Files will appear in the queue below"/>
+                                </TextBlock>
+                                <TextBlock FontSize="{StaticResource FontSizeCaption}" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,2,0,0">
+                                    <Run Text="3. Click 'Process Batch' to extract subtitles from all files"/>
+                                </TextBlock>
+                                <TextBlock FontSize="{StaticResource FontSizeCaption}" 
+                                           FontStyle="Italic" 
+                                           Foreground="{StaticResource TextTertiaryBrush}"
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="All files will use your preferred settings: {0} subtitles, {1} language">
+                                            <Binding Path="State.PreferForced" Converter="{StaticResource BoolToPreferenceConverter}"/>
+                                            <Binding Path="State.OcrLanguage"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Settings Summary Display -->
+                        <TextBlock Text="{Binding State.SettingsSummary}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   Margin="0,0,0,8"
+                                   HorizontalAlignment="Center"
+                                   ToolTip="Current extraction settings&#x0a;Go to Tools tab to modify these preferences"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Batch Queue -->
+                <GroupBox Header="Batch Queue" Grid.Row="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Queue Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Queue Count and Statistics -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                <TextBlock Text="Files in Queue:" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding State.BatchQueue.Count, StringFormat='{}{0}'}" 
+                                           FontWeight="Bold" 
+                                           Foreground="{StaticResource PrimaryBrush}"
+                                           VerticalAlignment="Center"
+                                           Margin="4,0,12,0"/>
+                                
+                                <!-- Batch Statistics -->
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconCheckmark}" 
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,2,0"/>
+                                <TextBlock Text="{Binding State.BatchCompletedCount}" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           FontSize="11"
+                                           ToolTip="Completed files"/>
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconError}" 
+                                           Foreground="{StaticResource ErrorBrush}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,2,0"/>
+                                <TextBlock Text="{Binding State.BatchErrorCount}" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           FontSize="11"
+                                           ToolTip="Failed files"/>
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconPending}" 
+                                           Foreground="{StaticResource PrimaryBrush}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,2,0"/>
+                                <TextBlock Text="{Binding State.BatchPendingCount}" 
+                                           VerticalAlignment="Center"
+                                           FontSize="11"
+                                           ToolTip="Pending files"/>
+                            </StackPanel>
+                            
+                            <!-- Action Buttons -->
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Resume Batch" 
+                                        Command="{Binding ResumeBatchCommand}"
+                                        Style="{StaticResource AccentButton}"
+                                        Margin="0,0,4,0"
+                                        Padding="8,4"
+                                        FontSize="12"
+                                        MinWidth="0"
+                                        Height="24"
+                                        Visibility="{Binding State.ShowResumeBatchButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        ToolTip="Resume batch processing from where it was interrupted&#x0a;Skips already completed files and continues with remaining files"/>
+                                <Button Content="Clear Completed" 
+                                        Command="{Binding ClearCompletedBatchItemsCommand}"
+                                        Style="{StaticResource SuccessButton}"
+                                        Margin="0,0,4,0"
+                                        Padding="8,4"
+                                        FontSize="12"
+                                        MinWidth="0"
+                                        Height="24"
+                                        ToolTip="Remove only completed files from the queue&#x0a;Keeps pending and failed files for re-processing"/>
+                                <Button Content="Clear All" 
+                                        Command="{Binding ClearBatchQueueCommand}"
+                                        Style="{StaticResource DangerButton}"
+                                        Padding="8,4"
+                                        FontSize="12"
+                                        MinWidth="0"
+                                        Height="24"
+                                        Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        ToolTip="Remove all files from the batch queue&#x0a;This will clear completed, pending, and failed files"/>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- Queue List -->
+                        <Grid Grid.Row="1">
+                            <ListBox ItemsSource="{Binding State.BatchQueue}"
+                                     Background="{DynamicResource BackgroundBrush}"
+                                     BorderBrush="{StaticResource BorderBrush}"
+                                     BorderThickness="1"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     AllowDrop="False"
+                                     PreviewMouseLeftButtonDown="BatchQueueListBox_PreviewMouseLeftButtonDown"
+                                     PreviewMouseMove="BatchQueueListBox_PreviewMouseMove"
+                                     PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp"
+                                     ToolTip="Batch processing queue&#x0a;Drag files from Windows Explorer to add them&#x0a;Right-click files for more options&#x0a;Click and drag to reorder files in the queue">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Process This File" 
+                                                  Command="{Binding DataContext.ProcessSingleBatchFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  ToolTip="Process only this file from the batch queue">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconPlay}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="Remove from Queue" 
+                                                  Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  ToolTip="Remove this file from the batch queue">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconRemove}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Move to Top" 
+                                                  Click="MoveBatchItemToTop_Click"
+                                                  ToolTip="Move this file to the top of the queue">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconChevronUp}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Move to Bottom" 
+                                                  Click="MoveBatchItemToBottom_Click"
+                                                  ToolTip="Move this file to the bottom of the queue">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconChevronDown}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="Open File Location" 
+                                                  Click="OpenBatchFileLocation_Click"
+                                                  ToolTip="Open the folder containing this file">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconFolder}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Show File Properties" 
+                                                  Click="ShowBatchFileProperties_Click"
+                                                  ToolTip="View detailed properties of this file">
+                                            <MenuItem.Icon>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                           Text="{StaticResource IconInfo}" 
+                                                           FontSize="14"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusM}" Margin="2" Padding="8">
+                                            <Border.Background>
+                                                <Binding Path="Status" Converter="{StaticResource StatusToBackgroundConverter}"/>
+                                            </Border.Background>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <!-- Status Indicator -->
+                                                <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" 
+                                                           FontSize="16" 
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,8,0">
+                                                    <TextBlock.Text>
+                                                        <Binding Path="Status" Converter="{StaticResource StatusToIconConverter}"/>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                                
+                                                <!-- File Info -->
+                                                <TextBlock Grid.Row="0" Grid.Column="1" 
+                                                           Text="{Binding FileName}" 
+                                                           FontWeight="Bold" 
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" 
+                                                           Text="{Binding FormattedFileSize}" 
+                                                           FontSize="10" 
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           Margin="0,2,0,0"/>
+                                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding NetworkIndicator}" FontSize="12"/>
+                                                    <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="10" Foreground="{StaticResource PrimaryBrush}" Margin="4,0,0,0"/>
+                                                </StackPanel>
+                                                
+                                                <!-- Status Message -->
+                                                <TextBlock Grid.Row="3" Grid.Column="1" 
+                                                           Text="{Binding StatusMessage}" 
+                                                           FontSize="9" 
+                                                           Foreground="{StaticResource TextTertiaryBrush}"
+                                                           FontStyle="Italic"
+                                                           Margin="0,2,0,0"
+                                                           TextWrapping="Wrap"/>
+                                                
+                                                <!-- Remove Button -->
+                                                <Button Grid.Row="0" Grid.RowSpan="4" Grid.Column="2" 
+                                                        Content="×" 
+                                                        Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="{DynamicResource ErrorBrush}"
+                                                        Foreground="White"
+                                                        FontWeight="Bold"
+                                                        Width="20" Height="20"
+                                                        Margin="4,0,0,0"
+                                                        Padding="0"
+                                                        ToolTip="Remove this file from the batch queue"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            
+                            <!-- Empty Queue Placeholder -->
+                            <Border Background="{DynamicResource BackgroundAltBrush}" 
+                                    BorderBrush="{StaticResource BorderBrush}" 
+                                    BorderThickness="2" 
+                                    CornerRadius="{StaticResource RadiusM}" 
+                                    Padding="{StaticResource ThicknessXL}"
+                                    Visibility="{Binding State.HasBatchQueue, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="{Binding Source={StaticResource PrimaryColor}}"
+                                                      BlurRadius="10"
+                                                      ShadowDepth="0"
+                                                      Opacity="0.3"/>
+                                </Border.Effect>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconFolder}" 
+                                               FontSize="48" 
+                                               Foreground="{StaticResource TextTertiaryBrush}"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,12"/>
+                                    <TextBlock Text="No files in queue" 
+                                               FontSize="{StaticResource FontSizeBody}" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Drag &amp; drop video files here to add them to the queue" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               FontStyle="Italic" 
+                                               Foreground="{DynamicResource TextSecondaryBrush}" 
+                                               HorizontalAlignment="Center"
+                                               Margin="0,4,0,0"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Batch Actions and Progress -->
+                <GroupBox Header="Batch Actions" Grid.Row="2">
+                    <StackPanel>
+                        <!-- Action Buttons -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                            <Button Command="{Binding ProcessBatchCommand}"
+                                    IsEnabled="{Binding State.HasBatchQueue}"
+                                    Style="{StaticResource SuccessButton}"
+                                    Height="48"
+                                    MinWidth="200"
+                                    FontSize="16"
+                                    FontWeight="{StaticResource FontWeightSemiBold}"
+                                    Padding="20,10"
+                                    Margin="0,0,12,0"
+                                    ToolTip="Process all files in the batch queue&#x0a;Uses your current subtitle preferences and OCR settings&#x0a;Each file is analyzed and best track is selected automatically&#x0a;Progress is displayed in real-time with status updates">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconPlay}" 
+                                               FontSize="18" 
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Process Batch" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Content="Cancel Batch" 
+                                    Command="{Binding CancelCommand}"
+                                    IsEnabled="{Binding State.IsProcessing}"
+                                    Style="{StaticResource WarningButton}"
+                                    Height="48"
+                                    Padding="20,10"
+                                    FontSize="16"
+                                    Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="Cancel the current batch processing operation&#x0a;Files already completed will remain processed&#x0a;Current file being processed will stop gracefully&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
+                        </StackPanel>
+                        
+                        <!-- Queue Progress -->
+                        <StackPanel Margin="0,8,0,0" 
+                                    Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Text="{Binding State.BatchProgressText}" 
+                                       FontWeight="Bold" 
+                                       HorizontalAlignment="Center"
+                                       FontSize="12"/>
+                            <ProgressBar Value="{Binding State.BatchProgressPercentage}" 
+                                         Height="18" 
+                                         Margin="0,4,0,0"
+                                         ToolTip="Batch processing progress&#x0a;Shows overall completion percentage for all files in queue&#x0a;Updated in real-time as each file is processed"/>
+                            <TextBlock Text="{Binding State.BatchProgressMessage}" 
+                                       HorizontalAlignment="Center" 
+                                       FontStyle="Italic" 
+                                       FontSize="11"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
+        </TabItem>
+        
+        <!-- ====================================== -->
+        <!-- TAB 3: HISTORY (Recent Files & Log) -->
+        <!-- ====================================== -->
+        <TabItem>
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="{StaticResource IconDocument}" 
+                               FontSize="16" 
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="History" 
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </TabItem.Header>
+            
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Recent Files -->
+                <GroupBox Header="Recent Files" Grid.Row="0" MaxHeight="200">
+                    <ListBox ItemsSource="{Binding State.RecentFiles}"
+                             BorderThickness="0"
+                             Background="Transparent"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             AllowDrop="False"
-                             PreviewMouseLeftButtonDown="BatchQueueListBox_PreviewMouseLeftButtonDown"
-                             PreviewMouseMove="BatchQueueListBox_PreviewMouseMove"
-                             PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp"
-                             ToolTip="Batch processing queue&#x0a;Drag files from Windows Explorer to add them&#x0a;Right-click files for more options&#x0a;Click and drag to reorder files in the queue">
-                        <ListBox.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Process This File" 
-                                          Command="{Binding DataContext.ProcessSingleBatchFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          ToolTip="Process only this file from the batch queue">
-                                    <MenuItem.Icon>
-                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                   Text="{StaticResource IconPlay}" 
-                                                   FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <Separator/>
-                                <MenuItem Header="Remove from Queue" 
-                                          Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          ToolTip="Remove this file from the batch queue">
-                                    <MenuItem.Icon>
-                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                   Text="{StaticResource IconRemove}" 
-                                                   FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Move to Top" 
-                                          Click="MoveBatchItemToTop_Click"
-                                          ToolTip="Move this file to the top of the queue">
-                                    <MenuItem.Icon>
-                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                   Text="{StaticResource IconChevronUp}" 
-                                                   FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Move to Bottom" 
-                                          Click="MoveBatchItemToBottom_Click"
-                                          ToolTip="Move this file to the bottom of the queue">
-                                    <MenuItem.Icon>
-                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                   Text="{StaticResource IconChevronDown}" 
-                                                   FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <Separator/>
-                                <MenuItem Header="Open File Location" 
-                                          Click="OpenBatchFileLocation_Click"
-                                          ToolTip="Open the folder containing this file">
-                                    <MenuItem.Icon>
-                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                   Text="{StaticResource IconFolder}" 
-                                                   FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Show File Properties" 
-                                          Click="ShowBatchFileProperties_Click"
-                                          ToolTip="View detailed properties of this file">
-                                    <MenuItem.Icon>
-                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                   Text="{StaticResource IconInfo}" 
-                                                   FontSize="14"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                            </ContextMenu>
-                        </ListBox.ContextMenu>
+                             ToolTip="Recently processed video files&#x0a;Click to quickly open a file again">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusM}" Margin="2" Padding="8">
-                                    <Border.Background>
-                                        <Binding Path="Status" Converter="{StaticResource StatusToBackgroundConverter}"/>
-                                    </Border.Background>
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <!-- Status Indicator -->
-                                        <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" 
-                                                   FontSize="16" 
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0">
-                                            <TextBlock.Text>
-                                                <Binding Path="Status" Converter="{StaticResource StatusToIconConverter}"/>
-                                            </TextBlock.Text>
-                                        </TextBlock>
-                                        
-                                        <!-- File Info -->
-                                        <TextBlock Grid.Row="0" Grid.Column="1" 
-                                                   Text="{Binding FileName}" 
-                                                   FontWeight="Bold" 
-                                                   TextWrapping="Wrap"
-                                                   MaxWidth="180"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" 
-                                                   Text="{Binding FormattedFileSize}" 
-                                                   FontSize="10" 
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,2,0,0"/>
-                                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,2,0,0">
-                                            <TextBlock Text="{Binding NetworkIndicator}" FontSize="12"/>
-                                            <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="10" Foreground="{StaticResource PrimaryBrush}" Margin="4,0,0,0"/>
-                                        </StackPanel>
-                                        
-                                        <!-- Status Message -->
-                                        <TextBlock Grid.Row="3" Grid.Column="1" 
-                                                   Text="{Binding StatusMessage}" 
-                                                   FontSize="9" 
-                                                   Foreground="{StaticResource TextTertiaryBrush}"
-                                                   FontStyle="Italic"
-                                                   Margin="0,2,0,0"
-                                                   TextWrapping="Wrap"/>
-                                        
-                                        <!-- Remove Button -->
-                                        <Button Grid.Row="0" Grid.RowSpan="4" Grid.Column="2" 
-                                                Content="×" 
-                                                Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"
-                                                Background="{DynamicResource ErrorBrush}"
-                                                Foreground="White"
-                                                FontWeight="Bold"
-                                                Width="20" Height="20"
-                                                Margin="4,0,0,0"
-                                                Padding="0"
-                                                ToolTip="Remove this file from the batch queue"/>
-                                    </Grid>
-                                </Border>
+                                <TextBlock Text="{Binding}" 
+                                           TextWrapping="Wrap"
+                                           Margin="4"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    
-                    <!-- Empty Queue Placeholder -->
-                    <Border Background="{DynamicResource BackgroundAltBrush}" 
-                            BorderBrush="{StaticResource BorderBrush}" 
-                            BorderThickness="2" 
-                            CornerRadius="{StaticResource RadiusM}" 
-                            Padding="{StaticResource ThicknessXL}"
-                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                        <Border.Effect>
-                            <DropShadowEffect Color="{Binding Source={StaticResource PrimaryColor}}"
-                                              BlurRadius="10"
-                                              ShadowDepth="0"
-                                              Opacity="0.3"/>
-                        </Border.Effect>
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                       Text="{StaticResource IconFolder}" 
-                                       FontSize="48" 
-                                       Foreground="{StaticResource TextTertiaryBrush}"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,0,0,12"/>
-                            <TextBlock Text="No files in queue" 
-                                       FontSize="{StaticResource FontSizeBody}" 
-                                       FontWeight="{StaticResource FontWeightSemiBold}" 
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       HorizontalAlignment="Center"/>
-                            <TextBlock Text="Drag &amp; drop video files here to add them to the queue" 
-                                       FontSize="{StaticResource FontSizeSmall}" 
-                                       FontStyle="Italic" 
-                                       Foreground="{DynamicResource TextSecondaryBrush}" 
-                                       HorizontalAlignment="Center"
-                                       Margin="0,4,0,0"
-                                       TextWrapping="Wrap"/>
+                </GroupBox>
+
+                <!-- Log Viewer -->
+                <GroupBox Header="Activity Log" Grid.Row="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Log Toolbar -->
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+                            <Button Content="Clear Log" 
+                                    Click="ClearLog_Click"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="12,6"
+                                    FontSize="12"
+                                    ToolTip="Clear the log display window&#x0a;Log history is preserved in the file log&#x0a;Location: C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\"/>
+                            <Button Content="Save Log..." 
+                                    Click="SaveLogToFile_Click"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="12,6"
+                                    FontSize="12"
+                                    Margin="4,0,0,0"
+                                    ToolTip="Save log content to a text file"/>
+                            <Button Content="Open Log Folder" 
+                                    Click="OpenLogFolder_Click"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="12,6"
+                                    FontSize="12"
+                                    Margin="4,0,0,0"
+                                    ToolTip="Open the folder containing log files"/>
                         </StackPanel>
-                    </Border>
-                </Grid>
-                
-                <!-- Queue Progress -->
-                <StackPanel Grid.Row="3" Margin="0,8,0,0" 
-                            Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Binding State.BatchProgressText}" 
-                               FontWeight="Bold" 
-                               HorizontalAlignment="Center"
-                               FontSize="11"/>
-                    <ProgressBar Value="{Binding State.BatchProgressPercentage}" 
-                                 Height="15" 
-                                 Margin="0,4,0,0"
-                                 ToolTip="Batch processing progress&#x0a;Shows overall completion percentage for all files in queue&#x0a;Updated in real-time as each file is processed"/>
-                    <TextBlock Text="{Binding State.BatchProgressMessage}" 
-                               HorizontalAlignment="Center" 
-                               FontStyle="Italic" 
-                               FontSize="10"
-                               Margin="0,2,0,0"/>
-                </StackPanel>
+                        
+                        <!-- Log Text Display -->
+                        <TextBox Text="{Binding State.LogText}" 
+                                 IsReadOnly="True" 
+                                 Grid.Row="1"
+                                 TextWrapping="Wrap" 
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 Background="{DynamicResource LogBackgroundBrush}"
+                                 Foreground="{DynamicResource LogForegroundBrush}"
+                                 FontFamily="{StaticResource MonospaceFontFamily}"
+                                 FontSize="{StaticResource FontSizeCaption}"
+                                 ToolTip="Real-time operation log showing all activities&#x0a;Right-click for options: Copy, Save, Open log folder&#x0a;Full logs saved to: C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\">
+                            <TextBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Copy All" 
+                                              Click="CopyLogText_Click"
+                                              ToolTip="Copy all log text to clipboard">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconCopy}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Copy Selection" 
+                                              Click="CopyLogSelection_Click"
+                                              ToolTip="Copy selected text to clipboard">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconCopy}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Clear Log" 
+                                              Click="ClearLog_Click"
+                                              ToolTip="Clear the log display">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconDelete}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Save Log to File" 
+                                              Click="SaveLogToFile_Click"
+                                              ToolTip="Save log content to a text file">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconSave}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Open Log Folder" 
+                                              Click="OpenLogFolder_Click"
+                                              ToolTip="Open the folder containing log files">
+                                        <MenuItem.Icon>
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                       Text="{StaticResource IconFolder}" 
+                                                       FontSize="14"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </TextBox.ContextMenu>
+                        </TextBox>
+                    </Grid>
+                </GroupBox>
             </Grid>
-        </GroupBox>
-    </Grid>
-    
+        </TabItem>
+        
+        <!-- ====================================== -->
+        <!-- TAB 4: TOOLS (Settings & Utilities) -->
+        <!-- ====================================== -->
+        <TabItem>
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="⚙" 
+                               FontSize="16" 
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Tools" 
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </TabItem.Header>
+            
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Extraction Settings -->
+                <GroupBox Header="Extraction Settings" Grid.Row="0">
+                    <StackPanel>
+                        <!-- Subtitle Preference Radio Buttons -->
+                        <StackPanel Margin="0,0,0,10">
+                            <TextBlock Text="Subtitle Preference:" 
+                                       FontWeight="{StaticResource FontWeightSemiBold}" 
+                                       Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Content="Prefer forced subtitles" 
+                                             IsChecked="{Binding State.PreferForced}"
+                                             GroupName="SubtitlePreference"
+                                             VerticalAlignment="Center"
+                                             Margin="0,0,20,0"
+                                             ToolTip="Prioritize forced subtitles when multiple tracks are available&#x0a;Forced subtitles typically contain only foreign dialogue or on-screen text&#x0a;Best for movies with occasional non-English dialogue"/>
+                                <RadioButton Content="Prefer CC (Closed Captions)" 
+                                             IsChecked="{Binding State.PreferClosedCaptions}"
+                                             GroupName="SubtitlePreference"
+                                             VerticalAlignment="Center"
+                                             ToolTip="Prioritize closed captions when multiple tracks are available&#x0a;CCs typically include all dialogue and sound effects descriptions&#x0a;Best for accessibility or when you want complete transcription"/>
+                            </StackPanel>
+                        </StackPanel>
+                        
+                        <!-- OCR and File Settings -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Text="OCR Language:" 
+                                       Grid.Column="0"
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,8,0"/>
+                            <ComboBox SelectedItem="{Binding State.OcrLanguage}" 
+                                      Grid.Column="1"
+                                      ItemsSource="{Binding State.AvailableLanguages}"
+                                      Margin="0,0,20,0"
+                                      ToolTip="Language for OCR text recognition when extracting image-based subtitles (PGS format)&#x0a;Only used when converting images to text&#x0a;Common: eng (English), spa (Spanish), fra (French)"/>
+                            
+                            <TextBlock Text="File Pattern:" 
+                                       Grid.Column="2"
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,8,0"/>
+                            <TextBox Text="{Binding State.FileNamePattern}" 
+                                     Grid.Column="3"
+                                     ToolTip="Output filename pattern for extracted subtitles&#x0a;Available variables:&#x0a;  {basename} - Video filename without extension&#x0a;  {lang} - Subtitle language code&#x0a;  {forced} - Adds '.forced' if applicable&#x0a;  {cc} - Adds '.cc' if applicable&#x0a;Example: Movie.eng.forced.srt"/>
+                        </Grid>
+                        
+                        <!-- Advanced Settings Button -->
+                        <Button Content="Advanced Settings..." 
+                                Click="SettingsMenuItem_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                HorizontalAlignment="Left"
+                                Margin="0,15,0,0"
+                                Padding="16,8"
+                                ToolTip="Open advanced settings dialog for detailed configuration"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Utilities -->
+                <GroupBox Header="Utilities" Grid.Row="1" Margin="0,10,0,0">
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Content="SRT Correction" 
+                                Click="SrtCorrection_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                Width="200"
+                                Height="50"
+                                Margin="0,0,10,10"
+                                ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
+                        <Button Content="VobSub Track Analyzer" 
+                                Click="VobSubTrackAnalyzer_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                Width="200"
+                                Height="50"
+                                Margin="0,0,10,10"
+                                ToolTip="Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit"/>
+                        <Button Content="Re-detect Tools" 
+                                Command="{Binding ReDetectToolsCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Width="200"
+                                Height="50"
+                                Margin="0,0,10,10"
+                                ToolTip="Re-detect and verify external tools (MKVToolNix, FFmpeg, etc.)&#x0a;Keyboard Shortcut: F5"/>
+                    </WrapPanel>
+                </GroupBox>
+
+                <!-- Tool Status -->
+                <GroupBox Header="Tool Status" Grid.Row="2">
+                    <StackPanel>
+                        <!-- MKVToolNix Status -->
+                        <Border BorderBrush="{StaticResource BorderBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusS}" 
+                                Padding="{StaticResource ThicknessS}" 
+                                Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0"
+                                           FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToStatusIconConverter}}" 
+                                           FontSize="20" 
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="MKVToolNix" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}"/>
+                                    <TextBlock Text="{Binding State.MkvToolNixStatus.Version, StringFormat='Version: {0}'}" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="Not installed" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource ErrorBrush}"
+                                               Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- SubtitleEdit Status -->
+                        <Border BorderBrush="{StaticResource BorderBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusS}" 
+                                Padding="{StaticResource ThicknessS}" 
+                                Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0"
+                                           FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToStatusIconConverter}}" 
+                                           FontSize="20" 
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Subtitle Edit" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}"/>
+                                    <TextBlock Text="{Binding State.SubtitleEditStatus.Version, StringFormat='Version: {0}'}" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Visibility="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="Not installed" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource ErrorBrush}"
+                                               Visibility="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- FFmpeg Status -->
+                        <Border BorderBrush="{StaticResource BorderBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusS}" 
+                                Padding="{StaticResource ThicknessS}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0"
+                                           FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToStatusIconConverter}}" 
+                                           FontSize="20" 
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="FFmpeg" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}"/>
+                                    <TextBlock Text="{Binding State.FfmpegStatus.Version, StringFormat='Version: {0}'}" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Visibility="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="Not installed" 
+                                               FontSize="{StaticResource FontSizeSmall}" 
+                                               Foreground="{StaticResource ErrorBrush}"
+                                               Visibility="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
+        </TabItem>
+        
+    </TabControl>
+
         </DockPanel>
         
         <!-- Drag & Drop Overlay -->
@@ -1250,3 +1458,4 @@
         </ItemsControl>
     </Grid>
 </Window>
+
