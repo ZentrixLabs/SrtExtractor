@@ -16,10 +16,6 @@
                                 <!-- Microsoft Blue accent -->
                                 <ui:ColorPaletteResources Accent="#FF0078D4" />
                             </ResourceDictionary.MergedDictionaries>
-                            
-                            <!-- Log/Console Colors for Light Theme -->
-                            <SolidColorBrush x:Key="LogBackgroundBrush" Color="#FFFAFAFA"/>
-                            <SolidColorBrush x:Key="LogForegroundBrush" Color="#FF1F1F1F"/>
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Dark">
                             <!-- Empty - Dark theme not used -->
@@ -34,10 +30,16 @@
                 <ResourceDictionary Source="Themes/FocusStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
+            <!-- Log/Console Colors for Light Theme -->
+            <SolidColorBrush x:Key="LogBackgroundBrush" Color="#FFFAFAFA"/>
+            <SolidColorBrush x:Key="LogForegroundBrush" Color="#FF1F1F1F"/>
+            
             <!-- Converters -->
             <converters:DurationConverter x:Key="DurationConverter"/>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
             <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
             <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+            <converters:BoolToPreferenceConverter x:Key="BoolToPreferenceConverter"/>
             <converters:DoubleToVisibilityConverter x:Key="DoubleToVisibilityConverter"/>
             <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
             <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>

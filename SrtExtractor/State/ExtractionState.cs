@@ -152,6 +152,7 @@ public partial class ExtractionState : ObservableObject
             PreferClosedCaptions = false;
             FileNamePattern = "{basename}.{lang}{forced}.srt";
         }
+        OnPropertyChanged(nameof(SettingsSummary));
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -162,6 +163,7 @@ public partial class ExtractionState : ObservableObject
             PreferForced = false;
             FileNamePattern = "{basename}.{lang}{cc}.srt";
         }
+        OnPropertyChanged(nameof(SettingsSummary));
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -191,6 +193,19 @@ public partial class ExtractionState : ObservableObject
         // Update convergence setting
         UseSmartConvergence = value != "Thorough";
         
+        OnPropertyChanged(nameof(SettingsSummary));
+        PreferencesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnOcrLanguageChanged(string value)
+    {
+        OnPropertyChanged(nameof(SettingsSummary));
+        PreferencesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnEnableMultiPassCorrectionChanged(bool value)
+    {
+        OnPropertyChanged(nameof(SettingsSummary));
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -313,6 +328,19 @@ public partial class ExtractionState : ObservableObject
 
     // Available correction modes
     public string[] AvailableCorrectionModes { get; } = { "Quick", "Standard", "Thorough" };
+
+    /// <summary>
+    /// Computed property that shows a summary of current settings at a glance.
+    /// </summary>
+    public string SettingsSummary
+    {
+        get
+        {
+            var preference = PreferForced ? "Forced" : "CC";
+            var multiPass = EnableMultiPassCorrection ? $"MultiPass({CorrectionMode})" : "SinglePass";
+            return $"⚙️ {OcrLanguage.ToUpper()} • {preference} • {multiPass}";
+        }
+    }
 
     /// <summary>
     /// Add a log message to the UI log display.

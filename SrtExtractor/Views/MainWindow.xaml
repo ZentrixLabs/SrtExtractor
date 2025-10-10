@@ -234,17 +234,27 @@
 
         <!-- File Selection Row -->
         <GroupBox Header="Video File" Grid.Row="0" Grid.ColumnSpan="2">
-            <StackPanel Orientation="Horizontal">
-                <Button Content="Pick Video..." 
-                        Command="{Binding PickMkvCommand}"
-                        IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                        ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
-                <TextBox Text="{Binding State.MkvPath}" 
-                         IsReadOnly="True" 
-                         Margin="4,0"
-                         VerticalAlignment="Center"
-                         MinWidth="300"
-                         ToolTip="Path to the selected video file&#x0a;Right-click for more options (copy path, open location, etc.)">
+            <StackPanel>
+                <!-- Settings Summary -->
+                <TextBlock Text="{Binding State.SettingsSummary}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="{StaticResource FontSizeSmall}"
+                           Margin="0,0,0,8"
+                           HorizontalAlignment="Center"
+                           ToolTip="Current extraction settings&#x0a;Click the Settings button to modify these preferences"/>
+                
+                <!-- File Selection -->
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Pick Video..." 
+                            Command="{Binding PickMkvCommand}"
+                            IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolConverter}}"
+                            ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
+                    <TextBox Text="{Binding State.MkvPath}" 
+                             IsReadOnly="True" 
+                             Margin="4,0"
+                             VerticalAlignment="Center"
+                             MinWidth="300"
+                             ToolTip="Path to the selected video file&#x0a;Right-click for more options (copy path, open location, etc.)">
                     <TextBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Copy File Path" 
@@ -297,9 +307,9 @@
                         </ContextMenu>
                     </TextBox.ContextMenu>
                 </TextBox>
+                </StackPanel>
             </StackPanel>
         </GroupBox>
-
 
         <!-- Settings Row -->
         <GroupBox Header="Settings" Grid.Row="1" Grid.Column="1">
@@ -380,7 +390,7 @@
                                    TextWrapping="Wrap">
                             <TextBlock.Text>
                                 <MultiBinding StringFormat="All files will use your preferred settings: {0} subtitles, {1} language">
-                                    <Binding Path="State.PreferForced" Converter="{StaticResource BoolToStatusConverter}"/>
+                                    <Binding Path="State.PreferForced" Converter="{StaticResource BoolToPreferenceConverter}"/>
                                     <Binding Path="State.OcrLanguage"/>
                                 </MultiBinding>
                             </TextBlock.Text>
@@ -588,16 +598,16 @@
                           SelectionMode="Single"
                           MinHeight="120"
                           MaxHeight="300"
-                          Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
+                          Background="{StaticResource BackgroundAltBrush}"
                           Foreground="{DynamicResource TextPrimaryBrush}"
                           BorderBrush="{DynamicResource BorderBrush}"
                           Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                           ToolTip="Click to select a subtitle track for extraction&#x0a;⭐ Recommended tracks are automatically identified based on your preferences&#x0a;Right-click for additional options">
                 <DataGrid.RowBackground>
-                    <SolidColorBrush Color="{DynamicResource SystemAltHighColor}"/>
+                    <SolidColorBrush Color="White"/>
                 </DataGrid.RowBackground>
                 <DataGrid.AlternatingRowBackground>
-                    <SolidColorBrush Color="{DynamicResource SystemChromeLowColor}"/>
+                    <SolidColorBrush Color="#F8F8F8"/>
                 </DataGrid.AlternatingRowBackground>
                 <DataGrid.ContextMenu>
                     <ContextMenu>
@@ -785,8 +795,8 @@
                          AcceptsReturn="True"
                          VerticalScrollBarVisibility="Auto"
                          HorizontalScrollBarVisibility="Auto"
-                         Background="{DynamicResource LogBackgroundBrush}" 
-                         Foreground="{DynamicResource LogForegroundBrush}"
+                           Background="{DynamicResource LogBackgroundBrush}"
+                           Foreground="{DynamicResource LogForegroundBrush}"
                          FontFamily="{StaticResource MonospaceFontFamily}"
                          FontSize="{StaticResource FontSizeCaption}"
                          MinHeight="150"
@@ -1117,7 +1127,7 @@
                                                 Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}"
                                                 Background="{DynamicResource ErrorBrush}"
-                                                Foreground="{DynamicResource SystemAltHighColor}"
+                                                Foreground="White"
                                                 FontWeight="Bold"
                                                 Width="20" Height="20"
                                                 Margin="4,0,0,0"

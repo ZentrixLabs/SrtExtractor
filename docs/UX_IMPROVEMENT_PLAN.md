@@ -666,19 +666,31 @@ partial void OnIsBatchModeChanged(bool value)
 
 ---
 
-### Quick Win 5: Settings Summary Display ✅
+### Quick Win 5: Settings Summary Display ✅ COMPLETED
 **Effort:** 20 minutes  
-**Impact:** Shows active settings at a glance
+**Impact:** Shows active settings at a glance  
+**Status:** ✅ Completed October 9, 2025
 
-```xaml
-<TextBlock Text="{Binding SettingsSummary}"
-           Foreground="{StaticResource TextSecondaryBrush}"
-           Margin="0,0,0,10"/>
-```
+**What was implemented:**
+- Added `SettingsSummary` computed property to `ExtractionState`
+- Shows: Language • Preference (Forced/CC) • MultiPass mode
+- Format: `⚙️ ENG • Forced • MultiPass(Standard)`
+- Updates automatically when settings change
+- Added to UI between file selection and settings sections
+- Includes helpful tooltip explaining how to modify settings
 
-```csharp
-public string SettingsSummary => $"⚙️ {State.OcrLanguage} • {(State.PreferForced ? "Forced" : "CC")} • {State.CorrectionMode}";
-```
+**Visual Improvements:**
+- Centered display with secondary text color
+- Small font size to not overwhelm the interface
+- Clear visual separation from other UI elements
+- Shows key settings that affect extraction behavior
+
+**Files Modified:**
+- `SrtExtractor/State/ExtractionState.cs`
+  - Lines 317-328: Added `SettingsSummary` computed property
+  - Lines 155, 167, 196, 202, 208: Added property change notifications
+- `SrtExtractor/Views/MainWindow.xaml`
+  - Lines 303-311: Added settings summary TextBlock with tooltip
 
 ---
 
