@@ -585,20 +585,37 @@ These can be done in a single afternoon and have high visible impact.
 
 ---
 
-### Quick Win 2: Collapse Log by Default ✅
+### Quick Win 2: Collapse Log by Default ✅ COMPLETED
 **Effort:** 10 minutes  
-**Impact:** Saves 200px vertical space
+**Impact:** Saves ~150-200px of vertical space  
+**Status:** ✅ Completed October 9, 2025
 
-```xaml
-<Expander Header="Log" 
-          Grid.Row="4" 
-          Grid.ColumnSpan="2"
-          IsExpanded="False">
-  <!-- Existing log TextBox -->
-</Expander>
-```
+**What was implemented:**
+- **Fixed Grid row definitions** so collapsing actually reclaims space:
+  - Row 3 (Track List): Changed from `Auto` to `*` (grows to fill space)
+  - Row 4 (Log): Changed from `*` to `Auto` (only takes what Expander needs)
+- **Fixed DataGrid height constraints** to prevent empty space:
+  - MinHeight: 120px (prevents too-small display)
+  - MaxHeight: 300px (increased from 200px for more room)
+- Replaced GroupBox with Expander control
+- Set `IsExpanded="False"` to collapse by default
+- Added icon (document glyph) to header for visual interest
+- Added "(click to expand)" hint text in header
+- Maintains all log functionality when expanded
+- Users can click header to toggle visibility
 
-**File:** `SrtExtractor/Views/MainWindow.xaml` (Line 733)
+**Visual Improvements:**
+- Header shows: 📄 Log (click to expand)
+- Collapsed state: ~24px height (just the header)
+- Expanded state: Full log display with 150px minimum height
+- Saves 150-200px of vertical space by default
+- More room for track list and main controls
+
+**Files Modified:**
+- `SrtExtractor/Views/MainWindow.xaml` 
+  - Lines 223-228: Grid row definitions (Track List now grows, Log shrinks)
+  - Lines 589-590: DataGrid height constraints (MinHeight 120px, MaxHeight 300px)
+  - Lines 756-846: Expander implementation with header
 
 ---
 

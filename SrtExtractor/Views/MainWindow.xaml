@@ -224,8 +224,8 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -586,7 +586,8 @@
                           GridLinesVisibility="Horizontal"
                           HeadersVisibility="Column"
                           SelectionMode="Single"
-                          MaxHeight="200"
+                          MinHeight="120"
+                          MaxHeight="300"
                           Background="{DynamicResource SystemControlPageBackgroundAltHighBrush}"
                           Foreground="{DynamicResource TextPrimaryBrush}"
                           BorderBrush="{DynamicResource BorderBrush}"
@@ -753,8 +754,31 @@
         </GroupBox>
 
         <!-- Log Display -->
-        <GroupBox Header="Log" Grid.Row="4" Grid.ColumnSpan="2">
-            <Grid>
+        <Expander Grid.Row="4" Grid.ColumnSpan="2" 
+                  IsExpanded="False"
+                  BorderBrush="{StaticResource BorderBrush}"
+                  BorderThickness="1"
+                  Background="{StaticResource BackgroundBrush}"
+                  Padding="0">
+            <Expander.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                               Text="{StaticResource IconDocument}" 
+                               FontSize="14" 
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Log" 
+                               FontWeight="{StaticResource FontWeightSemiBold}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text=" (click to expand)" 
+                               FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontStyle="Italic"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Expander.Header>
+            <Grid Margin="{StaticResource ThicknessS}">
                 <TextBox Text="{Binding State.LogText}" 
                          IsReadOnly="True" 
                          TextWrapping="Wrap" 
@@ -820,7 +844,7 @@
                     </TextBox.ContextMenu>
                 </TextBox>
             </Grid>
-        </GroupBox>
+        </Expander>
 
         </Grid>
 
