@@ -687,10 +687,12 @@ partial void OnIsBatchModeChanged(bool value)
 
 **Files Modified:**
 - `SrtExtractor/State/ExtractionState.cs`
-  - Lines 317-328: Added `SettingsSummary` computed property
-  - Lines 155, 167, 196, 202, 208: Added property change notifications
+  - Lines 317-328: Added `SettingsSummary` computed property with formatting logic
+  - Lines 155, 167, 196, 202, 208: Added `OnPropertyChanged(nameof(SettingsSummary))` to all relevant property change handlers
 - `SrtExtractor/Views/MainWindow.xaml`
-  - Lines 303-311: Added settings summary TextBlock with tooltip
+  - Lines 239-245: Added settings summary TextBlock inside Video File GroupBox
+  - Fixed resource references and XML structure issues
+  - Settings summary now appears as subtitle within Video File section
 
 ---
 
@@ -719,11 +721,11 @@ Use this checklist to track progress through the improvement plan.
 - [ ] 3.6 Accessibility improvements
 
 ### Quick Wins (Target: Day 1)
-- [ ] Larger extract button
-- [ ] Collapse log by default
-- [ ] Mode indicator in title bar
-- [ ] Add tooltips everywhere
-- [ ] Settings summary display
+- [x] Larger extract button ✅ COMPLETED
+- [x] Collapse log by default ✅ COMPLETED
+- [x] Mode indicator in title bar ✅ COMPLETED
+- [x] Add tooltips everywhere ✅ COMPLETED
+- [x] Settings summary display ✅ COMPLETED
 
 ---
 

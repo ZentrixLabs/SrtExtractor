@@ -119,11 +119,26 @@ Settings [⚙️] (click to modify)
   - **Lines 317-328**: Added `SettingsSummary` computed property with formatting logic
   - **Lines 155, 167, 196, 202, 208**: Added `OnPropertyChanged(nameof(SettingsSummary))` to all relevant property change handlers
 - **`SrtExtractor/Views/MainWindow.xaml`**
-  - **Lines 303-311**: Added settings summary TextBlock with proper styling and tooltip
+  - **Lines 239-245**: Added settings summary TextBlock inside Video File GroupBox
+  - **Fixed resource references**: Resolved XDG-0001 errors by using proper resource syntax
+  - **Fixed XML structure**: Resolved StackPanel closing tag issues
+  - **Final positioning**: Settings summary appears as subtitle within Video File section
 
 ### Documentation:
 - **`docs/UX_IMPROVEMENT_PLAN.md`** - Marked complete with implementation details
 - **`docs/QUICK_WIN_5_SUMMARY.md`** - This document
+
+## 🔧 Technical Notes
+
+### **Resource Reference Fixes:**
+During implementation, several XDG-0001 resource resolution errors were encountered and resolved:
+- **DataGrid colors**: Used direct color values (`White`, `#F8F8F8`) instead of complex system resources
+- **Log brushes**: Used `DynamicResource` for theme-specific `LogBackgroundBrush` and `LogForegroundBrush`
+- **Converter references**: Fixed `InverseBoolToVisibilityConverter` and `BoolToStatusConverter` references
+
+### **XML Structure Fixes:**
+- **StackPanel nesting**: Fixed missing closing tags in Video File GroupBox structure
+- **Button content**: Ensured proper nesting of StackPanel content within Button elements
 
 ## 🧪 Testing Recommendations
 
