@@ -23,25 +23,25 @@ public class NotificationService : INotificationService
     /// </summary>
     public static event Action<ToastNotificationData>? ToastRequested;
 
-    public void ShowInfo(string message, string? title = null, int durationMs = 4000)
+    public void ShowInfo(string message, string? title = null, int durationMs = 8000)
     {
         _loggingService.LogInfo($"Toast Info: {title ?? "Info"} - {message}");
         ShowToast(ToastType.Info, message, title, durationMs);
     }
 
-    public void ShowSuccess(string message, string? title = null, int durationMs = 4000)
+    public void ShowSuccess(string message, string? title = null, int durationMs = 8000)
     {
         _loggingService.LogInfo($"Toast Success: {title ?? "Success"} - {message}");
         ShowToast(ToastType.Success, message, title, durationMs);
     }
 
-    public void ShowWarning(string message, string? title = null, int durationMs = 5000)
+    public void ShowWarning(string message, string? title = null, int durationMs = 10000)
     {
         _loggingService.LogWarning($"Toast Warning: {title ?? "Warning"} - {message}");
         ShowToast(ToastType.Warning, message, title, durationMs);
     }
 
-    public void ShowError(string message, string? title = null, int durationMs = 6000)
+    public void ShowError(string message, string? title = null, int durationMs = 12000)
     {
         _loggingService.LogError($"Toast Error: {title ?? "Error"} - {message}");
         ShowToast(ToastType.Error, message, title, durationMs);

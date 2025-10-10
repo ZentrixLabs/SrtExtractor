@@ -110,7 +110,7 @@
                              VerticalAlignment="Center"
                              MinWidth="350"/>
                     <Button Command="{Binding ScanForVobSubTracksCommand}"
-                            Style="{StaticResource SuccessButton}"
+                            Style="{StaticResource PrimaryButton}"
                             IsEnabled="{Binding CanStartScan}"
                             Margin="8,0,0,0">
                         <StackPanel Orientation="Horizontal">
@@ -286,7 +286,7 @@
                 </StackPanel>
             </Button>
             <Button Command="{Binding ExportReportCommand}"
-                    Style="{StaticResource SuccessButton}"
+                    Style="{StaticResource PrimaryButton}"
                     Padding="12,6"
                     IsEnabled="{Binding HasVobSubTracks}"
                     ToolTip="Export detailed analysis report to text file">
@@ -300,7 +300,7 @@
                 </StackPanel>
             </Button>
             <Button Command="{Binding CancelScanCommand}"
-                    Style="{StaticResource WarningButton}"
+                    Style="{StaticResource SecondaryButton}"
                     Padding="12,6"
                     IsEnabled="{Binding IsScanning}">
                 <StackPanel Orientation="Horizontal">

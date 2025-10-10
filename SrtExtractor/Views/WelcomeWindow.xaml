@@ -726,7 +726,7 @@
                         Visibility="{Binding ShowNextButton, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 <Button Content="Get Started!" 
                         Command="{Binding FinishCommand}"
-                        Style="{StaticResource SuccessButton}"
+                        Style="{StaticResource PrimaryButton}"
                         Padding="20,10"
                         FontSize="14"
                         FontWeight="{StaticResource FontWeightSemiBold}"

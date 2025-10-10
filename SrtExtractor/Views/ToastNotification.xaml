@@ -119,7 +119,7 @@
                 
                 <Button x:Name="ConfirmButton"
                        Content="Yes"
-                       Style="{StaticResource AccentButton}"
+                       Style="{StaticResource PrimaryButton}"
                        MinWidth="80"
                        Margin="0,0,8,0"
                        Click="ConfirmButton_Click"/>

@@ -245,22 +245,49 @@ public partial class MainViewModel : ObservableObject, IDisposable
             State.UpdateProcessingMessage("Analysis completed!");
             State.AddLogMessage($"Found {result.Tracks.Count} subtitle tracks");
             
-            // Log technical details for each track (for power users inspecting History tab)
-            foreach (var track in State.Tracks)
+            // If no tracks found, log diagnostic information
+            if (result.Tracks.Count == 0)
             {
-                var speedInfo = track.SpeedIndicator.Contains("Fast") ? "FAST" : "OCR-REQUIRED";
-                State.AddLogMessage($"  Track {track.Id}: {track.Language} | {track.FormatDisplay} ({speedInfo}) | Codec: {track.Codec} | Frames: {track.FrameCount} | {(track.Forced ? "FORCED" : "FULL")}");
+                var fileSizeFormatted = Utils.FileUtilities.FormatFileSize(fileInfo.Length);
+                
+                State.AddLogMessage(""); // Blank line for readability
+                State.AddLogMessage("📊 DIAGNOSTIC INFORMATION:");
+                State.AddLogMessage($"  File: {Path.GetFileName(State.MkvPath)}");
+                State.AddLogMessage($"  Container: {fileExtension.TrimStart('.').ToUpper()}");
+                State.AddLogMessage($"  Size: {fileSizeFormatted}");
+                State.AddLogMessage($"  Probe Tool: {(fileExtension == ".mp4" ? "FFprobe" : "mkvmerge")}");
+                State.AddLogMessage("");
+                State.AddLogMessage("🔍 ANALYSIS RESULTS:");
+                State.AddLogMessage("  ✗ No subtitle streams found in container");
+                State.AddLogMessage("  ℹ This indicates the file does not have embedded subtitle tracks");
+                State.AddLogMessage("");
+                State.AddLogMessage("💡 POSSIBLE REASONS:");
+                State.AddLogMessage("  • File was encoded without subtitles");
+                State.AddLogMessage("  • Subtitles are hardcoded (burned into video - cannot be extracted)");
+                State.AddLogMessage("  • Subtitles are in a separate .srt/.ass file");
+                State.AddLogMessage("  • Wrong source file (not the original release)");
+                State.AddLogMessage("");
+                State.AddLogMessage("✓ NEXT STEPS:");
+                State.AddLogMessage("  1. Verify file in VLC (View → Track → Subtitle Track)");
+                State.AddLogMessage("  2. Check if subtitle file exists separately (same folder)");
+                State.AddLogMessage("  3. Try opening original source file if this is a re-encode");
+            }
+            else
+            {
+                // Log technical details for each track (for power users inspecting History tab)
+                State.AddLogMessage(""); // Blank line for readability
+                foreach (var track in State.Tracks)
+                {
+                    var speedInfo = track.SpeedIndicator.Contains("Fast") ? "FAST" : "OCR-REQUIRED";
+                    State.AddLogMessage($"  Track {track.Id}: {track.Language} | {track.FormatDisplay} ({speedInfo}) | Codec: {track.Codec} | Frames: {track.FrameCount} | {(track.Forced ? "FORCED" : "FULL")}");
+                }
             }
             
             // Mark that we've probed this file
             State.HasProbedFile = true;
             
-            if (result.Tracks.Count == 0)
-            {
-                State.AddLogMessage("⚠️ No subtitle tracks found in this video file");
-                State.AddLogMessage("💡 Try selecting a different video file or check if the file has embedded subtitles");
-            }
-            else if (selectedTrack != null)
+            // Auto-select messages (only shown when tracks exist)
+            if (result.Tracks.Count > 0 && selectedTrack != null)
             {
                 var englishTracks = result.Tracks.Where(t => string.Equals(t.Language, "eng", StringComparison.OrdinalIgnoreCase)).ToList();
                 if (englishTracks.Count == 1)
@@ -406,7 +433,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private async Task ExtractFromMp4Async(string outputPath, CancellationToken cancellationToken)
     {
         State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
-        await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack!.Id, outputPath, cancellationToken);
+        await _ffmpegService.ExtractSubtitleAsync(State.MkvPath!, State.SelectedTrack!.Id, outputPath, cancellationToken);
         State.UpdateProcessingMessage("MP4 extraction completed!");
         State.AddLogMessage($"Subtitles extracted to: {outputPath}");
 
@@ -454,7 +481,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         
         // Simulate progress for text extraction (this is typically very fast)
         State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionStart), "Extracting text subtitles");
-        await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack!.ExtractionId, outputPath, cancellationToken);
+        await _mkvToolService.ExtractTextAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, outputPath, cancellationToken);
         State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionComplete), "Text extraction completed");
         
         State.UpdateProcessingMessage("Text extraction completed!");
@@ -474,7 +501,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Extract PGS to SUP file
         State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
         State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.PgsExtractionStart), "Extracting PGS subtitles");
-        await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack!.ExtractionId, tempSupPath, cancellationToken);
+        await _mkvToolService.ExtractPgsAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, tempSupPath, cancellationToken);
         State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
         // Convert SUP to SRT using OCR

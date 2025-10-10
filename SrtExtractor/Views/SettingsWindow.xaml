@@ -86,7 +86,7 @@
                                     <Button Content="Install via winget" 
                                             Command="{Binding InstallMkvToolNixCommand}"
                                             Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                                            Style="{StaticResource SuccessButton}"
+                                            Style="{StaticResource PrimaryButton}"
                                             Margin="0,0,10,0"/>
                                     <Button Content="Browse..." 
                                             Command="{Binding BrowseMkvToolNixCommand}"
@@ -152,7 +152,7 @@
                         <!-- Tool Management Actions -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
                             <Button Command="{Binding ReDetectToolsCommand}"
-                                    Style="{StaticResource AccentButton}">
+                                    Style="{StaticResource PrimaryButton}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                                Text="{StaticResource IconRefresh}" 
