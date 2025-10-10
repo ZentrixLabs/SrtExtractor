@@ -327,16 +327,20 @@
                                    FontWeight="Bold" 
                                    Margin="0,0,0,15"/>
                         
-                        <!-- Batch Mode -->
+                        <!-- Batch Mode Note -->
                         <GroupBox Header="Batch Processing" Margin="0,0,0,15">
                             <StackPanel>
-                                <CheckBox Content="Enable batch mode by default" 
-                                          IsChecked="{Binding State.IsBatchMode}"
-                                          Margin="0,5"/>
-                                <TextBlock Text="When enabled, allows processing multiple files simultaneously with drag &amp; drop support." 
+                                <TextBlock TextWrapping="Wrap" 
+                                           Margin="0,5">
+                                    <Run Text="Use the " FontWeight="Normal"/>
+                                    <Run Text="Batch tab" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}"/>
+                                    <Run Text=" to process multiple files simultaneously with drag &amp; drop support." FontWeight="Normal"/>
+                                </TextBlock>
+                                <TextBlock Text="Simply switch to the Batch tab (Ctrl+B) to access batch processing features." 
                                            FontStyle="Italic" 
                                            Foreground="{StaticResource TextSecondaryBrush}" 
-                                           Margin="0,10,0,0"/>
+                                           Margin="0,10,0,0"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
                         </GroupBox>
 

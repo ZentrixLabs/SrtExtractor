@@ -113,10 +113,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     ResumeBatchCommand.NotifyCanExecuteChanged();
                 });
             }
-            else if (e.PropertyName == nameof(State.IsBatchMode))
-            {
-                OnBatchModeChanged(State.IsBatchMode);
-            }
             // Note: Settings are saved manually when user changes them
             // Automatic saving was removed to prevent infinite loops
         };
@@ -425,11 +421,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await _recentFilesService.AddFileAsync(State.MkvPath).ConfigureAwait(false);
             await LoadRecentFilesAsync().ConfigureAwait(false); // Refresh the UI list
             
-            // Only show success dialog in single file mode, not batch mode
-            if (!State.IsBatchMode)
-            {
-                _notificationService.ShowSuccess($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete");
-            }
+            // Show success notification (batch processing has its own notifications)
+            _notificationService.ShowSuccess($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete");
         }
         catch (OperationCanceledException)
         {
@@ -449,11 +442,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Clean up any temporary files that might have been created
             await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
             
-            // Only show error dialog in single file mode, not batch mode
-            if (!State.IsBatchMode)
-            {
-                _notificationService.ShowError($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error");
-            }
+            // Show error notification (batch processing has its own error handling)
+            _notificationService.ShowError($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error");
         }
         finally
         {
@@ -1693,56 +1683,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             batchFile.Status = BatchFileStatus.Error;
             batchFile.StatusMessage = ex.Message;
             State.AddLogMessage($"❌ Error processing {batchFile.FileName}: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Handles batch mode changes and provides user feedback.
-    /// </summary>
-    /// <param name="isBatchMode">Whether batch mode is enabled</param>
-    private void OnBatchModeChanged(bool isBatchMode)
-    {
-        try
-        {
-            // Update queue column width
-            State.QueueColumnWidth = isBatchMode ? 350 : 0;
-            
-            if (isBatchMode)
-            {
-                // Show confirmation dialog about using preferred settings
-                var preferenceText = State.PreferForced ? "forced subtitles" : 
-                                   State.PreferClosedCaptions ? "closed captions" : "full subtitles";
-                
-                var message = $"🎬 Batch Mode will use your preferred settings:\n\n" +
-                             $"• Subtitle preference: {preferenceText}\n" +
-                             $"• OCR language: {State.OcrLanguage}\n" +
-                             $"• File pattern: {State.FileNamePattern}\n\n" +
-                             $"All files in the batch will be processed with these settings.\n\n" +
-                             $"Do you want to continue?";
-                
-                _notificationService.ShowConfirmation(
-                    message,
-                    "Batch Mode Settings Confirmation",
-                    () => { /* User confirmed, continue */ },
-                    () => { 
-                        // User declined, disable batch mode
-                        State.IsBatchMode = false;
-                    });
-                
-                State.AddLogMessage("🎬 Batch Mode enabled! Drag & drop video files anywhere on this window to add them to the queue.");
-                State.AddLogMessage("💡 Tip: Files with 🌐 are on network drives and may take longer to process.");
-                State.AddLogMessage($"⚙️ Using settings: {preferenceText}, {State.OcrLanguage} language");
-            }
-            else
-            {
-                State.AddLogMessage("📁 Batch Mode disabled. Switch back to single file processing mode.");
-                // Clear the batch queue when disabling batch mode
-                ClearBatchQueue();
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Error handling batch mode change", ex);
         }
     }
 

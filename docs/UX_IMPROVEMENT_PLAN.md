@@ -107,11 +107,11 @@ Users don't realize there are two modes. Elements appear/disappear based on a ch
 Replace dual-mode UI with separate tabs (covered in 1.1). This naturally separates single-file from batch operations.
 
 #### Tasks
-- [ ] **Remove IsBatchMode property** from ExtractionState.cs (1 hour)
-- [ ] **Remove mode-switching logic** from MainViewModel.cs (1 hour)
-- [ ] **Remove visibility converters** for ShowBatchMode/ShowSingleFileMode (30 min)
-- [ ] **Update Settings** to remove "Enable Batch Mode" checkbox (30 min)
-- [ ] **Add tooltip to Batch tab** explaining batch mode (15 min)
+- [x] **Remove IsBatchMode property** from ExtractionState.cs (1 hour) ✅ **COMPLETED**
+- [x] **Remove mode-switching logic** from MainViewModel.cs (1 hour) ✅ **COMPLETED**
+- [x] **Remove visibility converters** for ShowBatchMode/ShowSingleFileMode (30 min) ✅ **COMPLETED**
+- [x] **Update Settings** to remove "Enable Batch Mode" checkbox (30 min) ✅ **COMPLETED**
+- [x] **Add tooltip to Batch tab** explaining batch mode (15 min) ✅ **COMPLETED**
 
 #### Files to Modify
 - `SrtExtractor/State/ExtractionState.cs` (Lines 86-169)
@@ -703,7 +703,7 @@ Use this checklist to track progress through the improvement plan.
 
 ### Phase 1: Critical (Target: Week 1-2)
 - [x] 1.1 Simplify Main Window (Tab-based interface) ✅ **COMPLETED - October 10, 2025**
-- [ ] 1.2 Remove dual-mode confusion (Partially complete - tabs eliminate confusion)
+- [x] 1.2 Remove dual-mode confusion ✅ **COMPLETED - October 10, 2025**
 - [ ] 1.3 Humanize track information
 - [x] 1.4 Reduce log visibility ✅ **COMPLETED - Log now in History tab only**
 
