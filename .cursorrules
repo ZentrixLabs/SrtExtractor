@@ -30,6 +30,12 @@ Key folders:
 
 ## 🚫 Critical Rules
 
+### **NO THEME SWITCHING**
+- **NEVER** add theme switching functionality
+- **ALWAYS** use the fixed light theme (Microsoft 365 inspired)
+- **PREFER** `StaticResource` for consistent appearance
+- **Theme Policy**: Fixed light theme only - no light/dark switching
+
 ### **NO PRINT STATEMENTS**
 - **NEVER** use `Console.WriteLine()`, `Debug.WriteLine()`, or `print()`
 - **ALWAYS** use `ILoggingService` for all output
@@ -67,6 +73,13 @@ Key folders:
 - Use `{Binding CommandName}` for button actions
 - Use value converters for UI transformations
 - Define styles and templates in App.xaml
+
+### **UI/Theme Standards**
+- **Fixed Light Theme**: Use Microsoft 365-inspired light theme with clean whites and blues
+- **ModernWPF**: Use ModernWPF controls and styling for professional appearance
+- **Consistent Colors**: Use defined color palette from App.xaml
+- **Microsoft Aesthetic**: Clean, professional enterprise app appearance
+- **No Theme Switching**: Never add light/dark theme toggle functionality
 
 ## 📝 Logging Examples
 

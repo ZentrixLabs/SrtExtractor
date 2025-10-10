@@ -115,6 +115,7 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
+                // Keep simple MessageBox for edge cases like browser link failures
                 MessageBox.Show($"Error opening online documentation:\n{ex.Message}", 
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }

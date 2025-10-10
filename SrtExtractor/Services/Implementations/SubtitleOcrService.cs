@@ -1,5 +1,6 @@
 using System.IO;
 using SrtExtractor.Services.Interfaces;
+using SrtExtractor.Utils;
 
 namespace SrtExtractor.Services.Implementations;
 
@@ -27,12 +28,11 @@ public class SubtitleOcrService : ISubtitleOcrService
         bool removeHi = true,
         CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Starting OCR conversion: {supPath} -> {outSrt}");
+        _loggingService.LogInfo($"Starting OCR conversion");
 
-        if (!File.Exists(supPath))
-        {
-            throw new FileNotFoundException($"SUP file not found: {supPath}");
-        }
+        // SECURITY: Validate and sanitize paths
+        var validatedSupPath = PathValidator.ValidateFileExists(supPath);
+        var validatedOutSrt = SafeFileOperations.ValidateAndPrepareOutputPath(outSrt);
 
         try
         {
@@ -42,32 +42,27 @@ public class SubtitleOcrService : ISubtitleOcrService
                 throw new InvalidOperationException("Subtitle Edit path not configured");
             }
 
-            // Ensure output directory exists
-            var outputDir = Path.GetDirectoryName(outSrt);
-            if (!string.IsNullOrEmpty(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-
             // Build Subtitle Edit command line arguments
-            var args = BuildOcrArguments(settings.SubtitleEditPath, supPath, outSrt, language, fixCommonErrors, removeHi);
+            var argsArray = BuildOcrArgumentsArray(validatedSupPath, validatedOutSrt, language, fixCommonErrors, removeHi);
             
-            _loggingService.LogInfo($"Running Subtitle Edit CLI with args: {args}");
+            _loggingService.LogInfo($"Running Subtitle Edit CLI with {argsArray.Length} arguments");
             
             // Calculate timeout based on file size (OCR is slow, especially for large files)
-            var timeout = CalculateOcrTimeout(supPath);
-            _loggingService.LogInfo($"Using OCR timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeMB(supPath):F1} MB");
+            var timeout = CalculateOcrTimeout(validatedSupPath);
+            _loggingService.LogInfo($"Using OCR timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeMB(validatedSupPath):F1} MB");
             
             using var cts = new CancellationTokenSource(timeout);
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.SubtitleEditPath, args, combinedCts.Token);
+            
+            // SECURITY: Use argument array to prevent command injection
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.SubtitleEditPath, argsArray, combinedCts.Token);
 
             if (exitCode != 0)
             {
                 throw new InvalidOperationException($"Subtitle Edit failed with exit code {exitCode}: {stderr}");
             }
 
-            if (!File.Exists(outSrt))
+            if (!File.Exists(validatedOutSrt))
             {
                 throw new InvalidOperationException($"Output SRT file was not created: {outSrt}");
             }
@@ -81,13 +76,23 @@ public class SubtitleOcrService : ISubtitleOcrService
         }
     }
 
-    private static string BuildOcrArguments(string toolPath, string supPath, string outSrt, string language, bool fixCommonErrors, bool removeHi)
+    /// <summary>
+    /// SECURITY: Build OCR arguments as array to prevent command injection.
+    /// </summary>
+    private static string[] BuildOcrArgumentsArray(string supPath, string outSrt, string language, bool fixCommonErrors, bool removeHi)
     {
         // seconv syntax: seconv <pattern> <format> [options]
         // For SUP to SRT conversion with OCR
         // Map language codes to OCR database names
         var ocrDb = MapLanguageToOcrDb(language);
-        var args = $"\"{supPath}\" subrip /outputfilename:\"{outSrt}\" /ocrdb:{ocrDb}";
+        
+        var argsList = new List<string>
+        {
+            supPath,
+            "subrip",
+            $"/outputfilename:{outSrt}",
+            $"/ocrdb:{ocrDb}"
+        };
         
         if (fixCommonErrors)
         {
@@ -97,10 +102,10 @@ public class SubtitleOcrService : ISubtitleOcrService
 
         if (removeHi)
         {
-            args += " /RemoveTextForHI";
+            argsList.Add("/RemoveTextForHI");
         }
 
-        return args;
+        return argsList.ToArray();
     }
 
     /// <summary>

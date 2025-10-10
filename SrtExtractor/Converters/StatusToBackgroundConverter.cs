@@ -15,18 +15,19 @@ public class StatusToBackgroundConverter : IValueConverter
     {
         if (value is BatchFileStatus status)
         {
+            // Use theme-aware colors from DesignTokens.xaml
             return status switch
             {
-                BatchFileStatus.Pending => new SolidColorBrush(Colors.White),
-                BatchFileStatus.Processing => new SolidColorBrush(Color.FromRgb(255, 248, 220)), // Light yellow
-                BatchFileStatus.Completed => new SolidColorBrush(Color.FromRgb(240, 255, 240)), // Light green
-                BatchFileStatus.Error => new SolidColorBrush(Color.FromRgb(255, 240, 240)), // Light red
-                BatchFileStatus.Cancelled => new SolidColorBrush(Color.FromRgb(248, 248, 248)), // Light gray
-                _ => new SolidColorBrush(Colors.White)
+                BatchFileStatus.Pending => System.Windows.Application.Current.FindResource("BackgroundBrush"),
+                BatchFileStatus.Processing => System.Windows.Application.Current.FindResource("WarningBrush"),
+                BatchFileStatus.Completed => System.Windows.Application.Current.FindResource("SuccessBrush"),
+                BatchFileStatus.Error => System.Windows.Application.Current.FindResource("ErrorBrush"),
+                BatchFileStatus.Cancelled => System.Windows.Application.Current.FindResource("BackgroundAltBrush"),
+                _ => System.Windows.Application.Current.FindResource("BackgroundBrush")
             };
         }
         
-        return new SolidColorBrush(Colors.White);
+        return System.Windows.Application.Current.FindResource("BackgroundBrush");
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

@@ -12,6 +12,18 @@ A powerful and easy-to-use desktop application for extracting subtitles from MKV
 
 SrtExtractor simplifies the process of extracting subtitles from your video files. Whether you're dealing with MKV containers or MP4 files with embedded "Timed Text" subtitles, SrtExtractor provides a seamless experience to convert them into the widely compatible SRT format.
 
+### 🆕 What's New in v2.0
+
+Version 2.0 brings major UX improvements and performance enhancements:
+
+- **🎨 Clean Tab-Based Interface** - Separate Extract, Batch, History, and Tools tabs for focused workflows
+- **👤 Humanized Track Information** - User-friendly labels like "Image-based (PGS)" instead of technical jargon
+- **⚡ Speed Indicators** - Know instantly which tracks are fast (text) vs slow (OCR required)
+- **⌨️ Enhanced Keyboard Shortcuts** - Press F1 to see all shortcuts in a beautiful help window
+- **🚀 Performance Boost** - 2-3x faster codec detection and batch processing
+- **♿ Better Accessibility** - Screen reader support and comprehensive keyboard navigation
+- **🐛 Bug Fixes** - ASS/SSA subtitle support, accurate batch reporting, and more
+
 ## ✨ Features
 
 - **Multi-format Support**: Handles both MKV and MP4 video files
@@ -98,25 +110,32 @@ The application will automatically detect and download required external tools o
 
 ## 🚀 Usage
 
-### Single File Processing
+### Single File Processing (Extract Tab)
 
-1. **Select Video File**: Click "Pick Video..." to choose your MKV or MP4 file
-2. **Probe Tracks**: Click "Probe Tracks" to analyze the file for subtitle tracks
-3. **Review Recommendation**: The smart recommendation engine automatically selects the best track (SubRip/SRT preferred over HDMV PGS)
-4. **Select Track**: Choose your preferred subtitle track from the list, or use the recommended one
-5. **Extract**: Click "Extract Selected → SRT" to generate the SRT file
-6. **Multi-Pass Correction**: OCR errors are automatically corrected using advanced multi-pass correction
+1. **Open Extract Tab**: The default view when you launch the app
+2. **Select Video File**: Click "Pick Video..." or press Ctrl+O to choose your MKV or MP4 file
+3. **Probe Tracks**: Click "Probe Tracks" or press Ctrl+P to analyze available subtitle tracks
+4. **Review Tracks**: View human-friendly track information with speed indicators:
+   - **⚡ Fast** - Text-based subtitles (instant extraction)
+   - **🐢 OCR Required** - Image-based subtitles (requires processing time)
+5. **Review Recommendation**: The smart recommendation engine automatically selects the best track
+6. **Select Track**: Choose your preferred subtitle track from the list (or use the recommended one)
+7. **Extract**: Click "Extract to SRT" or press Ctrl+E to generate the SRT file
+8. **Auto-Correction**: OCR errors are automatically corrected using advanced multi-pass correction
 
-### Batch Processing
+### Batch Processing (Batch Tab)
 
-Process multiple files efficiently with the new batch mode:
+Process multiple files efficiently with the dedicated Batch tab:
 
-1. **Enable Batch Mode**: Check "🎬 Enable Batch Mode" in the Settings panel
-2. **Confirm Settings**: Review your preferred subtitle settings (forced/CC, OCR language)
+1. **Switch to Batch Tab**: Click the "Batch" tab or press Ctrl+B
+2. **Confirm Settings**: Review your subtitle preferences shown in the settings panel
 3. **Add Files**: Drag & drop MKV/MP4 files anywhere on the window to add them to the queue
-4. **Review Queue**: Check the batch queue panel showing file sizes, network indicators (🌐), and estimated processing times
+4. **Review Queue**: Check the batch queue showing:
+   - File sizes and network indicators (🌐)
+   - Estimated processing times
+   - Individual file status
 5. **Process Batch**: Click "🚀 Process Batch" to extract subtitles from all files
-6. **Monitor Progress**: Watch real-time progress with detailed status updates
+6. **Monitor Progress**: Watch real-time progress with detailed status updates for each file
 7. **Review Results**: Get a comprehensive summary of successful, failed, and cancelled files
 
 #### Batch Mode Features
@@ -127,27 +146,29 @@ Process multiple files efficiently with the new batch mode:
 - **Detailed Summary**: Complete breakdown of processing results when finished
 - **Automatic Cleanup**: Temporary files are automatically cleaned up during and after processing
 
-### Standalone SRT Correction
+### Standalone SRT Correction (Tools Tab)
 
-Use the "🔧 Correct SRT File" button to fix OCR errors in existing SRT files:
-1. Click "🔧 Correct SRT File"
-2. Select your SRT file
-3. Common OCR errors are automatically fixed
-4. File is updated in-place with corrections
+Use the SRT Correction tool to fix OCR errors in existing SRT files:
+1. **Switch to Tools Tab**: Click the "Tools" tab
+2. **Launch Tool**: Click "SRT Correction" button or press Ctrl+R
+3. **Select SRT File**: Choose the file you want to correct
+4. **Auto-Correction**: Common OCR errors are automatically fixed
+5. **Updated File**: File is corrected in-place with detailed statistics
 
-### Batch SRT Correction
+### Batch SRT Correction (Tools Tab)
 
-Process hundreds of SRT files simultaneously with the new batch correction feature:
+Process hundreds of SRT files simultaneously with the batch correction tool:
 
-1. **Open Batch Tool**: Click "Batch SRT Correction" button in the main window
-2. **Select Folder**: Choose a folder containing SRT files (with option to include subfolders)
-3. **Scan Files**: Click "🔍 Scan for SRT Files" to discover all SRT files
-4. **Configure Options**: 
+1. **Switch to Tools Tab**: Click the "Tools" tab
+2. **Launch Batch Tool**: Click "Batch SRT Correction" button
+3. **Select Folder**: Choose a folder containing SRT files (with option to include subfolders)
+4. **Scan Files**: Click "🔍 Scan for SRT Files" to discover all SRT files
+5. **Configure Options**: 
    - Include subfolders (recommended for large collections)
    - Create backup copies (recommended for safety)
-5. **Start Processing**: Click "🚀 Start Batch Correction" to process all files
-6. **Monitor Progress**: Watch real-time progress with file-by-file status updates
-7. **Review Results**: Get detailed statistics on corrections applied per file
+6. **Start Processing**: Click "🚀 Start Batch Correction" to process all files
+7. **Monitor Progress**: Watch real-time progress with file-by-file status updates
+8. **Review Results**: Get detailed statistics on corrections applied per file
 
 #### Batch SRT Correction Features
 - **Lightning Fast**: Process hundreds of SRT files in minutes
@@ -160,7 +181,9 @@ Process hundreds of SRT files simultaneously with the new batch correction featu
 
 **Example Results**: 79 SRT files processed with 81,000+ total corrections applied!
 
-### Settings
+### Settings (Tools Tab)
+
+Access settings in the Tools tab or via menu Options → Settings:
 
 - **Subtitle Preference**: Choose between "Prefer forced subtitles" or "Prefer CC (Closed Captions)"
 - **OCR Language**: Set the language for OCR conversion (default: English)
@@ -263,17 +286,24 @@ SrtExtractor provides comprehensive logging:
 - **Log Format**: `srt_YYYYMMDD.txt`
 - **Recommendation Logging**: Track selection decisions and reasoning are logged for transparency
 
-## 🎨 User Interface
+## 🎨 User Interface (v2.0)
 
-- **Clean Design**: Modern, intuitive interface with optimized layout
-- **Real-time Feedback**: Progress indicators and status updates
-- **Tool Status**: Visual indicators for external tool availability
-- **Batch Queue Panel**: Dedicated panel for managing multiple files with drag & drop
+### Tab-Based Interface
+- **Extract Tab**: Single-file extraction with focused workflow
+- **Batch Tab**: Multiple-file processing with drag & drop queue
+- **History Tab**: Recent files list and complete log viewer
+- **Tools Tab**: Advanced tools, settings, and tool status
+
+### Design Features
+- **Clean Modern Design**: Microsoft 365-inspired light theme
+- **Humanized Track Display**: User-friendly labels instead of technical jargon
+- **Speed Indicators**: Visual cues showing fast (⚡) vs slow (🐢) subtitle tracks
+- **3-Tier Button Hierarchy**: Clear visual priority for primary/secondary/tertiary actions
+- **Real-time Feedback**: Progress indicators and status updates throughout
+- **Keyboard Shortcuts**: Press F1 to view comprehensive shortcut help window
 - **Network Indicators**: Visual indicators (🌐) for network files with time estimates
-- **Progress Tracking**: Real-time progress bars and counters for batch operations
-- **Batch SRT Correction Window**: Dedicated interface for bulk SRT file processing
-- **File List Display**: Shows discovered SRT files with status and correction counts
-- **About Window**: Branding and credits information
+- **Accessibility**: Screen reader support and full keyboard navigation
+- **Tool Status Display**: Visual indicators for external tool availability (MKVToolNix, FFmpeg, etc.)
 
 ## 🐛 Troubleshooting
 
@@ -282,7 +312,7 @@ SrtExtractor provides comprehensive logging:
 1. **Tools Not Found**: Use "Re-detect Tools" button or check tool installation
 2. **Extraction Fails**: Verify the selected track is a supported format
 3. **OCR Issues**: Ensure Subtitle Edit CLI is properly built and available
-4. **Batch Mode Not Working**: Ensure you've enabled batch mode and added files to the queue
+4. **Batch Mode Not Working**: Switch to the Batch tab and add files to the queue via drag & drop
 5. **Network Files Slow**: Files on network drives will take longer - this is normal
 6. **Temporary Files Left Behind**: Use the "🧹 Cleanup Temp Files" button if needed
 7. **Cancellation Issues**: If processes don't stop, restart the application

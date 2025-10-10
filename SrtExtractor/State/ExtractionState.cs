@@ -16,12 +16,15 @@ public partial class ExtractionState : ObservableObject
 {
     // File Management
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanProbe))]
+    [NotifyPropertyChangedFor(nameof(CanExtract))]
     private string? _mkvPath;
 
     [ObservableProperty]
     private ObservableCollection<SubtitleTrack> _tracks = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanExtract))]
     private SubtitleTrack? _selectedTrack;
 
     [ObservableProperty]
@@ -29,6 +32,13 @@ public partial class ExtractionState : ObservableObject
 
     [ObservableProperty]
     private bool _showNoTracksError = false;
+
+    [ObservableProperty]
+    private bool _showExtractionSuccess = false;
+
+    [ObservableProperty]
+    private string _lastExtractionOutputPath = "";
+
 
 
     // Tool Status
@@ -43,12 +53,15 @@ public partial class ExtractionState : ObservableObject
 
     // Settings
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
     private bool _preferForced = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
     private bool _preferClosedCaptions = false;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
     private string _ocrLanguage = "eng";
 
     [ObservableProperty]
@@ -56,6 +69,7 @@ public partial class ExtractionState : ObservableObject
 
     // Multi-Pass Correction Settings
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
     private bool _enableMultiPassCorrection = true;
 
     [ObservableProperty]
@@ -65,6 +79,7 @@ public partial class ExtractionState : ObservableObject
     private bool _useSmartConvergence = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
     private string _correctionMode = "Standard"; // Quick, Standard, Thorough
 
     // Network Detection
@@ -83,15 +98,25 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _networkDriveInfo = "";
 
-    // Batch Mode
+    // Window Title - simple static title (active tab provides context)
     [ObservableProperty]
-    private bool _isBatchMode;
+    private string _windowTitle = "SrtExtractor";
 
     [ObservableProperty]
-    private double _queueColumnWidth = 0;
+    private ObservableCollection<BatchFile> _batchQueue;
 
-    [ObservableProperty]
-    private ObservableCollection<BatchFile> _batchQueue = new();
+    public ExtractionState()
+    {
+        // Initialize BatchQueue with CollectionChanged handler
+        _batchQueue = new ObservableCollection<BatchFile>();
+        _batchQueue.CollectionChanged += (sender, e) =>
+        {
+            // Update computed properties when batch queue changes
+            OnPropertyChanged(nameof(HasBatchQueue));
+            OnPropertyChanged(nameof(CanProcessBatch));
+            OnPropertyChanged(nameof(CanResumeBatch));
+        };
+    }
 
     [ObservableProperty]
     private int _batchCompletedCount = 0;
@@ -124,6 +149,9 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _recentFiles = new();
 
+    // Tab Navigation
+    [ObservableProperty]
+    private int _selectedTabIndex = 0; // 0=Extract, 1=Batch, 2=History, 3=Tools
 
     // Events
     public event EventHandler? PreferencesChanged;
@@ -135,6 +163,7 @@ public partial class ExtractionState : ObservableObject
             PreferClosedCaptions = false;
             FileNamePattern = "{basename}.{lang}{forced}.srt";
         }
+        // SettingsSummary notification handled by [NotifyPropertyChangedFor] attribute
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -145,14 +174,8 @@ public partial class ExtractionState : ObservableObject
             PreferForced = false;
             FileNamePattern = "{basename}.{lang}{cc}.srt";
         }
+        // SettingsSummary notification handled by [NotifyPropertyChangedFor] attribute
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    partial void OnIsBatchModeChanged(bool value)
-    {
-        // Notify computed properties that depend on IsBatchMode
-        OnPropertyChanged(nameof(ShowBatchMode));
-        OnPropertyChanged(nameof(ShowSingleFileMode));
     }
 
     partial void OnCorrectionModeChanged(string value)
@@ -169,33 +192,24 @@ public partial class ExtractionState : ObservableObject
         // Update convergence setting
         UseSmartConvergence = value != "Thorough";
         
+        // SettingsSummary notification handled by [NotifyPropertyChangedFor] attribute
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnMkvPathChanged(string? value)
-    {
-        OnPropertyChanged(nameof(CanProbe));
-        OnPropertyChanged(nameof(CanExtract));
-    }
-
-    partial void OnIsBusyChanged(bool value)
-    {
-        OnPropertyChanged(nameof(CanProbe));
-        OnPropertyChanged(nameof(CanExtract));
-        OnPropertyChanged(nameof(CanProcessBatch));
-    }
-
-    partial void OnSelectedTrackChanged(SubtitleTrack? value)
-    {
-        OnPropertyChanged(nameof(CanExtract));
-    }
+    // Property change handlers removed - now using [NotifyPropertyChangedFor] attributes
 
     // UI State
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanProbe))]
+    [NotifyPropertyChangedFor(nameof(CanExtract))]
+    [NotifyPropertyChangedFor(nameof(CanProcessBatch))]
     private bool _isBusy;
 
     [ObservableProperty]
     private bool _isProcessing = false;
+    
+    // Event to request opening settings dialog from toast notifications
+    public event EventHandler? RequestOpenSettings;
 
     [ObservableProperty]
     private string _processingMessage = "";
@@ -205,6 +219,14 @@ public partial class ExtractionState : ObservableObject
     
     // Internal log message list to prevent string concatenation memory issues
     private readonly List<string> _logMessages = new(1000);
+    
+    /// <summary>
+    /// Triggers the RequestOpenSettings event to open settings dialog immediately.
+    /// </summary>
+    public void TriggerOpenSettings()
+    {
+        RequestOpenSettings?.Invoke(this, EventArgs.Empty);
+    }
 
     // Enhanced Progress Information
     [ObservableProperty]
@@ -253,21 +275,15 @@ public partial class ExtractionState : ObservableObject
 
     public bool ShowNetworkWarning => IsNetworkFile && !string.IsNullOrEmpty(MkvPath);
 
-    public bool ShowBatchMode => IsBatchMode;
-
-    public bool ShowSingleFileMode => !IsBatchMode;
-
-    public bool ShowNoTracksWarning => ShowNoTracksError;
-
     // Resume Batch Computed Properties
     public bool CanResumeBatch => BatchQueue.Any() && LastProcessedBatchIndex >= 0 && LastProcessedBatchIndex < BatchQueue.Count - 1 && AreToolsAvailable && !IsBusy;
 
     public bool ShowResumeBatchButton => CanResumeBatch && BatchCompletedCount > 0;
 
     // Enhanced Progress Computed Properties
-    public string FormattedBytesProcessed => FormatBytes(BytesProcessed);
+    public string FormattedBytesProcessed => Utils.FileUtilities.FormatFileSize(BytesProcessed);
 
-    public string FormattedTotalBytes => FormatBytes(TotalBytes);
+    public string FormattedTotalBytes => Utils.FileUtilities.FormatFileSize(TotalBytes);
 
     public string ProgressDetails => $"({FormattedBytesProcessed} / {FormattedTotalBytes})";
 
@@ -280,6 +296,19 @@ public partial class ExtractionState : ObservableObject
 
     // Available correction modes
     public string[] AvailableCorrectionModes { get; } = { "Quick", "Standard", "Thorough" };
+
+    /// <summary>
+    /// Computed property that shows a summary of current settings at a glance.
+    /// </summary>
+    public string SettingsSummary
+    {
+        get
+        {
+            var preference = PreferForced ? "Forced" : "CC";
+            var multiPass = EnableMultiPassCorrection ? $"MultiPass({CorrectionMode})" : "SinglePass";
+            return $"⚙️ {OcrLanguage.ToUpper()} • {preference} • {multiPass}";
+        }
+    }
 
     /// <summary>
     /// Add a log message to the UI log display.
@@ -420,6 +449,8 @@ public partial class ExtractionState : ObservableObject
 
     /// <summary>
     /// Add a file to the batch queue.
+    /// NOTE: This method is kept for backwards compatibility but is discouraged.
+    /// Use the async version from ViewModel that properly initializes file data.
     /// </summary>
     /// <param name="filePath">Path to the file to add</param>
     /// <returns>True if file was added, false if already exists</returns>
@@ -430,8 +461,14 @@ public partial class ExtractionState : ObservableObject
             return false;
         }
 
-        var batchFile = new BatchFile { FilePath = filePath };
-        batchFile.UpdateFromFileSystem();
+        var batchFile = new BatchFile 
+        { 
+            FilePath = filePath,
+            FileName = Path.GetFileName(filePath),
+            Status = BatchFileStatus.Pending
+        };
+        
+        // Note: File size is not populated here. Use MainViewModel.AddFilesToBatchQueueAsync instead.
         BatchQueue.Add(batchFile);
 
         TotalBatchFiles = BatchQueue.Count;
@@ -496,17 +533,42 @@ public partial class ExtractionState : ObservableObject
 
     /// <summary>
     /// Update batch statistics based on current queue status.
+    /// Uses single-pass grouping for better performance (O(n) instead of O(3n)).
     /// </summary>
     public void UpdateBatchStatistics()
     {
-        BatchCompletedCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Completed);
-        BatchErrorCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Error);
-        BatchPendingCount = BatchQueue.Count(f => f.Status == BatchFileStatus.Pending);
+        // Single pass through the collection with grouping
+        var statusCounts = BatchQueue
+            .GroupBy(f => f.Status)
+            .ToDictionary(g => g.Key, g => g.Count());
         
-        // Update computed properties
+        BatchCompletedCount = statusCounts.GetValueOrDefault(BatchFileStatus.Completed, 0);
+        BatchErrorCount = statusCounts.GetValueOrDefault(BatchFileStatus.Error, 0);
+        BatchPendingCount = statusCounts.GetValueOrDefault(BatchFileStatus.Pending, 0);
+        
+        // Batch all property change notifications to reduce UI overhead
         OnPropertyChanged(nameof(CanProcessBatch));
         OnPropertyChanged(nameof(CanResumeBatch));
         OnPropertyChanged(nameof(ShowResumeBatchButton));
+    }
+
+    /// <summary>
+    /// Update batch statistics efficiently without triggering excessive UI updates.
+    /// Use this for frequent updates during batch processing.
+    /// </summary>
+    public void UpdateBatchStatisticsFast()
+    {
+        // Single pass through the collection with grouping
+        var statusCounts = BatchQueue
+            .GroupBy(f => f.Status)
+            .ToDictionary(g => g.Key, g => g.Count());
+        
+        BatchCompletedCount = statusCounts.GetValueOrDefault(BatchFileStatus.Completed, 0);
+        BatchErrorCount = statusCounts.GetValueOrDefault(BatchFileStatus.Error, 0);
+        BatchPendingCount = statusCounts.GetValueOrDefault(BatchFileStatus.Pending, 0);
+        
+        // Only notify essential properties during batch processing
+        // Skip computed properties that cause UI cascades
     }
 
     /// <summary>
@@ -544,27 +606,7 @@ public partial class ExtractionState : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Format bytes as a human-readable string.
-    /// </summary>
-    /// <param name="bytes">Number of bytes</param>
-    /// <returns>Formatted byte string</returns>
-    private static string FormatBytes(long bytes)
-    {
-        if (bytes == 0) return "0 B";
-        
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        int suffixIndex = 0;
-        double size = bytes;
-        
-        while (size >= 1024 && suffixIndex < suffixes.Length - 1)
-        {
-            size /= 1024;
-            suffixIndex++;
-        }
-        
-        return $"{size:F1} {suffixes[suffixIndex]}";
-    }
+    // FormatBytes method removed - now using shared Utils.FileUtilities.FormatFileSize
 
     /// <summary>
     /// Format a TimeSpan as a human-readable string.
@@ -624,7 +666,7 @@ public partial class ExtractionState : ObservableObject
         if (elapsed.TotalSeconds > 0)
         {
             var speedBytesPerSecond = bytesProcessed / elapsed.TotalSeconds;
-            ProcessingSpeed = FormatBytes((long)speedBytesPerSecond) + "/s";
+            ProcessingSpeed = Utils.FileUtilities.FormatFileSize((long)speedBytesPerSecond) + "/s";
             
             // Estimate time remaining
             if (TotalBytes > 0 && speedBytesPerSecond > 0)
@@ -678,7 +720,7 @@ public partial class ExtractionState : ObservableObject
         {
             var process = System.Diagnostics.Process.GetCurrentProcess();
             var memoryBytes = process.WorkingSet64;
-            return FormatBytes(memoryBytes);
+            return Utils.FileUtilities.FormatFileSize(memoryBytes);
         }
         catch
         {
@@ -714,6 +756,20 @@ public partial class ExtractionState : ObservableObject
         DetailedProgressMessage = string.Join(" • ", parts);
     }
 
+
+    /// <summary>
+    /// Clear file-specific state when selecting a new file or starting a new probe.
+    /// This is a lightweight reset that preserves settings and tool status.
+    /// </summary>
+    public void ClearFileState()
+    {
+        ShowNoTracksError = false;
+        ShowExtractionSuccess = false;
+        LastExtractionOutputPath = "";
+        Tracks.Clear();
+        SelectedTrack = null;
+        HasProbedFile = false;
+    }
 
     /// <summary>
     /// Reset the state to initial values.

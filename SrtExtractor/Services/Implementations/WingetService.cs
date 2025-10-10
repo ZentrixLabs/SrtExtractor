@@ -34,7 +34,7 @@ public class WingetService : IWingetService
                 return false;
             }
             
-            var (exitCode, _, _) = await _processRunner.RunAsync("winget", "--version");
+            var (exitCode, _, _) = await _processRunner.RunAsync("winget", new[] { "--version" });
             var isAvailable = exitCode == 0;
             
             _loggingService.LogInfo($"Winget available: {isAvailable}");
@@ -76,8 +76,9 @@ public class WingetService : IWingetService
             }
 
             // Install the package with silent flags
-            var args = $"install {packageId} --accept-package-agreements --accept-source-agreements --silent";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync("winget", args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                "winget", 
+                new[] { "install", packageId, "--accept-package-agreements", "--accept-source-agreements", "--silent" });
 
             if (exitCode == 0)
             {
@@ -103,8 +104,9 @@ public class WingetService : IWingetService
         {
             _loggingService.LogInfo($"Getting installed version for package: {packageId}");
             
-            var args = $"list {packageId} --exact";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync("winget", args);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                "winget", 
+                new[] { "list", packageId, "--exact" });
 
             if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
             {

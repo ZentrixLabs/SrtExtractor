@@ -3,12 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
+        Icon="pack://application:,,,/SrtExtractor.ico"
         Title="SrtExtractor - User Guide"
         Height="800" Width="1000"
         MinHeight="600" MinWidth="800"
-        WindowStartupLocation="CenterOwner"
-        Background="White">
+        WindowStartupLocation="CenterOwner">
     
     <Window.Resources>
         <Style TargetType="Button">
@@ -64,20 +66,32 @@
     
     <DockPanel>
         <!-- Navigation Panel -->
-        <Border DockPanel.Dock="Left" Width="200" Background="#F8F9FA" BorderBrush="#E9ECEF" BorderThickness="0,0,1,0">
+        <Border DockPanel.Dock="Left" Width="200" Background="{StaticResource BackgroundAltBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
             <StackPanel>
-            <TextBlock Text="📚 User Guide" FontSize="16" FontWeight="Bold" Margin="12,12,12,8" Foreground="#495057"/>
+            <StackPanel Orientation="Horizontal" Margin="12,12,12,8">
+                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                           Text="{StaticResource IconHelp}" 
+                           FontSize="16" 
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,8,0"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="User Guide" 
+                           FontSize="16" 
+                           FontWeight="{StaticResource FontWeightBold}" 
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
             
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="8,0,8,8">
-                    <Button Content="🏠 Getting Started" Style="{StaticResource NavigationButton}" Click="NavigateToGettingStarted" Tag="getting-started"/>
-                    <Button Content="🎬 Single File Mode" Style="{StaticResource NavigationButton}" Click="NavigateToSingleFile" Tag="single-file"/>
-                    <Button Content="📁 Batch Mode" Style="{StaticResource NavigationButton}" Click="NavigateToBatchMode" Tag="batch-mode"/>
-                    <Button Content="⚙️ Settings &amp; Options" Style="{StaticResource NavigationButton}" Click="NavigateToSettings" Tag="settings"/>
-                    <Button Content="🔧 SRT Correction" Style="{StaticResource NavigationButton}" Click="NavigateToSrtCorrection" Tag="srt-correction"/>
-                    <Button Content="⌨️ Keyboard Shortcuts" Style="{StaticResource NavigationButton}" Click="NavigateToShortcuts" Tag="shortcuts"/>
-                    <Button Content="❓ Troubleshooting" Style="{StaticResource NavigationButton}" Click="NavigateToTroubleshooting" Tag="troubleshooting"/>
-                    <Button Content="📋 Supported Formats" Style="{StaticResource NavigationButton}" Click="NavigateToFormats" Tag="formats"/>
+                    <Button Content="Getting Started" Style="{StaticResource NavigationButton}" Click="NavigateToGettingStarted" Tag="getting-started"/>
+                    <Button Content="Single File Mode" Style="{StaticResource NavigationButton}" Click="NavigateToSingleFile" Tag="single-file"/>
+                    <Button Content="Batch Mode" Style="{StaticResource NavigationButton}" Click="NavigateToBatchMode" Tag="batch-mode"/>
+                    <Button Content="Settings &amp; Options" Style="{StaticResource NavigationButton}" Click="NavigateToSettings" Tag="settings"/>
+                    <Button Content="SRT Correction" Style="{StaticResource NavigationButton}" Click="NavigateToSrtCorrection" Tag="srt-correction"/>
+                    <Button Content="Keyboard Shortcuts" Style="{StaticResource NavigationButton}" Click="NavigateToShortcuts" Tag="shortcuts"/>
+                    <Button Content="Troubleshooting" Style="{StaticResource NavigationButton}" Click="NavigateToTroubleshooting" Tag="troubleshooting"/>
+                    <Button Content="Supported Formats" Style="{StaticResource NavigationButton}" Click="NavigateToFormats" Tag="formats"/>
                 </StackPanel>
             </ScrollViewer>
             </StackPanel>

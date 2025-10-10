@@ -15,6 +15,7 @@ namespace SrtExtractor.ViewModels;
 public partial class VobSubTrackAnalyzerViewModel : ObservableObject
 {
     private readonly ILoggingService _loggingService;
+    private readonly INotificationService _notificationService;
     private readonly IMkvToolService _mkvToolService;
     private readonly ISettingsService _settingsService;
     private CancellationTokenSource? _cancellationTokenSource;
@@ -63,10 +64,12 @@ public partial class VobSubTrackAnalyzerViewModel : ObservableObject
 
     public VobSubTrackAnalyzerViewModel(
         ILoggingService loggingService,
+        INotificationService notificationService,
         IMkvToolService mkvToolService,
         ISettingsService settingsService)
     {
         _loggingService = loggingService;
+        _notificationService = notificationService;
         _mkvToolService = mkvToolService;
         _settingsService = settingsService;
         
@@ -258,7 +261,7 @@ public partial class VobSubTrackAnalyzerViewModel : ObservableObject
         catch (Exception ex)
         {
             _loggingService.LogError("Error during VobSub track scan", ex);
-            MessageBox.Show($"Error during scan: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Error during scan: {ex.Message}", "Error");
         }
         finally
         {
@@ -349,7 +352,7 @@ public partial class VobSubTrackAnalyzerViewModel : ObservableObject
     {
         var instructions = GenerateSubtitleEditInstructions();
         Clipboard.SetText(instructions);
-        MessageBox.Show("Instructions copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        _notificationService.ShowSuccess("Instructions copied to clipboard!", "Success");
         _loggingService.LogInfo("Copied Subtitle Edit instructions to clipboard");
     }
 
@@ -369,15 +372,14 @@ public partial class VobSubTrackAnalyzerViewModel : ObservableObject
             {
                 var report = GenerateFullReport();
                 File.WriteAllText(dialog.FileName, report);
-                MessageBox.Show($"Report exported successfully!\n\n{dialog.FileName}", "Export Complete", 
-                              MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowSuccess($"Report exported successfully!\n\n{dialog.FileName}", "Export Complete");
                 _loggingService.LogInfo($"Exported VobSub track analysis report to: {dialog.FileName}");
             }
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Error exporting VobSub track report", ex);
-            MessageBox.Show($"Error exporting report: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Error exporting report: {ex.Message}", "Error");
         }
     }
 

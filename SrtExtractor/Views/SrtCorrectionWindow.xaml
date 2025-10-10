@@ -5,11 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtExtractor.Views"
         xmlns:converters="clr-namespace:SrtExtractor.Converters"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
+        ui:WindowHelper.UseModernWindowStyle="True"
+        Icon="pack://application:,,,/SrtExtractor.ico"
         Title="SRT Correction - SrtExtractor" 
         Height="700" Width="800"
         MinHeight="600" MinWidth="700"
-        Background="White"
         WindowStartupLocation="CenterOwner">
     
     <Window.Resources>
@@ -50,7 +52,17 @@
         <!-- Main Content -->
         <TabControl Grid.Row="1">
             <!-- Single File Tab -->
-            <TabItem Header="📄 Single File">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="{StaticResource IconDocument}" 
+                                   FontSize="14" 
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="Single File" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                     <TextBlock Text="Correct OCR errors in a single SRT file" 
@@ -60,7 +72,7 @@
                     
                     <TextBlock Text="Select an SRT file to apply automatic corrections for common OCR errors like extra spaces, missing spaces, character substitutions, and more." 
                                TextWrapping="Wrap" 
-                               Foreground="Gray" 
+                               Foreground="{StaticResource TextSecondaryBrush}" 
                                Margin="0,0,0,20"/>
 
                     <!-- File Selection -->
@@ -69,18 +81,17 @@
                             <StackPanel Orientation="Horizontal" Margin="0,10">
                                 <Button Content="Select SRT File..." 
                                         Click="SelectSingleFile_Click"
-                                        Background="LightBlue"
-                                        FontWeight="Bold"
+                                        Style="{StaticResource SecondaryButton}"
                                         Margin="0,0,10,0"/>
                                 <TextBlock Text="No file selected" 
                                            Name="SingleFileStatus"
                                            VerticalAlignment="Center"
-                                           Foreground="Gray"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                             
                             <TextBlock Name="SingleFilePath" 
                                        TextWrapping="Wrap" 
-                                       Foreground="DarkBlue" 
+                                       Foreground="{StaticResource PrimaryBrush}" 
                                        Margin="0,10,0,0"
                                        Visibility="Collapsed"/>
                         </StackPanel>
@@ -95,20 +106,27 @@
                                       Margin="0,5"/>
                             <TextBlock Text="Creates a .bak file before applying corrections" 
                                        FontStyle="Italic" 
-                                       Foreground="Gray" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" 
                                        Margin="0,10,0,0"/>
                         </StackPanel>
                     </GroupBox>
 
                     <!-- Process Button -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
-                        <Button Content="🔧 Correct File" 
-                                Click="ProcessSingleFile_Click"
-                                Background="LightGreen"
-                                FontWeight="Bold"
+                        <Button Click="ProcessSingleFile_Click"
+                                Style="{StaticResource PrimaryButton}"
                                 Padding="20,8"
                                 Name="ProcessSingleButton"
-                                IsEnabled="False"/>
+                                IsEnabled="False">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                           Text="{StaticResource IconSettings}" 
+                                           FontSize="16" 
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="Correct File" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
 
                     <!-- Single File Results -->
@@ -129,7 +147,17 @@
             </TabItem>
 
             <!-- Batch Processing Tab -->
-            <TabItem Header="📁 Batch Processing">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                   Text="{StaticResource IconFolder}" 
+                                   FontSize="14" 
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="Batch Processing" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                     <TextBlock Text="Correct OCR errors in multiple SRT files" 
@@ -139,7 +167,7 @@
                     
                     <TextBlock Text="Select a folder to automatically find and correct all SRT files. This is perfect for processing large collections of subtitle files." 
                                TextWrapping="Wrap" 
-                               Foreground="Gray" 
+                               Foreground="{StaticResource TextSecondaryBrush}" 
                                Margin="0,0,0,20"/>
 
                     <!-- Folder Selection -->
@@ -148,18 +176,17 @@
                             <StackPanel Orientation="Horizontal" Margin="0,10">
                                 <Button Content="Select Folder..." 
                                         Click="SelectFolder_Click"
-                                        Background="LightBlue"
-                                        FontWeight="Bold"
+                                        Style="{StaticResource SecondaryButton}"
                                         Margin="0,0,10,0"/>
                                 <TextBlock Text="No folder selected" 
                                            Name="FolderStatus"
                                            VerticalAlignment="Center"
-                                           Foreground="Gray"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                             
                             <TextBlock Name="FolderPath" 
                                        TextWrapping="Wrap" 
-                                       Foreground="DarkBlue" 
+                                       Foreground="{StaticResource PrimaryBrush}" 
                                        Margin="0,10,0,0"
                                        Visibility="Collapsed"/>
                         </StackPanel>
@@ -178,7 +205,7 @@
                                       Margin="0,5"/>
                             <TextBlock Text="Options for batch processing multiple SRT files" 
                                        FontStyle="Italic" 
-                                       Foreground="Gray" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" 
                                        Margin="0,10,0,0"/>
                         </StackPanel>
                     </GroupBox>
@@ -187,15 +214,22 @@
                     <GroupBox Header="SRT Files Found" Margin="0,0,0,15">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <Button Content="🔍 Scan Folder" 
-                                        Click="ScanFolder_Click"
-                                        Background="Orange"
-                                        FontWeight="Bold"
+                                <Button Click="ScanFolder_Click"
+                                        Style="{StaticResource PrimaryButton}"
                                         Margin="0,0,10,0"
-                                        Name="ScanButton"/>
+                                        Name="ScanButton">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconSearch}" 
+                                                   FontSize="14" 
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Scan Folder" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                                 <TextBlock Text="Click to scan for SRT files in the selected folder" 
                                            VerticalAlignment="Center"
-                                           Foreground="Gray"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
                             </StackPanel>
                             
                             <!-- Files List -->
@@ -207,25 +241,33 @@
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding FileName}" FontWeight="Bold" Width="200"/>
-                                            <TextBlock Text="{Binding FormattedSize}" Foreground="Gray" Width="80"/>
-                                            <TextBlock Text="{Binding Status}" Foreground="DarkBlue" Width="150"/>
+                                            <TextBlock Text="{Binding FormattedSize}" Foreground="{StaticResource TextSecondaryBrush}" Width="80"/>
+                                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource PrimaryBrush}" Width="150"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             
                             <!-- No Files Message -->
-                            <Border Background="LightYellow" 
-                                    BorderBrush="Orange" 
+                            <Border Background="{StaticResource BackgroundAltBrush}" 
+                                    BorderBrush="{StaticResource WarningBrush}" 
                                     BorderThickness="1" 
-                                    CornerRadius="4" 
-                                    Padding="10" 
+                                    CornerRadius="{StaticResource RadiusS}" 
+                                    Padding="{StaticResource ThicknessM}" 
                                     Margin="0,10,0,0"
                                     Name="NoFilesMessage"
                                     Visibility="Collapsed">
-                                <TextBlock Text="No SRT files found in the selected folder. Try including subfolders or select a different folder." 
-                                           TextWrapping="Wrap" 
-                                           HorizontalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="{StaticResource IconWarning}" 
+                                               FontSize="16" 
+                                               Foreground="{StaticResource WarningBrush}"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="No SRT files found in the selected folder. Try including subfolders or select a different folder." 
+                                               TextWrapping="Wrap" 
+                                               Foreground="{StaticResource WarningBrush}"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                     </GroupBox>
@@ -234,21 +276,35 @@
                     <GroupBox Header="Batch Processing" Margin="0,0,0,15">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,10">
-                                <Button Content="🚀 Start Batch Correction" 
-                                        Click="StartBatchCorrection_Click"
-                                        Background="LightGreen"
-                                        FontWeight="Bold"
+                                <Button Click="StartBatchCorrection_Click"
+                                        Style="{StaticResource PrimaryButton}"
                                         Padding="20,8"
                                         Name="StartBatchButton"
                                         IsEnabled="False"
-                                        Margin="0,0,10,0"/>
-                                <Button Content="⏹️ Cancel" 
-                                        Click="CancelBatch_Click"
-                                        Background="LightGray"
-                                        FontWeight="Bold"
+                                        Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconPlay}" 
+                                                   FontSize="16" 
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Start Batch Correction" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="CancelBatch_Click"
+                                        Style="{StaticResource SecondaryButton}"
                                         Padding="20,8"
                                         Name="CancelBatchButton"
-                                        IsEnabled="False"/>
+                                        IsEnabled="False">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconStop}" 
+                                                   FontSize="16" 
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Cancel" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                             
                             <!-- Progress -->
@@ -294,7 +350,7 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="Close" 
                     Click="CloseButton_Click"
-                    Background="LightGray"
+                    Style="{StaticResource SecondaryButton}"
                     Padding="20,8"/>
         </StackPanel>
     </Grid>

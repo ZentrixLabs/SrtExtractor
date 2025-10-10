@@ -88,11 +88,13 @@ public class ToolDetectionService : IToolDetectionService
         // Also check if it's in PATH
         try
         {
-            var (exitCode, _, _) = await _processRunner.RunAsync("seconv", "--help");
+            var (exitCode, _, _) = await _processRunner.RunAsync("seconv", new[] { "--help" });
             if (exitCode == 0 || exitCode == 1) // Help usually returns 1
             {
-                _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, "seconv", "Unknown", null));
-                return new ToolStatus(true, "seconv", "Unknown", null);
+                // Try to get version even for PATH tools
+                var version = await GetToolVersionAsync("seconv");
+                _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, "seconv", version, null));
+                return new ToolStatus(true, "seconv", version, null);
             }
         }
         catch
@@ -136,11 +138,13 @@ public class ToolDetectionService : IToolDetectionService
         // Also check if it's in PATH
         try
         {
-            var (exitCode, _, _) = await _processRunner.RunAsync("ffmpeg", "-version");
+            var (exitCode, _, _) = await _processRunner.RunAsync("ffmpeg", new[] { "-version" });
             if (exitCode == 0)
             {
-                _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, "ffmpeg", "Unknown", null));
-                return new ToolStatus(true, "ffmpeg", "Unknown", null);
+                // Try to get version even for PATH tools
+                var version = await GetToolVersionAsync("ffmpeg");
+                _loggingService.LogToolDetection("FFmpeg", new ToolStatus(true, "ffmpeg", version, null));
+                return new ToolStatus(true, "ffmpeg", version, null);
             }
         }
         catch
@@ -167,10 +171,12 @@ public class ToolDetectionService : IToolDetectionService
             }
         }
 
-        // Check PATH environment variable
+        // Check PATH environment variable using Windows where command
         try
         {
-            var whereResult = await _processRunner.RunAsync("where", toolName);
+            // Use full path to where.exe to avoid ProcessRunner looking in current directory
+            var whereExe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "where.exe");
+            var whereResult = await _processRunner.RunAsync(whereExe, new[] { toolName });
             if (whereResult.ExitCode == 0 && !string.IsNullOrEmpty(whereResult.StdOut))
             {
                 var path = whereResult.StdOut.Trim().Split('\n')[0].Trim();
@@ -192,7 +198,7 @@ public class ToolDetectionService : IToolDetectionService
         try
         {
             _loggingService.LogInfo($"Checking for dotnet tool: {toolName}");
-            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", $"tool list --global");
+            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", new[] { "tool", "list", "--global" });
             
             if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
             {
@@ -225,7 +231,7 @@ public class ToolDetectionService : IToolDetectionService
         try
         {
             // Get the dotnet tools directory
-            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", "tool list --global");
+            var (exitCode, stdout, _) = await _processRunner.RunAsync("dotnet", new[] { "tool", "list", "--global" });
             
             if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
             {
@@ -252,7 +258,7 @@ public class ToolDetectionService : IToolDetectionService
                     // If not found in common locations, try to run it directly
                     try
                     {
-                        var (testExitCode, _, _) = await _processRunner.RunAsync(toolName, "--help");
+                        var (testExitCode, _, _) = await _processRunner.RunAsync(toolName, new[] { "--help" });
                         if (testExitCode == 0 || testExitCode == 1) // Help usually returns 1
                         {
                             return toolName; // Tool is in PATH
@@ -283,52 +289,55 @@ public class ToolDetectionService : IToolDetectionService
 
         try
         {
-            var toolName = Path.GetFileNameWithoutExtension(toolPath).ToLowerInvariant();
+            var tool = IdentifyTool(toolPath);
             
-            if (toolName.Contains("mkvmerge") || toolName.Contains("mkvextract"))
+            switch (tool)
             {
-                // MKVToolNix tools - try --version
-                var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, "--version");
-                if (exitCode == 0)
-                {
-                    _loggingService.LogInfo($"MKVToolNix validation successful: {toolPath}");
-                    return true;
-                }
-            }
-            else if (toolName.Contains("subtitleedit"))
-            {
-                // Subtitle Edit - try /help (but it might open GUI, so we'll just check if file exists and is executable)
-                // For now, just verify the file exists and is executable
-                _loggingService.LogInfo($"Subtitle Edit validation successful (file exists): {toolPath}");
-                return true;
-            }
-            else if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
-            {
-                // FFmpeg tools - just check if file exists and is executable
-                // FFmpeg has quirky behavior with --version, so we'll trust that if it exists, it works
-                _loggingService.LogInfo($"FFmpeg validation successful (file exists): {toolPath}");
-                return true;
-            }
-            else
-            {
-                // Generic tool - try common help flags
-                var helpFlags = new[] { "--version", "/version", "--help", "/help", "/?" };
-                foreach (var flag in helpFlags)
-                {
-                    try
+                case KnownTool.MkvMerge:
+                case KnownTool.MkvExtract:
                     {
-                        var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, flag);
+                        var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { "--version" });
                         if (exitCode == 0)
                         {
-                            _loggingService.LogInfo($"Tool validation successful with {flag}: {toolPath}");
+                            _loggingService.LogInfo($"MKVToolNix validation successful: {toolPath}");
                             return true;
                         }
+                        break;
                     }
-                    catch
+                
+                case KnownTool.SubtitleEditCli:
+                    // Subtitle Edit - file exists is sufficient
+                    _loggingService.LogInfo($"Subtitle Edit CLI validation successful (file exists): {toolPath}");
+                    return true;
+                
+                case KnownTool.FFmpeg:
+                case KnownTool.FFprobe:
+                    // FFmpeg tools - file exists is sufficient
+                    _loggingService.LogInfo($"FFmpeg validation successful (file exists): {toolPath}");
+                    return true;
+                
+                default:
                     {
-                        // Continue to next flag
+                        // Generic tool - try common help flags
+                        var helpFlags = new[] { "--version", "/version", "--help", "/help", "/?" };
+                        foreach (var flag in helpFlags)
+                        {
+                            try
+                            {
+                                var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { flag });
+                                if (exitCode == 0)
+                                {
+                                    _loggingService.LogInfo($"Tool validation successful with {flag}: {toolPath}");
+                                    return true;
+                                }
+                            }
+                            catch
+                            {
+                                // Continue to next flag
+                            }
+                        }
+                        break;
                     }
-                }
             }
 
             _loggingService.LogWarning($"Tool validation failed: {toolPath}");
@@ -341,16 +350,92 @@ public class ToolDetectionService : IToolDetectionService
         }
     }
 
+    /// <summary>
+    /// Identify which known tool a path corresponds to.
+    /// </summary>
+    /// <param name="toolPath">Path to the tool executable</param>
+    /// <returns>Identified tool type</returns>
+    private static KnownTool IdentifyTool(string toolPath)
+    {
+        var toolName = Path.GetFileNameWithoutExtension(toolPath).ToLowerInvariant();
+        
+        if (toolName.Contains("mkvmerge")) return KnownTool.MkvMerge;
+        if (toolName.Contains("mkvextract")) return KnownTool.MkvExtract;
+        if (toolName.Contains("seconv")) return KnownTool.SubtitleEditCli;
+        if (toolName.Contains("ffmpeg")) return KnownTool.FFmpeg;
+        if (toolName.Contains("ffprobe")) return KnownTool.FFprobe;
+        
+        return KnownTool.Unknown;
+    }
+
     private async Task<string?> GetToolVersionAsync(string toolPath)
     {
         try
         {
-            var (exitCode, stdout, _) = await _processRunner.RunAsync(toolPath, "--version");
-            if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
+            var tool = IdentifyTool(toolPath);
+            
+            // Different tools use different version flags
+            var versionArgs = tool switch
             {
-                // Extract version from output (first line usually contains version)
-                var firstLine = stdout.Split('\n')[0].Trim();
-                return firstLine;
+                KnownTool.FFmpeg or KnownTool.FFprobe => new[] { "-version" },
+                KnownTool.SubtitleEditCli or KnownTool.MkvMerge or KnownTool.MkvExtract => new[] { "--version" },
+                _ => new[] { "--version" }
+            };
+            
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolPath, versionArgs);
+            
+            // Some tools return version in stdout, some in stderr, and some use exit code 1
+            if ((exitCode == 0 || exitCode == 1) && !string.IsNullOrEmpty(stdout))
+            {
+                // Extract version from output
+                var lines = stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                if (lines.Length > 0)
+                {
+                    var firstLine = lines[0].Trim();
+                    
+                    // Parse version based on tool type (using type-safe enum)
+                    // Note: 'tool' is already declared in outer scope
+                    switch (tool)
+                    {
+                        case KnownTool.FFmpeg:
+                        case KnownTool.FFprobe:
+                            {
+                                // FFmpeg version format: "ffmpeg version N-xxxxx-gxxxxxxx Copyright..."
+                                var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"ffmpeg version\s+([^\s]+)");
+                                if (versionMatch.Success)
+                                {
+                                    return versionMatch.Groups[1].Value;
+                                }
+                                break;
+                            }
+                        
+                        case KnownTool.MkvMerge:
+                        case KnownTool.MkvExtract:
+                            {
+                                // MKVToolNix format: "mkvmerge v84.0 ('Something') 64-bit"
+                                var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"v(\d+\.\d+(?:\.\d+)?)");
+                                if (versionMatch.Success)
+                                {
+                                    return versionMatch.Groups[1].Value;
+                                }
+                                break;
+                            }
+                        
+                        case KnownTool.SubtitleEditCli:
+                            {
+                                // Try to extract version number from various formats
+                                var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"(\d+\.\d+(?:\.\d+)?)");
+                                if (versionMatch.Success)
+                                {
+                                    return versionMatch.Groups[1].Value;
+                                }
+                                break;
+                            }
+                    }
+                    
+                    // Fallback: return first 50 chars of first line
+                    return firstLine.Length > 50 ? firstLine.Substring(0, 50) + "..." : firstLine;
+                }
             }
         }
         catch (Exception ex)

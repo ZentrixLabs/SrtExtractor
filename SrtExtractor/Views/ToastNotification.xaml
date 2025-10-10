@@ -1,0 +1,135 @@
+<UserControl x:Class="SrtExtractor.Views.ToastNotification"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             mc:Ignorable="d" 
+             x:Name="ToastRoot"
+             MaxWidth="500"
+             Opacity="0">
+    
+    <UserControl.Resources>
+        <!-- Toast animations -->
+        <Storyboard x:Key="ShowAnimation">
+            <DoubleAnimation Storyboard.TargetName="ToastRoot" 
+                           Storyboard.TargetProperty="Opacity"
+                           From="0" To="1" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="ToastRoot"
+                           Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                           From="30" To="0" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+        
+        <Storyboard x:Key="HideAnimation">
+            <DoubleAnimation Storyboard.TargetName="ToastRoot" 
+                           Storyboard.TargetProperty="Opacity"
+                           From="1" To="0" Duration="0:0:0.2">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </UserControl.Resources>
+    
+    <UserControl.RenderTransform>
+        <TranslateTransform Y="0"/>
+    </UserControl.RenderTransform>
+    
+    <Border x:Name="ToastBorder"
+            Background="{DynamicResource BackgroundBrush}"
+            BorderBrush="{DynamicResource PrimaryBrush}"
+            BorderThickness="2"
+            CornerRadius="8"
+            Padding="16"
+            Margin="8">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="10" 
+                            ShadowDepth="2" 
+                            Opacity="0.3" 
+                            Color="Black"/>
+        </Border.Effect>
+        
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Icon -->
+            <TextBlock x:Name="IconText"
+                      Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"
+                      FontFamily="{StaticResource IconFontFamily}"
+                      FontSize="32"
+                      VerticalAlignment="Top"
+                      Margin="0,0,16,0"
+                      Foreground="{DynamicResource PrimaryBrush}"/>
+            
+            <!-- Title -->
+            <TextBlock x:Name="TitleText"
+                      Grid.Row="0" Grid.Column="1"
+                      FontSize="{StaticResource FontSizeSubtitle}"
+                      FontWeight="{StaticResource FontWeightSemiBold}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      TextWrapping="Wrap"
+                      Margin="0,0,0,4"/>
+            
+            <!-- Message -->
+            <TextBlock x:Name="MessageText"
+                      Grid.Row="1" Grid.Column="1"
+                      FontSize="{StaticResource FontSizeSmall}"
+                      Foreground="{DynamicResource TextSecondaryBrush}"
+                      TextWrapping="Wrap"
+                      LineHeight="20"/>
+            
+            <!-- Close Button -->
+            <Button x:Name="CloseButton"
+                   Grid.Row="0" Grid.Column="2"
+                   Style="{StaticResource IconButton}"
+                   Width="32" Height="32"
+                   VerticalAlignment="Top"
+                   Click="CloseButton_Click"
+                   ToolTip="Dismiss">
+                <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                          Text="✖" 
+                          FontSize="14"
+                          Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </Button>
+            
+            <!-- Action Buttons (for confirmation) -->
+            <StackPanel x:Name="ActionButtonsPanel"
+                       Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                       Orientation="Horizontal"
+                       HorizontalAlignment="Right"
+                       Margin="0,12,0,0"
+                       Visibility="Collapsed">
+                
+                <Button x:Name="ConfirmButton"
+                       Content="Yes"
+                       Style="{StaticResource PrimaryButton}"
+                       MinWidth="80"
+                       Margin="0,0,8,0"
+                       Click="ConfirmButton_Click"/>
+                
+                <Button x:Name="CancelButton"
+                       Content="No"
+                       Style="{StaticResource SecondaryButton}"
+                       MinWidth="80"
+                       Click="CancelButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

@@ -3,6 +3,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
+using SrtExtractor.Constants;
 using SrtExtractor.Models;
 using SrtExtractor.Services.Interfaces;
 using SrtExtractor.State;
@@ -16,6 +17,7 @@ namespace SrtExtractor.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly ILoggingService _loggingService;
+    private readonly INotificationService _notificationService;
     private readonly IToolDetectionService _toolDetectionService;
     private readonly IWingetService _wingetService;
     private readonly IMkvToolService _mkvToolService;
@@ -26,6 +28,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly ISettingsService _settingsService;
     private readonly INetworkDetectionService _networkDetectionService;
     private readonly IRecentFilesService _recentFilesService;
+    private readonly IFileCacheService _fileCacheService;
     private CancellationTokenSource? _extractionCancellationTokenSource;
     private Task? _initializationTask;
 
@@ -34,6 +37,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel(
         ILoggingService loggingService,
+        INotificationService notificationService,
         IToolDetectionService toolDetectionService,
         IWingetService wingetService,
         IMkvToolService mkvToolService,
@@ -43,9 +47,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IMultiPassCorrectionService multiPassCorrectionService,
         ISettingsService settingsService,
         INetworkDetectionService networkDetectionService,
-        IRecentFilesService recentFilesService)
+        IRecentFilesService recentFilesService,
+        IFileCacheService fileCacheService)
     {
         _loggingService = loggingService;
+        _notificationService = notificationService;
         _toolDetectionService = toolDetectionService;
         _wingetService = wingetService;
         _mkvToolService = mkvToolService;
@@ -56,9 +62,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _settingsService = settingsService;
         _networkDetectionService = networkDetectionService;
         _recentFilesService = recentFilesService;
+        _fileCacheService = fileCacheService;
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
+        
+        // Ensure clean state on startup
+        State.ClearFileState();
         
 
         // Initialize commands
@@ -71,6 +81,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
         CleanupTempFilesCommand = new AsyncRelayCommand(CleanupTempFilesAsync);
         CorrectSrtCommand = new AsyncRelayCommand(CorrectSrtAsync);
+        
         
         // Batch mode commands
         ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
@@ -107,10 +118,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     ResumeBatchCommand.NotifyCanExecuteChanged();
                 });
             }
-            else if (e.PropertyName == nameof(State.IsBatchMode))
-            {
-                OnBatchModeChanged(State.IsBatchMode);
-            }
             // Note: Settings are saved manually when user changes them
             // Automatic saving was removed to prevent infinite loops
         };
@@ -130,6 +137,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand ReDetectToolsCommand { get; }
     public IAsyncRelayCommand CleanupTempFilesCommand { get; }
     public IAsyncRelayCommand CorrectSrtCommand { get; }
+    
     
     // Batch mode commands
     public IAsyncRelayCommand ProcessBatchCommand { get; }
@@ -162,11 +170,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (openFileDialog.ShowDialog() == true)
             {
                 State.MkvPath = openFileDialog.FileName;
-                State.Tracks.Clear();
-                State.SelectedTrack = null;
-                State.HasProbedFile = false;
-                // Clear the message state when selecting a new file
-                State.ShowNoTracksError = false;
+                State.ClearFileState();
                 
                 // Update network detection
                 UpdateNetworkDetection(State.MkvPath);
@@ -177,7 +181,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to pick MKV file", ex);
-            MessageBox.Show($"Failed to select MKV file:\n{ex.Message}", "File Selection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to select MKV file:\n{ex.Message}", "File Selection Error");
         }
         
         return Task.CompletedTask;
@@ -191,8 +195,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             State.IsBusy = true;
-            // Clear the message state when starting probe
-            State.ShowNoTracksError = false;
+            State.ClearFileState();
+            _loggingService.LogInfo("Probe started - file state cleared");
             
             // Get file size for progress tracking
             var fileInfo = new FileInfo(State.MkvPath);
@@ -232,28 +236,67 @@ public partial class MainViewModel : ObservableObject, IDisposable
             
             // Show message only if no tracks were found - do this AFTER all other state changes
             State.ShowNoTracksError = result.Tracks.Count == 0;
+            
+            // Force UI update by explicitly setting success state to false again
+            State.ShowExtractionSuccess = false;
+            
+            _loggingService.LogInfo($"Probe completed - ShowNoTracksError={State.ShowNoTracksError}, ShowExtractionSuccess={State.ShowExtractionSuccess}");
 
             State.UpdateProcessingMessage("Analysis completed!");
             State.AddLogMessage($"Found {result.Tracks.Count} subtitle tracks");
             
+            // If no tracks found, log diagnostic information
+            if (result.Tracks.Count == 0)
+            {
+                var fileSizeFormatted = Utils.FileUtilities.FormatFileSize(fileInfo.Length);
+                
+                State.AddLogMessage(""); // Blank line for readability
+                State.AddLogMessage("📊 DIAGNOSTIC INFORMATION:");
+                State.AddLogMessage($"  File: {Path.GetFileName(State.MkvPath)}");
+                State.AddLogMessage($"  Container: {fileExtension.TrimStart('.').ToUpper()}");
+                State.AddLogMessage($"  Size: {fileSizeFormatted}");
+                State.AddLogMessage($"  Probe Tool: {(fileExtension == ".mp4" ? "FFprobe" : "mkvmerge")}");
+                State.AddLogMessage("");
+                State.AddLogMessage("🔍 ANALYSIS RESULTS:");
+                State.AddLogMessage("  ✗ No subtitle streams found in container");
+                State.AddLogMessage("  ℹ This indicates the file does not have embedded subtitle tracks");
+                State.AddLogMessage("");
+                State.AddLogMessage("💡 POSSIBLE REASONS:");
+                State.AddLogMessage("  • File was encoded without subtitles");
+                State.AddLogMessage("  • Subtitles are hardcoded (burned into video - cannot be extracted)");
+                State.AddLogMessage("  • Subtitles are in a separate .srt/.ass file");
+                State.AddLogMessage("  • Wrong source file (not the original release)");
+                State.AddLogMessage("");
+                State.AddLogMessage("✓ NEXT STEPS:");
+                State.AddLogMessage("  1. Verify file in VLC (View → Track → Subtitle Track)");
+                State.AddLogMessage("  2. Check if subtitle file exists separately (same folder)");
+                State.AddLogMessage("  3. Try opening original source file if this is a re-encode");
+            }
+            else
+            {
+                // Log technical details for each track (for power users inspecting History tab)
+                State.AddLogMessage(""); // Blank line for readability
+                foreach (var track in State.Tracks)
+                {
+                    var speedInfo = track.SpeedIndicator.Contains("Fast") ? "FAST" : "OCR-REQUIRED";
+                    State.AddLogMessage($"  Track {track.Id}: {track.Language} | {track.FormatDisplay} ({speedInfo}) | Codec: {track.Codec} | Frames: {track.FrameCount} | {(track.Forced ? "FORCED" : "FULL")}");
+                }
+            }
+            
             // Mark that we've probed this file
             State.HasProbedFile = true;
             
-            if (result.Tracks.Count == 0)
-            {
-                State.AddLogMessage("⚠️ No subtitle tracks found in this video file");
-                State.AddLogMessage("💡 Try selecting a different video file or check if the file has embedded subtitles");
-            }
-            else if (selectedTrack != null)
+            // Auto-select messages (only shown when tracks exist)
+            if (result.Tracks.Count > 0 && selectedTrack != null)
             {
                 var englishTracks = result.Tracks.Where(t => string.Equals(t.Language, "eng", StringComparison.OrdinalIgnoreCase)).ToList();
                 if (englishTracks.Count == 1)
                 {
-                    State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language}) - Only English track available");
+                    State.AddLogMessage($"⭐ Auto-selected track {selectedTrack.Id}: {selectedTrack.FormatDisplay} ({selectedTrack.Language}) - Only English track available");
                 }
                 else
                 {
-                    State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language}) - Best of {englishTracks.Count} English tracks");
+                    State.AddLogMessage($"⭐ Auto-selected track {selectedTrack.Id}: {selectedTrack.FormatDisplay} ({selectedTrack.Language}) - Best of {englishTracks.Count} English tracks");
                 }
             }
         }
@@ -261,7 +304,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogError("Failed to probe video tracks", ex);
             State.AddLogMessage($"Error probing tracks: {ex.Message}");
-            MessageBox.Show($"Failed to probe video file:\n{ex.Message}", "Probe Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to probe video file:\n{ex.Message}", "Probe Error");
         }
         finally
         {
@@ -318,97 +361,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             var outputPath = State.GenerateOutputFilename(State.MkvPath, State.SelectedTrack);
 
-            // Use appropriate service based on file extension
+            // Use appropriate extraction strategy based on file type and codec
             var fileExtension = Path.GetExtension(State.MkvPath).ToLowerInvariant();
             if (fileExtension == ".mp4")
             {
-                // Use FFmpeg for MP4 files (uses the display ID for MP4 files)
-                State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
-                await _ffmpegService.ExtractSubtitleAsync(State.MkvPath, State.SelectedTrack.Id, outputPath, cancellationToken ?? CancellationToken.None);
-                State.UpdateProcessingMessage("MP4 extraction completed!");
-                State.AddLogMessage($"Subtitles extracted to: {outputPath}");
-
-                // Apply multi-pass SRT corrections to MP4 subtitles
-                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-            }
-            else if (State.SelectedTrack.Codec.Contains("S_TEXT/UTF8") || State.SelectedTrack.Codec.Contains("SubRip/SRT"))
-            {
-                // Direct text extraction
-                State.UpdateProcessingMessage("Extracting text subtitles...");
-                
-                // Simulate progress for text extraction (this is typically very fast)
-                State.UpdateProgress(State.TotalBytes * 50 / 100, "Extracting text subtitles");
-                await _mkvToolService.ExtractTextAsync(State.MkvPath, State.SelectedTrack.ExtractionId, outputPath, cancellationToken ?? CancellationToken.None);
-                State.UpdateProgress(State.TotalBytes * 80 / 100, "Text extraction completed");
-                
-                State.UpdateProcessingMessage("Text extraction completed!");
-                State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
-
-                // Apply multi-pass SRT corrections to text subtitles
-                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-            }
-            else if (State.SelectedTrack.Codec.Contains("PGS") || State.SelectedTrack.Codec.Contains("S_HDMV/PGS"))
-            {
-                // PGS extraction + OCR
-                var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
-                
-                State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
-                State.UpdateProgress(State.TotalBytes * 30 / 100, "Extracting PGS subtitles");
-                await _mkvToolService.ExtractPgsAsync(State.MkvPath, State.SelectedTrack.ExtractionId, tempSupPath, cancellationToken ?? CancellationToken.None);
-                State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
-
-                State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
-                State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
-                State.UpdateProgress(State.TotalBytes * 50 / 100, "Starting OCR conversion");
-                await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken ?? CancellationToken.None);
-                State.UpdateProgress(State.TotalBytes * 90 / 100, "OCR conversion completed");
-                State.UpdateProcessingMessage("OCR conversion completed!");
-                State.AddLogMessage($"OCR conversion completed: {outputPath}");
-
-                // Apply multi-pass OCR corrections
-                await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-
-                // Clean up temporary SUP file
-                State.UpdateProcessingMessage("Cleaning up temporary files...");
-                try
-                {
-                    File.Delete(tempSupPath);
-                }
-                catch
-                {
-                    // Ignore cleanup errors
-                }
-                State.UpdateProcessingMessage("PGS extraction completed!");
-            }
-            else if (State.SelectedTrack.Codec.Contains("VobSub") || State.SelectedTrack.Codec.Contains("S_VOBSUB"))
-            {
-                // VobSub (image-based) subtitles detected - direct users to Subtitle Edit
-                _loggingService.LogInfo("VobSub track detected - directing user to Subtitle Edit for OCR processing");
-                
-                var message = "VobSub Image-Based Subtitles Detected\n\n" +
-                             "This subtitle track is VobSub (image-based) which requires OCR processing.\n\n" +
-                             "We recommend using Subtitle Edit for VobSub extraction:\n\n" +
-                             "1. Open Subtitle Edit\n" +
-                             "2. Go to: Tools → Batch Convert\n" +
-                             "3. Add your MKV file(s)\n" +
-                             "4. Set format: SubRip (.srt)\n" +
-                             "5. Configure OCR settings\n" +
-                             "6. Click Convert\n\n" +
-                             "Tip: Use Tools → VobSub Track Analyzer in SrtExtractor to identify track numbers across multiple files!";
-                
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    MessageBox.Show(message, "VobSub Subtitles - Use Subtitle Edit", 
-                                  MessageBoxButton.OK, MessageBoxImage.Information);
-                    State.UpdateProcessingMessage("VobSub extraction cancelled - please use Subtitle Edit");
-                    State.AddLogMessage("VobSub track detected. Please use Subtitle Edit's batch convert feature for OCR.");
-                });
-                
-                throw new InvalidOperationException("VobSub subtitles require Subtitle Edit for OCR processing. See the VobSub Track Analyzer tool for help.");
+                await ExtractFromMp4Async(outputPath, cancellationToken ?? CancellationToken.None);
             }
             else
             {
-                throw new NotSupportedException($"Unsupported subtitle codec: {State.SelectedTrack.Codec}");
+                // Use CodecType enum for type-safe dispatch (no more string Contains!)
+                await ExecuteExtractionByCodecType(outputPath, cancellationToken ?? CancellationToken.None);
             }
 
             State.AddLogMessage("Subtitle extraction completed successfully!");
@@ -420,11 +382,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await _recentFilesService.AddFileAsync(State.MkvPath).ConfigureAwait(false);
             await LoadRecentFilesAsync().ConfigureAwait(false); // Refresh the UI list
             
-            // Only show success dialog in single file mode, not batch mode
-            if (!State.IsBatchMode)
-            {
-                MessageBox.Show($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+            // Set success state for UI feedback (after all processing is complete)
+            State.ShowExtractionSuccess = true;
+            State.LastExtractionOutputPath = outputPath;
+            
+            // Note: Success message is now shown in-app via State.ShowExtractionSuccess
+            // Toast notification removed to prevent confusion with other messages
         }
         catch (OperationCanceledException)
         {
@@ -444,11 +407,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Clean up any temporary files that might have been created
             await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
             
-            // Only show error dialog in single file mode, not batch mode
-            if (!State.IsBatchMode)
+            // Show error notification only for single file extraction (not batch)
+            // For batch processing, let the exception propagate so batch can handle it
+            if (_extractionCancellationTokenSource == null)
             {
-                MessageBox.Show($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // This is batch processing - rethrow so batch handler can catch and mark as error
+                throw;
             }
+            
+            // Single file extraction - show error dialog
+            _notificationService.ShowError($"Failed to extract subtitles:\n{ex.Message}", "Extraction Error");
         }
         finally
         {
@@ -457,6 +425,134 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _extractionCancellationTokenSource?.Dispose();
             _extractionCancellationTokenSource = null;
         }
+    }
+
+    /// <summary>
+    /// Extract subtitles from MP4 files using FFmpeg.
+    /// </summary>
+    private async Task ExtractFromMp4Async(string outputPath, CancellationToken cancellationToken)
+    {
+        State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
+        await _ffmpegService.ExtractSubtitleAsync(State.MkvPath!, State.SelectedTrack!.Id, outputPath, cancellationToken);
+        State.UpdateProcessingMessage("MP4 extraction completed!");
+        State.AddLogMessage($"Subtitles extracted to: {outputPath}");
+
+        // Apply multi-pass SRT corrections to MP4 subtitles
+        await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Execute extraction strategy based on codec type (type-safe dispatch).
+    /// Uses the CodecType enum to avoid string Contains checks.
+    /// </summary>
+    private async Task ExecuteExtractionByCodecType(string outputPath, CancellationToken cancellationToken)
+    {
+        switch (State.SelectedTrack!.CodecType)
+        {
+            case SubtitleCodecType.TextBasedSrt:
+            case SubtitleCodecType.TextBasedAss:
+            case SubtitleCodecType.TextBasedWebVtt:
+            case SubtitleCodecType.TextBasedGeneric:
+                await ExtractTextSubtitlesAsync(outputPath, cancellationToken);
+                break;
+
+            case SubtitleCodecType.ImageBasedPgs:
+                await ExtractPgsSubtitlesAsync(outputPath, cancellationToken);
+                break;
+
+            case SubtitleCodecType.ImageBasedVobSub:
+                ShowVobSubGuidance();
+                throw new InvalidOperationException("VobSub subtitles require Subtitle Edit for OCR processing. See the VobSub Track Analyzer tool for help.");
+
+            case SubtitleCodecType.ImageBasedDvb:
+                throw new NotSupportedException("DVB subtitles are not currently supported");
+
+            default:
+                throw new NotSupportedException($"Unsupported subtitle codec: {State.SelectedTrack.Codec}");
+        }
+    }
+
+    /// <summary>
+    /// Extract text-based subtitles (SRT, ASS, WebVTT).
+    /// </summary>
+    private async Task ExtractTextSubtitlesAsync(string outputPath, CancellationToken cancellationToken)
+    {
+        State.UpdateProcessingMessage("Extracting text subtitles...");
+        
+        // Simulate progress for text extraction (this is typically very fast)
+        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionStart), "Extracting text subtitles");
+        await _mkvToolService.ExtractTextAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, outputPath, cancellationToken);
+        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionComplete), "Text extraction completed");
+        
+        State.UpdateProcessingMessage("Text extraction completed!");
+        State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
+
+        // Apply multi-pass SRT corrections to text subtitles
+        await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Extract PGS (image-based) subtitles and convert to SRT using OCR.
+    /// </summary>
+    private async Task ExtractPgsSubtitlesAsync(string outputPath, CancellationToken cancellationToken)
+    {
+        var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
+        
+        // Extract PGS to SUP file
+        State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
+        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.PgsExtractionStart), "Extracting PGS subtitles");
+        await _mkvToolService.ExtractPgsAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, tempSupPath, cancellationToken);
+        State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
+
+        // Convert SUP to SRT using OCR
+        State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
+        State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
+        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrStart), "Starting OCR conversion");
+        await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken);
+        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrComplete), "OCR conversion completed");
+        State.UpdateProcessingMessage("OCR conversion completed!");
+        State.AddLogMessage($"OCR conversion completed: {outputPath}");
+
+        // Apply multi-pass OCR corrections
+        await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
+
+        // Clean up temporary SUP file
+        State.UpdateProcessingMessage("Cleaning up temporary files...");
+        try
+        {
+            File.Delete(tempSupPath);
+        }
+        catch
+        {
+            // Ignore cleanup errors
+        }
+        State.UpdateProcessingMessage("PGS extraction completed!");
+    }
+
+    /// <summary>
+    /// Show guidance message for VobSub subtitles which require Subtitle Edit.
+    /// </summary>
+    private void ShowVobSubGuidance()
+    {
+        _loggingService.LogInfo("VobSub track detected - directing user to Subtitle Edit for OCR processing");
+        
+        var message = "VobSub Image-Based Subtitles Detected\n\n" +
+                     "This subtitle track is VobSub (image-based) which requires OCR processing.\n\n" +
+                     "We recommend using Subtitle Edit for VobSub extraction:\n\n" +
+                     "1. Open Subtitle Edit\n" +
+                     "2. Go to: Tools → Batch Convert\n" +
+                     "3. Add your MKV file(s)\n" +
+                     "4. Set format: SubRip (.srt)\n" +
+                     "5. Configure OCR settings\n" +
+                     "6. Click Convert\n\n" +
+                     "Tip: Use Tools → VobSub Track Analyzer in SrtExtractor to identify track numbers across multiple files!";
+        
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            _notificationService.ShowInfo(message, "VobSub Subtitles - Use Subtitle Edit", 8000);
+            State.UpdateProcessingMessage("VobSub extraction cancelled - please use Subtitle Edit");
+            State.AddLogMessage("VobSub track detected. Please use Subtitle Edit's batch convert feature for OCR.");
+        });
     }
 
     private async Task InstallMkvToolNixAsync()
@@ -493,20 +589,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
             else
             {
                 State.AddLogMessage("Failed to install MKVToolNix");
-                MessageBox.Show("Failed to install MKVToolNix. Please check the log for details.", "Installation Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning("Failed to install MKVToolNix. Please check the log for details.", "Installation Failed");
             }
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to install MKVToolNix", ex);
             State.AddLogMessage($"Error installing MKVToolNix: {ex.Message}");
-            MessageBox.Show($"Failed to install MKVToolNix:\n{ex.Message}", "Installation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to install MKVToolNix:\n{ex.Message}", "Installation Error");
         }
         finally
         {
             State.IsBusy = false;
         }
     }
+
 
     private void BrowseMkvToolNix()
     {
@@ -611,19 +708,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             State.AddLogMessage("Some required tools are missing. Please configure them in Settings.");
             
-            // Show a message directing users to settings
-            Application.Current.Dispatcher.Invoke(() =>
+            // Show a message directing users to settings (fire and forget)
+            _ = Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                var result = MessageBox.Show(
+                var result = await _notificationService.ShowConfirmationAsync(
                     "Some required tools are missing and need to be configured.\n\nWould you like to open Settings to configure the tools now?",
-                    "Tools Missing",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
+                    "Tools Missing");
                 
-                if (result == MessageBoxResult.Yes)
+                if (result)
                 {
-                    // This will be handled by the main window when it opens
-                    State.ShowSettingsOnStartup = true;
+                    // Trigger the event to open settings immediately
+                    State.TriggerOpenSettings();
                 }
             });
         }
@@ -769,7 +864,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         // Default: Prefer SubRip/SRT tracks first, then Full tracks, then by quality
-        var subripTracks = languageTracks.Where(t => IsSubRipTrack(t.Codec)).ToList();
+        var subripTracks = languageTracks.Where(t => t.IsSubRip).ToList();
         if (subripTracks.Any())
         {
             _loggingService.LogInfo($"Found {subripTracks.Count} SubRip/SRT tracks, prioritizing over HDMV PGS");
@@ -789,6 +884,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Select the best quality track from a list of tracks based on bitrate, frame count, and codec type.
+    /// Now uses the SubtitleTrack model's cached codec properties for better performance.
     /// </summary>
     /// <param name="tracks">List of tracks to choose from</param>
     /// <returns>Best quality track</returns>
@@ -797,7 +893,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (!tracks.Any()) return tracks.First();
 
         // Priority order: SubRip/SRT > Other text-based > HDMV PGS > Other PGS
-        var subripTracks = tracks.Where(t => IsSubRipTrack(t.Codec)).ToList();
+        // Use the track's built-in codec properties instead of parsing strings
+        var subripTracks = tracks.Where(t => t.IsSubRip).ToList();
         if (subripTracks.Any())
         {
             _loggingService.LogInfo($"Selecting from {subripTracks.Count} SubRip/SRT tracks (highest priority)");
@@ -806,7 +903,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         else
         {
             // If no SubRip/SRT, prefer other text-based subtitles over PGS
-            var textTracks = tracks.Where(t => IsTextBasedTrack(t.Codec)).ToList();
+            var textTracks = tracks.Where(t => t.IsTextBased).ToList();
             if (textTracks.Any())
             {
                 _loggingService.LogInfo($"No SubRip/SRT found, selecting from {textTracks.Count} text-based tracks");
@@ -818,51 +915,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
-        // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec preference
+        // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec priority
+        // Use the track's CodecPriority property instead of helper method
         return tracks.OrderByDescending(t => t.Bitrate)
                      .ThenByDescending(t => t.FrameCount)
-                     .ThenByDescending(t => GetCodecPriority(t.Codec))
+                     .ThenByDescending(t => t.CodecPriority)
                      .First();
     }
 
-    /// <summary>
-    /// Check if a codec is SubRip/SRT format.
-    /// </summary>
-    /// <param name="codec">Codec string to check</param>
-    /// <returns>True if SubRip/SRT</returns>
-    private static bool IsSubRipTrack(string codec)
-    {
-        return codec.Contains("S_TEXT/UTF8") || 
-               codec.Contains("SubRip/SRT") || 
-               codec.Contains("subrip") ||
-               codec.Contains("srt");
-    }
-
-    /// <summary>
-    /// Check if a codec is text-based (not PGS).
-    /// </summary>
-    /// <param name="codec">Codec string to check</param>
-    /// <returns>True if text-based</returns>
-    private static bool IsTextBasedTrack(string codec)
-    {
-        return codec.Contains("S_TEXT") || 
-               codec.Contains("ASS") || 
-               codec.Contains("SSA") || 
-               codec.Contains("VTT");
-    }
-
-    /// <summary>
-    /// Get codec priority for sorting (higher number = higher priority).
-    /// </summary>
-    /// <param name="codec">Codec string</param>
-    /// <returns>Priority value</returns>
-    private static int GetCodecPriority(string codec)
-    {
-        if (IsSubRipTrack(codec)) return 100;  // Highest priority
-        if (IsTextBasedTrack(codec)) return 50; // Medium priority
-        if (codec.Contains("PGS") || codec.Contains("S_HDMV/PGS")) return 10; // Lower priority
-        return 0; // Lowest priority
-    }
+    // Codec helper methods removed - now using SubtitleTrack.CodecType, .IsSubRip, .IsTextBased, and .CodecPriority properties
 
     /// <summary>
     /// Test method to verify recommendation logic prioritizes SubRip/SRT over HDMV PGS.
@@ -968,14 +1029,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 var correctionCount = await _srtCorrectionService.CorrectSrtFileAsync(openFileDialog.FileName);
                 
                 State.AddLogMessage($"🎯 SRT correction completed successfully! Applied {correctionCount} corrections.");
-                MessageBox.Show("SRT file has been corrected successfully!", "Correction Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowSuccess("SRT file has been corrected successfully!", "Correction Complete");
             }
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to correct SRT file", ex);
             State.AddLogMessage($"Error correcting SRT file: {ex.Message}");
-            MessageBox.Show($"Failed to correct SRT file:\n{ex.Message}", "Correction Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to correct SRT file:\n{ex.Message}", "Correction Error");
         }
         finally
         {
@@ -988,6 +1049,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
+            // Load existing settings to preserve ShowWelcomeScreen preference
+            var existingSettings = await _settingsService.LoadSettingsAsync();
+            
             var settings = new AppSettings(
                 MkvMergePath: null, // These will be updated when tools are detected
                 MkvExtractPath: null,
@@ -998,7 +1062,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     PreferForced: State.PreferForced,
                     PreferClosedCaptions: State.PreferClosedCaptions,
                     DefaultOcrLanguage: State.OcrLanguage,
-                    FileNamePattern: State.FileNamePattern
+                    FileNamePattern: State.FileNamePattern,
+                    ShowWelcomeScreen: existingSettings.ShowWelcomeScreen
             );
 
             await _settingsService.SaveSettingsAsync(settings);
@@ -1262,6 +1327,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     
                     successCount++;
                     State.AddLogMessage($"✅ Completed: {batchFile.FileName}");
+                    
+                    // Use fast statistics update during batch processing to reduce UI overhead
+                    State.UpdateBatchStatisticsFast();
                 }
                 catch (OperationCanceledException)
                 {
@@ -1282,6 +1350,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     
                     _loggingService.LogError($"Failed to process batch file {batchFile.FileName}", ex);
                     State.AddLogMessage($"❌ Failed: {batchFile.FileName} - {ex.Message}");
+                    
+                    // Use fast statistics update during batch processing to reduce UI overhead
+                    State.UpdateBatchStatisticsFast();
                 }
 
                 processedCount++;
@@ -1289,6 +1360,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
 
             State.StopProcessingWithProgress();
+            
+            // Final statistics update with full UI notifications after batch processing completes
+            State.UpdateBatchStatistics();
             
             // Create detailed summary
             var successfulFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Completed).ToList();
@@ -1363,11 +1437,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (errorCount > 0)
             {
-                MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning(message, "Batch Processing Complete");
             }
             else
             {
-                MessageBox.Show(message, "Batch Processing Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowInfo(message, "Batch Processing Complete");
             }
             
             // Clear the batch queue and reset progress after completion
@@ -1377,7 +1451,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogError("Batch processing failed", ex);
             State.AddLogMessage($"Batch processing failed: {ex.Message}");
-            MessageBox.Show($"Batch processing failed:\n{ex.Message}", "Batch Processing Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Batch processing failed:\n{ex.Message}", "Batch Processing Error");
         }
         finally
         {
@@ -1430,7 +1504,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!State.AreToolsAvailable)
             {
-                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required");
                 return;
             }
 
@@ -1453,7 +1527,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogError("Failed to resume batch processing", ex);
             State.AddLogMessage($"Failed to resume batch processing: {ex.Message}");
-            MessageBox.Show($"Failed to resume batch processing:\n{ex.Message}", "Resume Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to resume batch processing:\n{ex.Message}", "Resume Error");
         }
     }
 
@@ -1483,7 +1557,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Uses bulk add to prevent excessive UI updates.
     /// </summary>
     /// <param name="filePaths">Array of file paths to add</param>
-    public void AddFilesToBatchQueue(string[] filePaths)
+    public async Task AddFilesToBatchQueueAsync(string[] filePaths)
     {
         try
         {
@@ -1503,7 +1577,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
 
                 var batchFile = new BatchFile { FilePath = filePath };
-                batchFile.UpdateFromFileSystem();
+                await batchFile.UpdateFromFileSystemAsync(_fileCacheService);
                 
                 // Update network detection
                 var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
@@ -1642,7 +1716,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!State.AreToolsAvailable)
             {
-                MessageBox.Show("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _notificationService.ShowWarning("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required");
                 return;
             }
 
@@ -1680,69 +1754,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// Handles batch mode changes and provides user feedback.
-    /// </summary>
-    /// <param name="isBatchMode">Whether batch mode is enabled</param>
-    private void OnBatchModeChanged(bool isBatchMode)
-    {
-        try
-        {
-            // Update queue column width
-            State.QueueColumnWidth = isBatchMode ? 350 : 0;
-            
-            if (isBatchMode)
-            {
-                // Show confirmation dialog about using preferred settings
-                var preferenceText = State.PreferForced ? "forced subtitles" : 
-                                   State.PreferClosedCaptions ? "closed captions" : "full subtitles";
-                
-                var message = $"🎬 Batch Mode will use your preferred settings:\n\n" +
-                             $"• Subtitle preference: {preferenceText}\n" +
-                             $"• OCR language: {State.OcrLanguage}\n" +
-                             $"• File pattern: {State.FileNamePattern}\n\n" +
-                             $"All files in the batch will be processed with these settings.\n\n" +
-                             $"Do you want to continue?";
-                
-                var result = MessageBox.Show(
-                    message,
-                    "Batch Mode Settings Confirmation",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                
-                if (result == MessageBoxResult.No)
-                {
-                    // User declined, disable batch mode
-                    State.IsBatchMode = false;
-                }
-                
-                State.AddLogMessage("🎬 Batch Mode enabled! Drag & drop video files anywhere on this window to add them to the queue.");
-                State.AddLogMessage("💡 Tip: Files with 🌐 are on network drives and may take longer to process.");
-                State.AddLogMessage($"⚙️ Using settings: {preferenceText}, {State.OcrLanguage} language");
-            }
-            else
-            {
-                State.AddLogMessage("📁 Batch Mode disabled. Switch back to single file processing mode.");
-                // Clear the batch queue when disabling batch mode
-                ClearBatchQueue();
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Error handling batch mode change", ex);
-        }
-    }
-
     private void ToggleBatchMode()
     {
         try
         {
-            State.IsBatchMode = !State.IsBatchMode;
-            _loggingService.LogInfo($"Batch mode toggled to: {State.IsBatchMode}");
+            // With tab-based interface, Ctrl+B switches to the Batch tab
+            State.SelectedTabIndex = 1; // 0=Extract, 1=Batch, 2=History, 3=Tools
+            _loggingService.LogInfo("Switched to Batch tab via keyboard shortcut (Ctrl+B)");
         }
         catch (Exception ex)
         {
-            _loggingService.LogError("Error toggling batch mode", ex);
+            _loggingService.LogError("Error switching to batch tab", ex);
         }
     }
 
@@ -1750,23 +1772,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            _loggingService.LogInfo("User requested help");
-            MessageBox.Show(
-                "SrtExtractor Help\n\n" +
-                "Keyboard Shortcuts:\n" +
-                "• Ctrl+O - Open Video File\n" +
-                "• Ctrl+P - Probe Tracks\n" +
-                "• Ctrl+E - Extract Subtitles\n" +
-                "• Ctrl+B - Toggle Batch Mode\n" +
-                "• Ctrl+C - Cancel Operation\n" +
-                "• F5 - Re-detect Tools\n" +
-                "• F1 - Show Help\n" +
-                "• Escape - Cancel Operation\n\n" +
-                "For more detailed help, visit the project repository:\n" +
-                "https://github.com/ZentrixLabs/SrtExtractor",
-                "SrtExtractor Help",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            _loggingService.LogInfo("User requested keyboard shortcuts help");
+            
+            // Open the keyboard shortcuts window
+            var helpWindow = new Views.KeyboardShortcutsWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+            helpWindow.ShowDialog();
         }
         catch (Exception ex)
         {
@@ -1783,11 +1796,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             _loggingService.LogInfo($"User selected recent file: {filePath}");
             State.MkvPath = filePath;
-            State.Tracks.Clear();
-            State.SelectedTrack = null;
-            State.HasProbedFile = false;
-            // Clear the message state when opening a recent file
-            State.ShowNoTracksError = false;
+            State.ClearFileState();
             
             // Update network detection
             UpdateNetworkDetection(filePath);
@@ -1797,7 +1806,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _loggingService.LogError($"Error opening recent file: {filePath}", ex);
-            MessageBox.Show($"Failed to open recent file:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError($"Failed to open recent file:\n{ex.Message}", "Error");
         }
     }
 

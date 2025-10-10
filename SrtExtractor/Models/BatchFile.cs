@@ -1,5 +1,6 @@
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SrtExtractor.Services.Interfaces;
 
 namespace SrtExtractor.Models;
 
@@ -67,44 +68,30 @@ public partial class BatchFile : ObservableObject
     }
 
     /// <summary>
-    /// Updates the file properties from the file system.
+    /// Updates the file properties from the file system using file cache service.
+    /// Now requires IFileCacheService to be provided (no nullable fallback).
     /// </summary>
-    public void UpdateFromFileSystem()
+    /// <param name="fileCacheService">File cache service for file operations</param>
+    public async Task UpdateFromFileSystemAsync(IFileCacheService fileCacheService)
     {
+        if (fileCacheService == null)
+            throw new ArgumentNullException(nameof(fileCacheService));
+            
         try
         {
-            if (!File.Exists(FilePath))
+            var fileExists = await fileCacheService.FileExistsAsync(FilePath);
+            if (!fileExists)
             {
                 Status = BatchFileStatus.Error;
                 StatusMessage = "File not found";
                 return;
             }
 
-            var fileInfo = new FileInfo(FilePath);
-            FileSizeBytes = fileInfo.Length;
-            FileName = fileInfo.Name;
-
-            // Format file size
-            const long kb = 1024;
-            const long mb = kb * 1024;
-            const long gb = mb * 1024;
-
-            if (FileSizeBytes >= gb)
-            {
-                FormattedFileSize = $"{FileSizeBytes / (double)gb:F1} GB";
-            }
-            else if (FileSizeBytes >= mb)
-            {
-                FormattedFileSize = $"{FileSizeBytes / (double)mb:F1} MB";
-            }
-            else if (FileSizeBytes >= kb)
-            {
-                FormattedFileSize = $"{FileSizeBytes / (double)kb:F1} KB";
-            }
-            else
-            {
-                FormattedFileSize = $"{FileSizeBytes} bytes";
-            }
+            FileSizeBytes = await fileCacheService.GetFileSizeAsync(FilePath);
+            FileName = Path.GetFileName(FilePath);
+            
+            // Use shared utility for consistent file size formatting
+            FormattedFileSize = Utils.FileUtilities.FormatFileSize(FileSizeBytes);
         }
         catch (Exception)
         {

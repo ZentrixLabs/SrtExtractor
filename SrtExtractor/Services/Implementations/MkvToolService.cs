@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using SrtExtractor.Models;
 using SrtExtractor.Services.Interfaces;
+using SrtExtractor.Utils;
 
 namespace SrtExtractor.Services.Implementations;
 
@@ -32,17 +33,20 @@ public class MkvToolService : IMkvToolService
 
     public async Task<ProbeResult> ProbeAsync(string mkvPath, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Probing MKV file: {mkvPath}");
+        _loggingService.LogInfo($"Probing MKV file: {Path.GetFileName(mkvPath)}");
+
+        // SECURITY: Validate and sanitize the input path
+        var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
 
         // Check if file exists and is accessible
-        var fileExists = await _asyncFileService.FileExistsAsync(mkvPath, cancellationToken);
+        var fileExists = await _asyncFileService.FileExistsAsync(validatedMkvPath, cancellationToken);
         if (!fileExists)
         {
             throw new FileNotFoundException($"MKV file not found: {mkvPath}");
         }
 
         // Check if file is locked
-        var isLocked = await _fileLockDetectionService.IsFileLockedAsync(mkvPath, cancellationToken);
+        var isLocked = await _fileLockDetectionService.IsFileLockedAsync(validatedMkvPath, cancellationToken);
         if (isLocked)
         {
             throw new IOException($"MKV file is locked or in use by another process: {mkvPath}");
@@ -57,8 +61,12 @@ public class MkvToolService : IMkvToolService
                 throw new InvalidOperationException("MKVToolNix not found");
             }
 
+            // SECURITY: Use argument array to prevent command injection
             // Run mkvmerge -J to get JSON output
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolStatus.Path, $"-J \"{mkvPath}\"");
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                toolStatus.Path, 
+                new[] { "-J", validatedMkvPath },
+                cancellationToken);
 
             if (exitCode != 0)
             {
@@ -80,10 +88,14 @@ public class MkvToolService : IMkvToolService
 
     public async Task<string> ExtractTextAsync(string mkvPath, int trackId, string outSrt, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Extracting text subtitle track {trackId} to: {outSrt}");
+        _loggingService.LogInfo($"Extracting text subtitle track {trackId}");
 
         try
         {
+            // SECURITY: Validate and sanitize paths
+            var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
+            var validatedOutSrt = SafeFileOperations.ValidateAndPrepareOutputPath(outSrt);
+
             // Get the tool path directly from tool detection
             var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
             if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
@@ -99,29 +111,25 @@ public class MkvToolService : IMkvToolService
                 throw new InvalidOperationException($"mkvextract.exe not found at: {mkvextractPath}");
             }
 
-            // Ensure output directory exists
-            var outputDir = Path.GetDirectoryName(outSrt);
-            if (!string.IsNullOrEmpty(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-
+            // SECURITY: Use argument array to prevent command injection
             // Run mkvextract tracks
-            var args = $"tracks \"{mkvPath}\" {trackId}:\"{outSrt}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args, cancellationToken);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                mkvextractPath, 
+                new[] { "tracks", validatedMkvPath, $"{trackId}:{validatedOutSrt}" }, 
+                cancellationToken);
 
             if (exitCode != 0)
             {
                 throw new InvalidOperationException($"mkvextract failed with exit code {exitCode}: {stderr}");
             }
 
-            if (!File.Exists(outSrt))
+            if (!File.Exists(validatedOutSrt))
             {
                 throw new InvalidOperationException($"Output file was not created: {outSrt}");
             }
 
             _loggingService.LogExtraction($"Text subtitle extraction (track {trackId})", true);
-            return outSrt;
+            return validatedOutSrt;
         }
         catch (Exception ex)
         {
@@ -132,13 +140,18 @@ public class MkvToolService : IMkvToolService
 
     public async Task<string> ExtractPgsAsync(string mkvPath, int trackId, string outSup, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Extracting PGS subtitle track {trackId} to: {outSup}");
+        _loggingService.LogInfo($"Extracting PGS subtitle track {trackId}");
 
         try
         {
+            // SECURITY: Validate and sanitize paths
+            var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
+            var validatedOutSup = SafeFileOperations.ValidateAndPrepareOutputPath(outSup);
+
             // Calculate timeout based on file size
-            var timeout = CalculateTimeoutForFile(mkvPath);
-            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(mkvPath):F1} GB");
+            var timeout = CalculateTimeoutForFile(validatedMkvPath);
+            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(validatedMkvPath):F1} GB");
+            
             // Get the tool path directly from tool detection
             var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
             if (!toolStatus.IsInstalled || string.IsNullOrEmpty(toolStatus.Path))
@@ -154,29 +167,26 @@ public class MkvToolService : IMkvToolService
                 throw new InvalidOperationException($"mkvextract.exe not found at: {mkvextractPath}");
             }
 
-            // Ensure output directory exists
-            var outputDir = Path.GetDirectoryName(outSup);
-            if (!string.IsNullOrEmpty(outputDir))
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-
+            // SECURITY: Use argument array to prevent command injection
             // Run mkvextract tracks
-            var args = $"tracks \"{mkvPath}\" {trackId}:\"{outSup}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args, timeout, cancellationToken);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                mkvextractPath, 
+                new[] { "tracks", validatedMkvPath, $"{trackId}:{validatedOutSup}" }, 
+                timeout, 
+                cancellationToken);
 
             if (exitCode != 0)
             {
                 throw new InvalidOperationException($"mkvextract failed with exit code {exitCode}: {stderr}");
             }
 
-            if (!File.Exists(outSup))
+            if (!File.Exists(validatedOutSup))
             {
                 throw new InvalidOperationException($"Output file was not created: {outSup}");
             }
 
             _loggingService.LogExtraction($"PGS subtitle extraction (track {trackId})", true);
-            return outSup;
+            return validatedOutSup;
         }
         catch (Exception ex)
         {
@@ -187,13 +197,18 @@ public class MkvToolService : IMkvToolService
 
     public async Task<(string idxFilePath, string subFilePath)> ExtractVobSubAsync(string mkvPath, int trackId, string outputDirectory, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Extracting VobSub track {trackId} to directory: {outputDirectory}");
+        _loggingService.LogInfo($"Extracting VobSub track {trackId}");
 
         try
         {
+            // SECURITY: Validate and sanitize paths
+            var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
+            var validatedOutputDir = SafeFileOperations.ValidateOutputPath(outputDirectory, validatedMkvPath);
+            SafeFileOperations.SafeCreateDirectory(validatedOutputDir, validatedMkvPath);
+
             // Calculate timeout based on file size
-            var timeout = CalculateTimeoutForFile(mkvPath);
-            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(mkvPath):F1} GB");
+            var timeout = CalculateTimeoutForFile(validatedMkvPath);
+            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(validatedMkvPath):F1} GB");
 
             // Get the tool path directly from tool detection
             var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
@@ -210,21 +225,23 @@ public class MkvToolService : IMkvToolService
                 throw new InvalidOperationException($"mkvextract.exe not found at: {mkvextractPath}");
             }
 
-            // Ensure output directory exists
-            if (!Directory.Exists(outputDirectory))
-            {
-                Directory.CreateDirectory(outputDirectory);
-            }
-
             // Generate output file names
-            var baseFileName = Path.GetFileNameWithoutExtension(mkvPath);
-            var idxFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.idx");
-            var subFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.sub");
+            var baseFileName = Path.GetFileNameWithoutExtension(validatedMkvPath);
+            var idxFilePath = Path.Combine(validatedOutputDir, $"{baseFileName}.{trackId}.idx");
+            var subFilePath = Path.Combine(validatedOutputDir, $"{baseFileName}.{trackId}.sub");
+            
+            // Validate output paths (allow same directory as source)
+            idxFilePath = SafeFileOperations.ValidateOutputPath(idxFilePath, validatedMkvPath);
+            subFilePath = SafeFileOperations.ValidateOutputPath(subFilePath, validatedMkvPath);
 
+            // SECURITY: Use argument array to prevent command injection
             // Run mkvextract tracks to extract VobSub
             // VobSub tracks are extracted as .idx/.sub file pairs
-            var args = $"tracks \"{mkvPath}\" {trackId}:\"{idxFilePath}\"";
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(mkvextractPath, args, timeout, cancellationToken);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                mkvextractPath, 
+                new[] { "tracks", validatedMkvPath, $"{trackId}:{idxFilePath}" }, 
+                timeout, 
+                cancellationToken);
 
             if (exitCode != 0)
             {
@@ -361,13 +378,22 @@ public class MkvToolService : IMkvToolService
 
                         // Detect track type based on characteristics
                         var trackType = DetectTrackType(bitrate, frameCount, duration, forced, isClosedCaption);
+                        
+                        // Convert TrackType enum to string for constructor (backwards compatibility)
+                        var trackTypeString = trackType switch
+                        {
+                            TrackType.Forced => "Forced",
+                            TrackType.ClosedCaption => "CC",
+                            TrackType.ClosedCaptionForced => "CC Forced",
+                            _ => "Full"
+                        };
 
                         // Create track with:
                         // - trackNumber (actual Matroska track number) for display
                         // - id (mkvmerge zero-based index) for extraction commands
                         tracks.Add(new SubtitleTrack(trackNumber, codec, language, false, forced, 
                             name ?? "", bitrate ?? 0, frameCount ?? 0, 0, "", false, 
-                            forced, isClosedCaption, false, trackType, frameCount ?? 0, extractionId: id));
+                            forced, isClosedCaption, false, trackTypeString, frameCount ?? 0, extractionId: id));
                     }
                 }
             }
@@ -418,57 +444,38 @@ public class MkvToolService : IMkvToolService
 
     /// <summary>
     /// Detect track type based on characteristics like bitrate, frame count, and duration.
+    /// Uses type-safe enum instead of strings for better maintainability.
     /// </summary>
     /// <param name="bitrate">Track bitrate in bits per second</param>
     /// <param name="frameCount">Number of subtitle frames</param>
     /// <param name="duration">Track duration in seconds</param>
     /// <param name="forced">Whether track is marked as forced</param>
     /// <param name="isClosedCaption">Whether track is closed caption</param>
-    /// <returns>Detected track type</returns>
-    private static string DetectTrackType(long? bitrate, int? frameCount, double? duration, bool forced, bool isClosedCaption)
+    /// <returns>Detected track type as enum</returns>
+    private static TrackType DetectTrackType(long? bitrate, int? frameCount, double? duration, bool forced, bool isClosedCaption)
     {
-        // Handle closed captions first
-        if (isClosedCaption)
-        {
-            return forced ? "CC Forced" : "CC";
-        }
+        // Definitive flags take precedence
+        if (isClosedCaption && forced) 
+            return TrackType.ClosedCaptionForced;
+        if (isClosedCaption) 
+            return TrackType.ClosedCaption;
+        if (forced) 
+            return TrackType.Forced;
 
-        // Handle explicitly forced tracks
-        if (forced)
-        {
-            return "Forced";
-        }
-
+        // Heuristics only if no definitive flags
         // Analyze characteristics for PGS tracks (which don't always have forced_track: true)
         if (bitrate.HasValue && frameCount.HasValue)
         {
-            // Very low bitrate and frame count = likely forced/partial
-            if (bitrate < 1000 && frameCount < 50)
-            {
-                return "Forced";
-            }
-
-            // Low bitrate and few frames = likely forced
-            if (bitrate < 10000 && frameCount < 200)
-            {
-                return "Forced";
-            }
-
-            // High bitrate and many frames = likely full subtitles
-            if (bitrate > 20000 && frameCount > 1000)
-            {
-                return "Full";
-            }
-
-            // Medium characteristics = likely full subtitles
-            if (bitrate > 10000 && frameCount > 500)
-            {
-                return "Full";
-            }
+            // Use single boolean expression for forced heuristic
+            var isForcedLikely = (bitrate < 1000 && frameCount < 50) || 
+                                 (bitrate < 10000 && frameCount < 200);
+            
+            if (isForcedLikely)
+                return TrackType.Forced;
         }
 
-        // Default to Full for text-based subtitles (S_TEXT/UTF8)
-        return "Full";
+        // Default to Full for text-based subtitles (S_TEXT/UTF8) or unclear cases
+        return TrackType.Full;
     }
 
     /// <summary>
@@ -514,13 +521,18 @@ public class MkvToolService : IMkvToolService
 
     public async Task<(string idxFilePath, string subFilePath)> ExtractVobSubWithFfmpegAsync(string mkvPath, int trackId, string outputDirectory, CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Extracting VobSub track {trackId} using FFmpeg to directory: {outputDirectory}");
+        _loggingService.LogInfo($"Extracting VobSub track {trackId} using FFmpeg");
 
         try
         {
+            // SECURITY: Validate and sanitize paths
+            var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
+            var validatedOutputDir = SafeFileOperations.ValidateOutputPath(outputDirectory, validatedMkvPath);
+            SafeFileOperations.SafeCreateDirectory(validatedOutputDir, validatedMkvPath);
+
             // Calculate timeout based on file size
-            var timeout = CalculateTimeoutForFile(mkvPath);
-            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(mkvPath):F1} GB");
+            var timeout = CalculateTimeoutForFile(validatedMkvPath);
+            _loggingService.LogInfo($"Using timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeGB(validatedMkvPath):F1} GB");
 
             // Get FFmpeg path from tool detection
             var toolStatus = await _toolDetectionService.CheckFfmpegAsync();
@@ -529,24 +541,25 @@ public class MkvToolService : IMkvToolService
                 throw new InvalidOperationException("FFmpeg not found");
             }
 
-            // Ensure output directory exists
-            if (!Directory.Exists(outputDirectory))
-            {
-                Directory.CreateDirectory(outputDirectory);
-            }
-
             // Generate output file names
-            var baseFileName = Path.GetFileNameWithoutExtension(mkvPath);
-            var idxFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.idx");
-            var subFilePath = Path.Combine(outputDirectory, $"{baseFileName}.{trackId}.sub");
+            var baseFileName = Path.GetFileNameWithoutExtension(validatedMkvPath);
+            var outputBasePath = Path.Combine(validatedOutputDir, $"{baseFileName}.{trackId}");
+            var idxFilePath = $"{outputBasePath}.idx";
+            var subFilePath = $"{outputBasePath}.sub";
+            
+            // Validate output paths (allow same directory as source)
+            outputBasePath = SafeFileOperations.ValidateOutputPath(outputBasePath, validatedMkvPath);
+            idxFilePath = SafeFileOperations.ValidateOutputPath(idxFilePath, validatedMkvPath);
+            subFilePath = SafeFileOperations.ValidateOutputPath(subFilePath, validatedMkvPath);
 
+            // SECURITY: Use argument array to prevent command injection
             // Use FFmpeg to extract VobSub subtitles
             // FFmpeg can extract VobSub directly from MKV and create .idx/.sub files
-            var args = $"-i \"{mkvPath}\" -map 0:s:{trackId - 1} -c copy -f vobsub \"{Path.Combine(outputDirectory, $"{baseFileName}.{trackId}")}\"";
-            
-            _loggingService.LogInfo($"Running FFmpeg command: {toolStatus.Path} {args}");
-            
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolStatus.Path, args, timeout, cancellationToken);
+            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
+                toolStatus.Path, 
+                new[] { "-i", validatedMkvPath, "-map", $"0:s:{trackId - 1}", "-c", "copy", "-f", "vobsub", outputBasePath }, 
+                timeout, 
+                cancellationToken);
 
             if (exitCode != 0)
             {

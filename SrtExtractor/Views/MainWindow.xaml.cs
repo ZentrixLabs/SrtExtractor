@@ -21,23 +21,26 @@ namespace SrtExtractor.Views
         private readonly IServiceProvider _serviceProvider;
         private readonly IWindowStateService _windowStateService;
         private readonly ILoggingService _loggingService;
+        private readonly INotificationService _notificationService;
         private CancellationTokenSource? _saveStateCts;
         private readonly TimeSpan _saveStateDebounce = TimeSpan.FromSeconds(1);
 
-        public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider, IWindowStateService windowStateService, ILoggingService loggingService)
+        public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider, IWindowStateService windowStateService, ILoggingService loggingService, INotificationService notificationService)
         {
             _serviceProvider = serviceProvider;
             _windowStateService = windowStateService;
             _loggingService = loggingService;
+            _notificationService = notificationService;
             InitializeComponent();
             DataContext = viewModel;
             
             // Note: Drag and drop is now handled by the queue panel specifically
             
-            // Subscribe to recent files changes
+            // Subscribe to recent files changes and settings requests
             if (viewModel.State != null)
             {
                 viewModel.State.PropertyChanged += State_PropertyChanged;
+                viewModel.State.RequestOpenSettings += (s, e) => SettingsMenuItem_Click(this, new RoutedEventArgs());
             }
             
             // Subscribe to window events for state persistence
@@ -48,6 +51,28 @@ namespace SrtExtractor.Views
             SizeChanged += MainWindow_SizeChanged;
             StateChanged += MainWindow_StateChanged;
             
+            // Subscribe to toast notification events
+            NotificationService.ToastRequested += ShowToast;
+        }
+        
+        private void ShowToast(ToastNotificationData data)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var toast = new ToastNotification();
+                
+                // Add toast to container
+                ToastContainer.Items.Add(toast);
+                
+                // Handle toast closed event
+                toast.Closed += (toastInstance) =>
+                {
+                    ToastContainer.Items.Remove(toastInstance);
+                };
+                
+                // Show the toast with data
+                toast.Show(data);
+            });
         }
 
         private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -85,14 +110,13 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening settings:\n{ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _notificationService.ShowError($"Error opening settings:\n{ex.Message}", "Settings Error");
             }
         }
 
         private void KeyboardShortcuts_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(
-                "SrtExtractor Keyboard Shortcuts\n\n" +
+            _notificationService.ShowInfo(
                 "File Operations:\n" +
                 "• Ctrl+O - Open Video File\n" +
                 "• Alt+F4 - Exit Application\n\n" +
@@ -107,8 +131,7 @@ namespace SrtExtractor.Views
                 "Help:\n" +
                 "• F1 - Show Help",
                 "Keyboard Shortcuts",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                7000);
         }
 
         private void UserGuide_Click(object sender, RoutedEventArgs e)
@@ -122,7 +145,7 @@ namespace SrtExtractor.Views
             catch (Exception ex)
             {
                 _loggingService.LogError("Error opening user guide", ex);
-                MessageBox.Show($"Error opening user guide:\n{ex.Message}", "User Guide Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _notificationService.ShowError($"Error opening user guide:\n{ex.Message}", "User Guide Error");
             }
         }
 
@@ -143,6 +166,20 @@ namespace SrtExtractor.Views
             }
         }
 
+        private void ThemeLight_Click(object sender, RoutedEventArgs e)
+        {
+            var themeService = _serviceProvider.GetRequiredService<IThemeService>();
+            themeService.SetTheme("Light");
+            _loggingService.LogInfo("User switched to Light theme");
+        }
+
+        private void ThemeDark_Click(object sender, RoutedEventArgs e)
+        {
+            var themeService = _serviceProvider.GetRequiredService<IThemeService>();
+            themeService.SetTheme("Dark");
+            _loggingService.LogInfo("User switched to Dark theme");
+        }
+
         private void SrtCorrection_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -154,7 +191,7 @@ namespace SrtExtractor.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening SRT correction:\n{ex.Message}", "SRT Correction Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _notificationService.ShowError($"Error opening SRT correction:\n{ex.Message}", "SRT Correction Error");
             }
         }
 
@@ -170,118 +207,139 @@ namespace SrtExtractor.Views
             catch (Exception ex)
             {
                 _loggingService.LogError("Error opening VobSub Track Analyzer", ex);
-                MessageBox.Show($"Error opening VobSub Track Analyzer:\n{ex.Message}", "VobSub Track Analyzer Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _notificationService.ShowError($"Error opening VobSub Track Analyzer:\n{ex.Message}", "VobSub Track Analyzer Error");
             }
         }
 
-        private void QueuePanel_DragEnter(object sender, DragEventArgs e)
-        {
-            // Only allow drag & drop if batch mode is enabled
-            if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                e.Effects = DragDropEffects.Copy;
-                // Change the queue panel appearance to indicate drop target
-                if (sender is GroupBox queuePanel)
-                {
-                    queuePanel.Background = System.Windows.Media.Brushes.LightBlue;
-                    queuePanel.BorderBrush = System.Windows.Media.Brushes.Blue;
-                    queuePanel.BorderThickness = new Thickness(2);
-                }
-            }
-            else
-            {
-                e.Effects = DragDropEffects.None;
-            }
-        }
-
-        private void QueuePanel_DragOver(object sender, DragEventArgs e)
-        {
-            // Only allow drag & drop if batch mode is enabled
-            if (DataContext is MainViewModel viewModel && viewModel.State.IsBatchMode && e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                e.Effects = DragDropEffects.Copy;
-            }
-            else
-            {
-                e.Effects = DragDropEffects.None;
-            }
-        }
-
-        private void QueuePanel_DragLeave(object sender, DragEventArgs e)
-        {
-            // Restore original queue panel appearance
-            if (sender is GroupBox queuePanel)
-            {
-                queuePanel.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F8FAFC"));
-                queuePanel.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E2E8F0"));
-                queuePanel.BorderThickness = new Thickness(1);
-            }
-        }
-
-        private void QueuePanel_Drop(object sender, DragEventArgs e)
+        private void ShowWelcome_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Restore original queue panel appearance
-                if (sender is GroupBox queuePanel)
-                {
-                    queuePanel.Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F8FAFC"));
-                    queuePanel.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E2E8F0"));
-                    queuePanel.BorderThickness = new Thickness(1);
-                }
+                _loggingService.LogInfo("User manually opened welcome screen (debug)");
                 
-                if (DataContext is not MainViewModel viewModel)
-                    return;
-
-                if (!e.Data.GetDataPresent(DataFormats.FileDrop))
-                    return;
-
-                // Check if batch mode is enabled
-                if (!viewModel.State.IsBatchMode)
-                {
-                    MessageBox.Show("Please enable Batch Mode first to use drag & drop functionality.\n\nCheck the 'Enable Batch Mode' checkbox in the Settings panel.", "Batch Mode Required", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                if (files == null || files.Length == 0)
-                    return;
-
-                // Filter for supported video files only
-                var videoExtensions = new[] { ".mkv", ".mp4" };
-                var videoFiles = files.Where(file =>
-                {
-                    if (string.IsNullOrEmpty(file))
-                        return false;
-
-                    var extension = Path.GetExtension(file).ToLowerInvariant();
-                    return File.Exists(file) && videoExtensions.Contains(extension);
-                }).ToArray();
-
-                if (videoFiles.Length == 0)
-                {
-                    MessageBox.Show("No valid video files found. Please drag MKV or MP4 files.", "Invalid Files", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                // Add files to batch queue
-                viewModel.AddFilesToBatchQueue(videoFiles);
-
-                // Show feedback
-                if (videoFiles.Length == 1)
-                {
-                    MessageBox.Show($"Added {Path.GetFileName(videoFiles[0])} to the batch queue.", "File Added", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show($"Added {videoFiles.Length} files to the batch queue.", "Files Added", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                // Create the welcome window with dependency injection
+                var welcomeWindow = _serviceProvider.GetRequiredService<WelcomeWindow>();
+                welcomeWindow.Owner = this;
+                welcomeWindow.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error processing dropped files:\n{ex.Message}", "Drag & Drop Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _loggingService.LogError("Error opening welcome screen", ex);
+                _notificationService.ShowError($"Error opening welcome screen:\n{ex.Message}", "Welcome Screen Error");
             }
         }
+
+        private void Window_DragEnter(object sender, DragEventArgs e)
+        {
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            // Only show overlay if on Batch tab (index 1) and files are being dragged
+            if (viewModel.State.SelectedTabIndex == 1 && e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                var videoExtensions = new[] { ".mkv", ".mp4" };
+                var hasValidFiles = files?.Any(file => videoExtensions.Contains(Path.GetExtension(file)?.ToLower())) ?? false;
+
+                if (hasValidFiles)
+                {
+                    DragDropOverlay.Visibility = Visibility.Visible;
+                    DragDropMessage.Text = "Drop MKV/MP4 files here";
+                    e.Effects = DragDropEffects.Copy;
+                }
+                else
+                {
+                    DragDropOverlay.Visibility = Visibility.Visible;
+                    DragDropMessage.Text = "Only MKV/MP4 files supported";
+                    DragDropMessage.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.OrangeRed);
+                    e.Effects = DragDropEffects.None;
+                }
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void Window_DragOver(object sender, DragEventArgs e)
+        {
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            if (viewModel.State.SelectedTabIndex == 1 && e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                var videoExtensions = new[] { ".mkv", ".mp4" };
+                var hasValidFiles = files?.Any(file => videoExtensions.Contains(Path.GetExtension(file)?.ToLower())) ?? false;
+                
+                e.Effects = hasValidFiles ? DragDropEffects.Copy : DragDropEffects.None;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void Window_DragLeave(object sender, DragEventArgs e)
+        {
+            // Hide overlay when drag leaves
+            DragDropOverlay.Visibility = Visibility.Collapsed;
+            DragDropMessage.Foreground = System.Windows.Media.Brushes.White;
+        }
+
+        private async void Window_Drop(object sender, DragEventArgs e)
+        {
+            // Hide overlay
+            DragDropOverlay.Visibility = Visibility.Collapsed;
+            DragDropMessage.Foreground = System.Windows.Media.Brushes.White;
+
+            if (DataContext is not MainViewModel viewModel)
+                return;
+
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
+            // Check if on Batch tab (index 1)
+            if (viewModel.State.SelectedTabIndex != 1)
+            {
+                _notificationService.ShowInfo("Please switch to the Batch tab to use drag & drop functionality.\n\nUse Ctrl+B or click the Batch tab.", 
+                              "Batch Tab Required");
+                return;
+            }
+
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files == null || files.Length == 0)
+                return;
+
+            // Filter for supported video files only
+            var videoExtensions = new[] { ".mkv", ".mp4" };
+            var videoFiles = files.Where(file =>
+            {
+                if (string.IsNullOrEmpty(file))
+                    return false;
+                var ext = Path.GetExtension(file)?.ToLower();
+                return videoExtensions.Contains(ext);
+            }).ToList();
+
+            if (videoFiles.Count == 0)
+            {
+                _notificationService.ShowWarning("No valid video files found. Only MKV and MP4 files are supported.", 
+                              "Invalid File Type");
+                return;
+            }
+
+          // Add files to batch queue using the ViewModel's async method
+          await viewModel.AddFilesToBatchQueueAsync(videoFiles.ToArray());
+
+            _loggingService.LogInfo($"Added {videoFiles.Count} file(s) to batch queue via window drag & drop");
+            
+            // Mark event as handled
+            e.Handled = true;
+        }
+
+        // Removed QueuePanel_DragEnter, QueuePanel_DragOver, QueuePanel_DragLeave - now handled at window level
+
+        // Removed QueuePanel_Drop method - now handled at window level
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
@@ -292,24 +350,6 @@ namespace SrtExtractor.Views
             {
                 // Populate recent files menu
                 PopulateRecentFilesMenu();
-                
-                // Check if settings should be opened on startup
-                if (viewModel.State.ShowSettingsOnStartup)
-                {
-                    viewModel.State.ShowSettingsOnStartup = false; // Reset the flag
-                    
-                    // Open settings window
-                    try
-                    {
-                        var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
-                        settingsWindow.Owner = this;
-                        settingsWindow.ShowDialog();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error opening settings:\n{ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
             }
         }
 
@@ -321,10 +361,9 @@ namespace SrtExtractor.Views
                 {
                     Dispatcher.Invoke(PopulateRecentFilesMenu);
                 }
-                else if (e.PropertyName == nameof(MainViewModel.State.IsBatchMode) || 
-                         e.PropertyName == nameof(MainViewModel.State.QueueColumnWidth))
+                else if (e.PropertyName == nameof(MainViewModel.State.SelectedTabIndex))
                 {
-                    // Save window state when batch mode or queue column width changes
+                    // Save window state when tab index changes
                     await SaveWindowStateAsync().ConfigureAwait(false);
                 }
             }
@@ -333,7 +372,7 @@ namespace SrtExtractor.Views
                 _loggingService.LogError("Unhandled error in State_PropertyChanged", ex);
             }
         }
-
+        
         private void PopulateRecentFilesMenu()
         {
             if (DataContext is not MainViewModel viewModel) return;
@@ -385,7 +424,7 @@ namespace SrtExtractor.Views
                 var isFirstRun = windowState.Width == 1250 && windowState.Height == 900 && 
                                 windowState.Left == 100 && windowState.Top == 100;
                 
-                // Apply window state on UI thread
+                // Apply window state on UI thread (including DataContext access)
                 Dispatcher.Invoke(() =>
                 {
                     // Apply window state
@@ -406,14 +445,13 @@ namespace SrtExtractor.Views
                     }
                     
                     WindowState = windowState.WindowStateEnum;
+                    
+                    // Apply selected tab index if available (must be on UI thread - DataContext is a DependencyObject)
+                    if (DataContext is MainViewModel viewModel)
+                    {
+                        viewModel.State.SelectedTabIndex = windowState.SelectedTabIndex;
+                    }
                 });
-                
-                // Apply batch mode state if available (this can be done on any thread)
-                if (DataContext is MainViewModel viewModel)
-                {
-                    viewModel.State.IsBatchMode = windowState.IsBatchMode;
-                    viewModel.State.QueueColumnWidth = windowState.QueueColumnWidth;
-                }
                 
                 if (isFirstRun)
                 {
@@ -447,8 +485,7 @@ namespace SrtExtractor.Views
                     Left = Left,
                     Top = Top,
                     WindowStateEnum = WindowState,
-                    QueueColumnWidth = DataContext is MainViewModel viewModel ? viewModel.State.QueueColumnWidth : 0,
-                    IsBatchMode = DataContext is MainViewModel vm ? vm.State.IsBatchMode : false
+                    SelectedTabIndex = DataContext is MainViewModel viewModel ? viewModel.State.SelectedTabIndex : 0
                 };
                 
                 await _windowStateService.SaveWindowStateAsync(windowState).ConfigureAwait(false);
@@ -608,7 +645,7 @@ namespace SrtExtractor.Views
                              $"Duration: {track.Duration}\n" +
                              $"Name: {track.Name ?? "N/A"}";
 
-                MessageBox.Show(details, "Track Details", MessageBoxButton.OK, MessageBoxImage.Information);
+                _notificationService.ShowInfo(details, "Track Details", 6000);
             }
         }
 
@@ -674,7 +711,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening file location", ex);
-                    MessageBox.Show($"Error opening file location: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _notificationService.ShowError($"Error opening file location: {ex.Message}", "Error");
                 }
             }
         }
@@ -697,7 +734,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening file properties", ex);
-                    MessageBox.Show($"Error opening file properties:\n{ex.Message}", "File Properties Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _notificationService.ShowError($"Error opening file properties:\n{ex.Message}", "File Properties Error");
                 }
             }
         }
@@ -744,13 +781,13 @@ namespace SrtExtractor.Views
                     {
                         File.WriteAllText(saveDialog.FileName, viewModel.State.LogText);
                         _loggingService.LogInfo($"Log saved to: {saveDialog.FileName}");
-                        MessageBox.Show($"Log saved successfully to:\n{saveDialog.FileName}", "Log Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                        _notificationService.ShowSuccess($"Log saved successfully to:\n{saveDialog.FileName}", "Log Saved");
                     }
                 }
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error saving log to file", ex);
-                    MessageBox.Show($"Error saving log:\n{ex.Message}", "Log Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _notificationService.ShowError($"Error saving log:\n{ex.Message}", "Log Save Error");
                 }
             }
         }
@@ -773,13 +810,13 @@ namespace SrtExtractor.Views
                 }
                 else
                 {
-                    MessageBox.Show("Log directory does not exist yet. Log files will be created when the application starts logging.", "Log Directory", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _notificationService.ShowInfo("Log directory does not exist yet. Log files will be created when the application starts logging.", "Log Directory");
                 }
             }
             catch (Exception ex)
             {
                 _loggingService.LogError("Error opening log folder", ex);
-                MessageBox.Show($"Error opening log folder:\n{ex.Message}", "Log Folder Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _notificationService.ShowError($"Error opening log folder:\n{ex.Message}", "Log Folder Error");
             }
         }
 
@@ -832,7 +869,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening batch file location", ex);
-                    MessageBox.Show($"Error opening file location:\n{ex.Message}", "File Location Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _notificationService.ShowError($"Error opening file location:\n{ex.Message}", "File Location Error");
                 }
             }
         }
@@ -855,7 +892,7 @@ namespace SrtExtractor.Views
                 catch (Exception ex)
                 {
                     _loggingService.LogError("Error opening batch file properties", ex);
-                    MessageBox.Show($"Error opening file properties:\n{ex.Message}", "File Properties Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _notificationService.ShowError($"Error opening file properties:\n{ex.Message}", "File Properties Error");
                 }
             }
         }
@@ -997,6 +1034,7 @@ namespace SrtExtractor.Views
         }
 
         #endregion
+
 
     }
 }
