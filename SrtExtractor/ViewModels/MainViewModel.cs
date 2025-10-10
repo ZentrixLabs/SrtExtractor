@@ -66,6 +66,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
         
+        // Ensure clean state on startup
+        State.ShowExtractionSuccess = false;
+        State.ShowNoTracksError = false;
+        State.LastExtractionOutputPath = "";
+        
 
         // Initialize commands
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
@@ -77,6 +82,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
         CleanupTempFilesCommand = new AsyncRelayCommand(CleanupTempFilesAsync);
         CorrectSrtCommand = new AsyncRelayCommand(CorrectSrtAsync);
+        
         
         // Batch mode commands
         ProcessBatchCommand = new AsyncRelayCommand(ProcessBatchAsync, () => State.HasBatchQueue);
@@ -133,6 +139,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand CleanupTempFilesCommand { get; }
     public IAsyncRelayCommand CorrectSrtCommand { get; }
     
+    
     // Batch mode commands
     public IAsyncRelayCommand ProcessBatchCommand { get; }
     public IAsyncRelayCommand ResumeBatchCommand { get; }
@@ -169,6 +176,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 State.HasProbedFile = false;
                 // Clear the message state when selecting a new file
                 State.ShowNoTracksError = false;
+                State.ShowExtractionSuccess = false;
+                State.LastExtractionOutputPath = "";
                 
                 // Update network detection
                 UpdateNetworkDetection(State.MkvPath);
@@ -195,6 +204,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             State.IsBusy = true;
             // Clear the message state when starting probe
             State.ShowNoTracksError = false;
+            State.ShowExtractionSuccess = false;
+            State.LastExtractionOutputPath = "";
+            _loggingService.LogInfo($"Probe started - cleared success state: ShowExtractionSuccess={State.ShowExtractionSuccess}");
             
             // Get file size for progress tracking
             var fileInfo = new FileInfo(State.MkvPath);
@@ -234,9 +246,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
             
             // Show message only if no tracks were found - do this AFTER all other state changes
             State.ShowNoTracksError = result.Tracks.Count == 0;
+            
+            // Force UI update by explicitly setting success state to false again
+            State.ShowExtractionSuccess = false;
+            
+            _loggingService.LogInfo($"Probe completed - ShowNoTracksError={State.ShowNoTracksError}, ShowExtractionSuccess={State.ShowExtractionSuccess}");
 
             State.UpdateProcessingMessage("Analysis completed!");
             State.AddLogMessage($"Found {result.Tracks.Count} subtitle tracks");
+            
+            // Log technical details for each track (for power users inspecting History tab)
+            foreach (var track in State.Tracks)
+            {
+                var speedInfo = track.SpeedIndicator.Contains("Fast") ? "FAST" : "OCR-REQUIRED";
+                State.AddLogMessage($"  Track {track.Id}: {track.Language} | {track.FormatDisplay} ({speedInfo}) | Codec: {track.Codec} | Frames: {track.FrameCount} | {(track.Forced ? "FORCED" : "FULL")}");
+            }
             
             // Mark that we've probed this file
             State.HasProbedFile = true;
@@ -251,11 +275,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 var englishTracks = result.Tracks.Where(t => string.Equals(t.Language, "eng", StringComparison.OrdinalIgnoreCase)).ToList();
                 if (englishTracks.Count == 1)
                 {
-                    State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language}) - Only English track available");
+                    State.AddLogMessage($"⭐ Auto-selected track {selectedTrack.Id}: {selectedTrack.FormatDisplay} ({selectedTrack.Language}) - Only English track available");
                 }
                 else
                 {
-                    State.AddLogMessage($"Auto-selected track {selectedTrack.Id}: {selectedTrack.Codec} ({selectedTrack.Language}) - Best of {englishTracks.Count} English tracks");
+                    State.AddLogMessage($"⭐ Auto-selected track {selectedTrack.Id}: {selectedTrack.FormatDisplay} ({selectedTrack.Language}) - Best of {englishTracks.Count} English tracks");
                 }
             }
         }
@@ -421,8 +445,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await _recentFilesService.AddFileAsync(State.MkvPath).ConfigureAwait(false);
             await LoadRecentFilesAsync().ConfigureAwait(false); // Refresh the UI list
             
-            // Show success notification (batch processing has its own notifications)
-            _notificationService.ShowSuccess($"Subtitles extracted successfully!\n\nOutput: {outputPath}", "Extraction Complete");
+            // Set success state for UI feedback (after all processing is complete)
+            State.ShowExtractionSuccess = true;
+            State.LastExtractionOutputPath = outputPath;
+            
+            // Note: Success message is now shown in-app via State.ShowExtractionSuccess
+            // Toast notification removed to prevent confusion with other messages
         }
         catch (OperationCanceledException)
         {
@@ -502,6 +530,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             State.IsBusy = false;
         }
     }
+
 
     private void BrowseMkvToolNix()
     {

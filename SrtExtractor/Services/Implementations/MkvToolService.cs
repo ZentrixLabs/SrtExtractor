@@ -203,8 +203,8 @@ public class MkvToolService : IMkvToolService
         {
             // SECURITY: Validate and sanitize paths
             var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
-            var validatedOutputDir = SafeFileOperations.ValidateOutputPath(outputDirectory);
-            SafeFileOperations.SafeCreateDirectory(validatedOutputDir);
+            var validatedOutputDir = SafeFileOperations.ValidateOutputPath(outputDirectory, validatedMkvPath);
+            SafeFileOperations.SafeCreateDirectory(validatedOutputDir, validatedMkvPath);
 
             // Calculate timeout based on file size
             var timeout = CalculateTimeoutForFile(validatedMkvPath);
@@ -230,9 +230,9 @@ public class MkvToolService : IMkvToolService
             var idxFilePath = Path.Combine(validatedOutputDir, $"{baseFileName}.{trackId}.idx");
             var subFilePath = Path.Combine(validatedOutputDir, $"{baseFileName}.{trackId}.sub");
             
-            // Validate output paths
-            idxFilePath = SafeFileOperations.ValidateOutputPath(idxFilePath);
-            subFilePath = SafeFileOperations.ValidateOutputPath(subFilePath);
+            // Validate output paths (allow same directory as source)
+            idxFilePath = SafeFileOperations.ValidateOutputPath(idxFilePath, validatedMkvPath);
+            subFilePath = SafeFileOperations.ValidateOutputPath(subFilePath, validatedMkvPath);
 
             // SECURITY: Use argument array to prevent command injection
             // Run mkvextract tracks to extract VobSub
@@ -537,8 +537,8 @@ public class MkvToolService : IMkvToolService
         {
             // SECURITY: Validate and sanitize paths
             var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
-            var validatedOutputDir = SafeFileOperations.ValidateOutputPath(outputDirectory);
-            SafeFileOperations.SafeCreateDirectory(validatedOutputDir);
+            var validatedOutputDir = SafeFileOperations.ValidateOutputPath(outputDirectory, validatedMkvPath);
+            SafeFileOperations.SafeCreateDirectory(validatedOutputDir, validatedMkvPath);
 
             // Calculate timeout based on file size
             var timeout = CalculateTimeoutForFile(validatedMkvPath);
@@ -557,10 +557,10 @@ public class MkvToolService : IMkvToolService
             var idxFilePath = $"{outputBasePath}.idx";
             var subFilePath = $"{outputBasePath}.sub";
             
-            // Validate output paths
-            outputBasePath = SafeFileOperations.ValidateOutputPath(outputBasePath);
-            idxFilePath = SafeFileOperations.ValidateOutputPath(idxFilePath);
-            subFilePath = SafeFileOperations.ValidateOutputPath(subFilePath);
+            // Validate output paths (allow same directory as source)
+            outputBasePath = SafeFileOperations.ValidateOutputPath(outputBasePath, validatedMkvPath);
+            idxFilePath = SafeFileOperations.ValidateOutputPath(idxFilePath, validatedMkvPath);
+            subFilePath = SafeFileOperations.ValidateOutputPath(subFilePath, validatedMkvPath);
 
             // SECURITY: Use argument array to prevent command injection
             // Use FFmpeg to extract VobSub subtitles

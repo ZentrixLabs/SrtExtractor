@@ -246,16 +246,24 @@
                                    ToolTip="Current extraction settings&#x0a;Go to Tools tab to modify these preferences"/>
                         
                         <!-- File Selection -->
-                        <DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
                             <Button Content="Pick Video..." 
                                     Command="{Binding PickMkvCommand}"
                                     IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolConverter}}"
-                                    DockPanel.Dock="Left"
-                                    Margin="0,0,4,0"
+                                    Grid.Column="0"
+                                    Margin="0,0,8,0"
                                     ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
+                            
                             <TextBox Text="{Binding State.MkvPath}" 
                                      IsReadOnly="True" 
                                      VerticalAlignment="Center"
+                                     Grid.Column="1"
                                      ToolTip="Path to the selected video file&#x0a;Right-click for more options (copy path, open location, etc.)">
                                 <TextBox.ContextMenu>
                                     <ContextMenu>
@@ -309,33 +317,75 @@
                                     </ContextMenu>
                                 </TextBox.ContextMenu>
                             </TextBox>
-                        </DockPanel>
-                        
-                        <!-- Network Warning -->
-                        <Border Background="{StaticResource BackgroundAltBrush}" 
-                                BorderBrush="{StaticResource WarningBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="{StaticResource RadiusS}" 
-                                Padding="{StaticResource ThicknessS}" 
-                                Margin="0,10,0,0"
-                                Visibility="{Binding State.ShowNetworkWarning, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            
+                            <!-- Compact Network Status Indicator -->
+                            <Border Grid.Column="2" 
+                                    Background="{StaticResource BackgroundAltBrush}" 
+                                    BorderBrush="{StaticResource WarningBrush}" 
+                                    BorderThickness="1" 
+                                    CornerRadius="4" 
+                                    Padding="8,4" 
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="{Binding State.ShowNetworkWarning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        <Style.Triggers>
+                                            <!-- Hide network warning when success message is showing -->
+                                            <DataTrigger Binding="{Binding State.ShowExtractionSuccessMessage}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
                                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                                Text="{StaticResource IconWarning}" 
-                                               FontSize="16" 
+                                               FontSize="12" 
                                                Foreground="{StaticResource WarningBrush}"
-                                               Margin="0,0,8,0"
+                                               Margin="0,0,4,0"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="Network File Detected" 
-                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                    <TextBlock Text="Network" 
+                                               FontSize="11" 
                                                Foreground="{StaticResource WarningBrush}"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding State.NetworkWarningMessage}" 
-                                           TextWrapping="Wrap" 
+                            </Border>
+                        </Grid>
+                        
+                        <!-- Extraction Success Message -->
+                        <Border Background="{StaticResource BackgroundAltBrush}" 
+                                BorderBrush="{StaticResource SuccessBrush}" 
+                                BorderThickness="2" 
+                                CornerRadius="{StaticResource RadiusM}" 
+                                Padding="{StaticResource ThicknessL}" 
+                                Margin="0,10,0,0"
+                                Visibility="{Binding State.ShowExtractionSuccess, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="✅" 
+                                               FontSize="24" 
+                                               Foreground="{StaticResource SuccessBrush}"
+                                               Margin="0,0,12,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Extraction Complete!" 
+                                               FontSize="{StaticResource FontSizeSubtitle}" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                               Foreground="{StaticResource SuccessBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding State.LastExtractionOutputPath, StringFormat='Subtitles saved to: {0}'}" 
+                                           FontSize="{StaticResource FontSizeBody}" 
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,4"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="You can now extract another file or select a different track from this video." 
+                                           FontSize="{StaticResource FontSizeSmall}" 
                                            Foreground="{StaticResource TextSecondaryBrush}"
-                                           Margin="24,0,0,0"/>
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -446,8 +496,44 @@
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                        
-                        <!-- Tracks DataGrid -->
+
+                        <!-- Extraction Success Message -->
+                        <Border Background="{StaticResource BackgroundAltBrush}" 
+                                BorderBrush="{StaticResource SuccessBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="{StaticResource RadiusM}" 
+                                Padding="{StaticResource ThicknessL}" 
+                                Margin="{StaticResource ThicknessS}"
+                                Visibility="{Binding State.ShowExtractionSuccess, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                               Text="✅" 
+                                               FontSize="20" 
+                                               Foreground="{StaticResource SuccessBrush}"
+                                               Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Extraction Complete!" 
+                                               FontSize="{StaticResource FontSizeSubtitle}" 
+                                               FontWeight="{StaticResource FontWeightSemiBold}" 
+                                               Foreground="{StaticResource SuccessBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding State.LastExtractionOutputPath, StringFormat='Subtitles saved to: {0}'}" 
+                                           FontSize="{StaticResource FontSizeBody}" 
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,4"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="You can now extract another file or select a different track from this video." 
+                                           FontSize="{StaticResource FontSizeSmall}" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           HorizontalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Tracks DataGrid - Humanized Display with Technical Details on Demand -->
                         <DataGrid ItemsSource="{Binding State.Tracks}" 
                                   SelectedItem="{Binding State.SelectedTrack}"
                                   AutoGenerateColumns="False" 
@@ -461,16 +547,30 @@
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   BorderBrush="{DynamicResource BorderBrush}"
                                   Visibility="{Binding State.ShowNoTracksError, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                                  ToolTip="Click to select a subtitle track for extraction&#x0a;⭐ Recommended tracks are automatically identified based on your preferences&#x0a;Right-click for additional options">
+                                  ToolTip="Click to select a subtitle track for extraction&#x0a;⭐ Recommended tracks are automatically identified&#x0a;Hover over rows to see full technical details&#x0a;Right-click for more options">
                             <DataGrid.RowBackground>
                                 <SolidColorBrush Color="White"/>
                             </DataGrid.RowBackground>
                             <DataGrid.AlternatingRowBackground>
                                 <SolidColorBrush Color="#F8F8F8"/>
                             </DataGrid.AlternatingRowBackground>
+                            <!-- Row Tooltip with Full Technical Details for Power Users -->
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                    <Setter Property="ToolTip">
+                                        <Setter.Value>
+                                            <ToolTip>
+                                                <TextBlock Text="{Binding TechnicalDetails}" 
+                                                           FontFamily="{StaticResource MonospaceFontFamily}"
+                                                           FontSize="11"/>
+                                            </ToolTip>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </DataGrid.RowStyle>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Select Track" 
+                                    <MenuItem Header="Extract This Track" 
                                               Command="{Binding ExtractCommand}"
                                               IsEnabled="{Binding State.CanExtract}"
                                               ToolTip="Extract this subtitle track to SRT format (Ctrl+E)">
@@ -481,9 +581,9 @@
                                         </MenuItem.Icon>
                                     </MenuItem>
                                     <Separator/>
-                                    <MenuItem Header="Show Track Details" 
+                                    <MenuItem Header="Show Technical Details" 
                                               Click="ShowTrackDetails_Click"
-                                              ToolTip="View detailed information about this subtitle track">
+                                              ToolTip="View all technical information (codec, bitrate, frames, etc.)">
                                         <MenuItem.Icon>
                                             <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                                        Text="{StaticResource IconInfo}" 
@@ -492,7 +592,7 @@
                                     </MenuItem>
                                     <MenuItem Header="Copy Track Info" 
                                               Click="CopyTrackInfo_Click"
-                                              ToolTip="Copy track information to clipboard">
+                                              ToolTip="Copy technical track information to clipboard">
                                         <MenuItem.Icon>
                                             <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                                        Text="{StaticResource IconCopy}" 
@@ -513,57 +613,103 @@
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" 
-                                                    Binding="{Binding Id}" 
-                                                    Width="40">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Track ID number from the video file"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Codec" 
-                                                    Binding="{Binding Codec}" 
-                                                    Width="120">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Subtitle format (SRT, ASS, VOBSUB, etc.)"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
+                                <!-- Language - Clear and Essential -->
                                 <DataGridTextColumn Header="Language" 
                                                     Binding="{Binding Language}" 
-                                                    Width="80">
+                                                    Width="85">
                                     <DataGridTextColumn.HeaderStyle>
                                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Subtitle language code (en, es, fr, etc.)"/>
+                                            <Setter Property="ToolTip" Value="Subtitle language (eng, spa, fra, etc.)"/>
                                         </Style>
                                     </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
+                                
+                                <!-- Format - User-Friendly Description (Technical codec in tooltip) -->
+                                <DataGridTextColumn Header="Format" 
+                                                    Binding="{Binding FormatDisplay}" 
+                                                    Width="150">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Subtitle format type&#x0a;Text formats extract instantly&#x0a;Image formats require OCR processing"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="ToolTip" Value="{Binding Codec}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- Speed - Critical for User Decision Making -->
+                                <DataGridTextColumn Header="Speed" 
+                                                    Binding="{Binding SpeedIndicator}" 
+                                                    Width="130">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Processing speed&#x0a;⚡ Fast: Text extraction (instant)&#x0a;🐢 OCR Required: Image conversion (slower)"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- Type - Helpful Context -->
                                 <DataGridTextColumn Header="Type" 
                                                     Binding="{Binding TrackType}" 
-                                                    Width="80">
+                                                    Width="85">
                                     <DataGridTextColumn.HeaderStyle>
                                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Subtitle track type (subtitles, captions, etc.)"/>
+                                            <Setter Property="ToolTip" Value="Track type (subtitles, captions, etc.)"/>
                                         </Style>
                                     </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
-                                <DataGridCheckBoxColumn Header="Forced" 
-                                                        Binding="{Binding Forced}" 
-                                                        Width="60">
-                                    <DataGridCheckBoxColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Indicates if this is a forced subtitle track"/>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
                                         </Style>
-                                    </DataGridCheckBoxColumn.HeaderStyle>
-                                </DataGridCheckBoxColumn>
-                                <DataGridTextColumn Header="Recommended" 
-                                                    Binding="{Binding IsRecommended}" 
-                                                    Width="100">
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- Forced - Important for Selection -->
+                                <DataGridTextColumn Header="Forced" 
+                                                    Binding="{Binding Forced}" 
+                                                    Width="70">
                                     <DataGridTextColumn.HeaderStyle>
                                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Shows if this track matches your preferences"/>
+                                            <Setter Property="ToolTip" Value="Forced subtitles (foreign dialogue only)"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="Text" Value="No"/>
+                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Forced}" Value="True">
+                                                    <Setter Property="Text" Value="✓ Yes"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                
+                                <!-- Recommended - Auto-Selection Helper -->
+                                <DataGridTextColumn Header="Recommended" 
+                                                    Binding="{Binding IsRecommended}" 
+                                                    Width="110">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                            <Setter Property="ToolTip" Value="Automatically recommended based on your preferences"/>
                                         </Style>
                                     </DataGridTextColumn.HeaderStyle>
                                     <DataGridTextColumn.ElementStyle>
@@ -581,41 +727,22 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTextColumn Header="Bitrate" 
-                                                    Binding="{Binding Bitrate, StringFormat='{}{0:N0} bps'}" 
-                                                    Width="100">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Data rate in bits per second"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Frames" 
-                                                    Binding="{Binding FrameCount}" 
-                                                    Width="70">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Number of subtitle frames/segments"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Duration" 
-                                                    Binding="{Binding Duration, Converter={StaticResource DurationConverter}}" 
-                                                    Width="100">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Total duration of the subtitle track"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                </DataGridTextColumn>
+                                
+                                <!-- Name - Additional Context -->
                                 <DataGridTextColumn Header="Name" 
                                                     Binding="{Binding Name}" 
-                                                    Width="*">
+                                                    Width="*"
+                                                    MinWidth="100">
                                     <DataGridTextColumn.HeaderStyle>
                                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Custom name or title of the subtitle track"/>
+                                            <Setter Property="ToolTip" Value="Track name or description&#x0a;Hover over row for full technical details&#x0a;Right-click for 'Show Technical Details'"/>
                                         </Style>
                                     </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>

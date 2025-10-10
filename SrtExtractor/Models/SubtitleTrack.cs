@@ -94,5 +94,124 @@ namespace SrtExtractor.Models
         {
             return $"{TrackId}: {Name} ({Language}) - {Codec}";
         }
+
+        // ====================================
+        // User-Friendly Computed Properties
+        // (Technical details preserved in original properties)
+        // ====================================
+
+        /// <summary>
+        /// Human-readable format description instead of technical codec string.
+        /// Technical details still available in Codec property and tooltips.
+        /// </summary>
+        public string FormatDisplay
+        {
+            get
+            {
+                var codec = Codec.ToUpperInvariant();
+                
+                // Image-based formats (require OCR)
+                if (codec.Contains("S_HDMV/PGS") || codec.Contains("PGS"))
+                    return "Image-based (PGS)";
+                if (codec.Contains("VOBSUB") || codec.Contains("S_VOBSUB"))
+                    return "Image-based (VobSub)";
+                if (codec.Contains("DVBSUB"))
+                    return "Image-based (DVB)";
+                
+                // Text-based formats (fast extraction)
+                if (codec.Contains("S_TEXT/UTF8") || codec.Contains("SUBRIP") || codec.Contains("SRT"))
+                    return "Text (SRT)";
+                if (codec.Contains("S_TEXT/ASS") || codec.Contains("ASS") || codec.Contains("SSA"))
+                    return "Text (ASS/SSA)";
+                if (codec.Contains("S_TEXT/WEBVTT") || codec.Contains("WEBVTT"))
+                    return "Text (WebVTT)";
+                if (codec.Contains("S_TEXT"))
+                    return "Text-based";
+                
+                // Fallback for unknown formats
+                return Codec.Length > 20 ? Codec.Substring(0, 20) + "..." : Codec;
+            }
+        }
+
+        /// <summary>
+        /// Speed indicator: Fast (text-based) or Slow (image-based requiring OCR).
+        /// </summary>
+        public string SpeedIndicator
+        {
+            get
+            {
+                var codec = Codec.ToUpperInvariant();
+                
+                // Image-based formats require OCR (slow)
+                if (codec.Contains("S_HDMV/PGS") || codec.Contains("PGS") || 
+                    codec.Contains("VOBSUB") || codec.Contains("S_VOBSUB") ||
+                    codec.Contains("DVBSUB"))
+                {
+                    return "🐢 OCR Required";
+                }
+                
+                // Text-based formats are fast
+                if (codec.Contains("S_TEXT") || codec.Contains("SUBRIP") || 
+                    codec.Contains("SRT") || codec.Contains("ASS") || 
+                    codec.Contains("WEBVTT"))
+                {
+                    return "⚡ Fast";
+                }
+                
+                return "❓ Unknown";
+            }
+        }
+
+        /// <summary>
+        /// Simple icon representing the track format type.
+        /// </summary>
+        public string FormatIcon
+        {
+            get
+            {
+                var codec = Codec.ToUpperInvariant();
+                
+                // Image-based = camera icon
+                if (codec.Contains("S_HDMV/PGS") || codec.Contains("PGS") || 
+                    codec.Contains("VOBSUB") || codec.Contains("S_VOBSUB") ||
+                    codec.Contains("DVBSUB"))
+                {
+                    return "🖼️";
+                }
+                
+                // Text-based = document icon
+                if (codec.Contains("S_TEXT") || codec.Contains("SUBRIP") || 
+                    codec.Contains("SRT") || codec.Contains("ASS") || 
+                    codec.Contains("WEBVTT"))
+                {
+                    return "📝";
+                }
+                
+                return "📄";
+            }
+        }
+
+        /// <summary>
+        /// Extended tooltip with all technical details for power users.
+        /// </summary>
+        public string TechnicalDetails
+        {
+            get
+            {
+                return $"Technical Details:\n" +
+                       $"Track ID: {TrackId}\n" +
+                       $"Extraction ID: {ExtractionId}\n" +
+                       $"Codec: {Codec}\n" +
+                       $"Language: {Language}\n" +
+                       $"Type: {TrackType}\n" +
+                       $"Bitrate: {Bitrate:N0} bps\n" +
+                       $"Frames: {FrameCount}\n" +
+                       $"Duration: {Duration}s\n" +
+                       $"Forced: {(Forced ? "Yes" : "No")}\n" +
+                       $"CC: {(IsClosedCaption ? "Yes" : "No")}\n" +
+                       $"Default: {(IsDefault ? "Yes" : "No")}\n" +
+                       $"Name: {(string.IsNullOrEmpty(Name) ? "N/A" : Name)}";
+            }
+        }
     }
 }

@@ -30,6 +30,13 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private bool _showNoTracksError = false;
 
+    [ObservableProperty]
+    private bool _showExtractionSuccess = false;
+
+    [ObservableProperty]
+    private string _lastExtractionOutputPath = "";
+
+
 
     // Tool Status
     [ObservableProperty]
@@ -193,6 +200,18 @@ public partial class ExtractionState : ObservableObject
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    partial void OnShowExtractionSuccessChanged(bool value)
+    {
+        // Notify computed property
+        OnPropertyChanged(nameof(ShowExtractionSuccessMessage));
+    }
+
+    partial void OnShowNoTracksErrorChanged(bool value)
+    {
+        // Notify computed property
+        OnPropertyChanged(nameof(ShowNoTracksWarning));
+    }
+
     partial void OnMkvPathChanged(string? value)
     {
         OnPropertyChanged(nameof(CanProbe));
@@ -286,6 +305,8 @@ public partial class ExtractionState : ObservableObject
     public bool ShowNetworkWarning => IsNetworkFile && !string.IsNullOrEmpty(MkvPath);
 
     public bool ShowNoTracksWarning => ShowNoTracksError;
+
+    public bool ShowExtractionSuccessMessage => ShowExtractionSuccess;
 
     // Resume Batch Computed Properties
     public bool CanResumeBatch => BatchQueue.Any() && LastProcessedBatchIndex >= 0 && LastProcessedBatchIndex < BatchQueue.Count - 1 && AreToolsAvailable && !IsBusy;

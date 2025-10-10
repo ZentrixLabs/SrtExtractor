@@ -1,0 +1,97 @@
+[2025-10-10 10:08:07.728] [Info] [SaveWindowStateAsync] Window state saved: 1397x780 at (118, 126)
+[2025-10-10 10:08:07.751] [Info] [SaveWindowStateAsync] Window state saved
+[2025-10-10 10:08:07.767] [Info] [MainWindow_Closed] MainWindow event handlers unsubscribed successfully
+[2025-10-10 10:08:07.773] [Info] [Dispose] MainViewModel disposed successfully
+[2025-10-10 10:08:20.957] [Info] [LoadSettingsAsync] Settings loaded successfully
+[2025-10-10 10:08:20.972] [Info] [LoadSettingsAsync] Settings loaded successfully
+[2025-10-10 10:08:20.977] [Info] [LoadRecentFilesAsync] Loaded 9 recent files
+[2025-10-10 10:08:21.387] [Info] [LoadWindowStateAsync] Window state loaded: 1397x780 at (118, 126)
+[2025-10-10 10:08:21.756] [Info] [LoadRecentFilesAsync] Loaded 9 recent files
+[2025-10-10 10:08:21.782] [Info] [LoadSettingsAsync] Settings loaded successfully
+[2025-10-10 10:08:21.806] [Info] [CheckMkvToolNixAsync] Checking MKVToolNix installation
+[2025-10-10 10:08:21.807] [Info] [FindToolPathAsync] Searching for mkvmerge.exe in 3 common paths
+[2025-10-10 10:08:21.808] [Info] [FindToolPathAsync] Checking path: C:\Program Files\MKVToolNix\mkvmerge.exe (exists: True)
+[2025-10-10 10:08:21.808] [Info] [FindToolPathAsync] Found mkvmerge.exe at C:\Program Files\MKVToolNix\mkvmerge.exe
+[2025-10-10 10:08:21.811] [Info] [RunAsync] Running process: mkvmerge.exe with 1 arguments
+[2025-10-10 10:08:21.831] [Error] [LoadWindowStateAsync] Failed to load window state - System.InvalidOperationException: The calling thread cannot access this object because a different thread owns it.
+   at System.Windows.Threading.Dispatcher.<VerifyAccess>g__ThrowVerifyAccess|7_0()
+   at System.Windows.DependencyObject.GetValue(DependencyProperty dp)
+   at SrtExtractor.Views.MainWindow.LoadWindowStateAsync() in E:\Github\SrtExtractor\SrtExtractor\Views\MainWindow.xaml.cs:line 468
+[2025-10-10 10:08:21.863] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:21.863] [Info] [RunAsync] Process output: 42 characters
+[2025-10-10 10:08:21.864] [Info] [ValidateToolAsync] MKVToolNix validation successful: C:\Program Files\MKVToolNix\mkvmerge.exe
+[2025-10-10 10:08:21.865] [Info] [RunAsync] Running process: mkvmerge.exe with 1 arguments
+[2025-10-10 10:08:21.912] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:21.913] [Info] [RunAsync] Process output: 42 characters
+[2025-10-10 10:08:21.916] [Info] [LogToolDetection] Tool 'MKVToolNix' detected at C:\Program Files\MKVToolNix\mkvmerge.exe (v95.0)
+[2025-10-10 10:08:21.917] [Info] [CheckSubtitleEditAsync] Checking Subtitle Edit CLI installation
+[2025-10-10 10:08:21.917] [Info] [CheckSubtitleEditAsync] AppDomain.CurrentDomain.BaseDirectory: E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows\
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Searching for seconv.exe in 9 common paths
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Checking path: E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Checking path: C:\Program Files\Subtitle Edit\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Checking path: C:\Program Files (x86)\Subtitle Edit\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Checking path: C:\Program Files\SubtitleEdit-CLI\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Checking path: C:\Program Files (x86)\SubtitleEdit-CLI\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.917] [Info] [FindToolPathAsync] Checking path: C:\Users\mikep\Downloads\SubtitleEdit-CLI\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.918] [Info] [FindToolPathAsync] Checking path: C:\Users\mikep\.dotnet\tools\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.918] [Info] [FindToolPathAsync] Checking path: C:\Program Files\dotnet\tools\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.918] [Info] [FindToolPathAsync] Checking path: C:\Users\mikep\AppData\Local\Microsoft\dotnet\tools\seconv.exe\seconv.exe (exists: False)
+[2025-10-10 10:08:21.918] [Info] [RunAsync] Running process: where with 1 arguments
+[2025-10-10 10:08:21.939] [Error] [RunAsync] Failed to run process: where - System.ComponentModel.Win32Exception (2): An error occurred trying to start process 'E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows\where' with working directory 'E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows'. The system cannot find the file specified.
+   at System.Diagnostics.Process.StartWithCreateProcess(ProcessStartInfo startInfo)
+   at SrtExtractor.Services.Implementations.ProcessRunner.RunAsync(String exe, String[] args, TimeSpan timeout, CancellationToken ct) in E:\Github\SrtExtractor\SrtExtractor\Services\Implementations\ProcessRunner.cs:line 128
+[2025-10-10 10:08:22.027] [Warning] [FindToolPathAsync] Failed to check PATH for seconv.exe: No process is associated with this object.
+[2025-10-10 10:08:22.027] [Warning] [FindToolPathAsync] seconv.exe not found in common paths or PATH
+[2025-10-10 10:08:22.028] [Info] [RunAsync] Running process: seconv with 1 arguments
+[2025-10-10 10:08:22.070] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:22.070] [Info] [RunAsync] Process output: 1891 characters
+[2025-10-10 10:08:22.071] [Info] [RunAsync] Running process: seconv with 1 arguments
+[2025-10-10 10:08:22.113] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:22.114] [Info] [RunAsync] Process output: 1891 characters
+[2025-10-10 10:08:22.114] [Info] [LogToolDetection] Tool 'Subtitle Edit CLI' detected at seconv (vCommandline-SE - Batch converter)
+[2025-10-10 10:08:22.115] [Info] [CheckFfmpegAsync] Checking FFmpeg installation
+[2025-10-10 10:08:22.115] [Info] [FindToolPathAsync] Searching for ffmpeg.exe in 5 common paths
+[2025-10-10 10:08:22.115] [Info] [FindToolPathAsync] Checking path: E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows\ffmpeg.exe\ffmpeg.exe (exists: False)
+[2025-10-10 10:08:22.115] [Info] [FindToolPathAsync] Checking path: C:\ffmpeg\bin\ffmpeg.exe\ffmpeg.exe (exists: False)
+[2025-10-10 10:08:22.115] [Info] [FindToolPathAsync] Checking path: C:\Program Files\ffmpeg\bin\ffmpeg.exe\ffmpeg.exe (exists: False)
+[2025-10-10 10:08:22.116] [Info] [FindToolPathAsync] Checking path: C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe\ffmpeg.exe (exists: False)
+[2025-10-10 10:08:22.116] [Info] [FindToolPathAsync] Checking path: C:\Users\mikep\ffmpeg\bin\ffmpeg.exe\ffmpeg.exe (exists: False)
+[2025-10-10 10:08:22.116] [Info] [RunAsync] Running process: where with 1 arguments
+[2025-10-10 10:08:22.131] [Error] [RunAsync] Failed to run process: where - System.ComponentModel.Win32Exception (2): An error occurred trying to start process 'E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows\where' with working directory 'E:\Github\SrtExtractor\SrtExtractor\bin\Debug\net9.0-windows'. The system cannot find the file specified.
+   at System.Diagnostics.Process.StartWithCreateProcess(ProcessStartInfo startInfo)
+   at SrtExtractor.Services.Implementations.ProcessRunner.RunAsync(String exe, String[] args, TimeSpan timeout, CancellationToken ct) in E:\Github\SrtExtractor\SrtExtractor\Services\Implementations\ProcessRunner.cs:line 128
+[2025-10-10 10:08:22.276] [Warning] [FindToolPathAsync] Failed to check PATH for ffmpeg.exe: No process is associated with this object.
+[2025-10-10 10:08:22.277] [Warning] [FindToolPathAsync] ffmpeg.exe not found in common paths or PATH
+[2025-10-10 10:08:22.277] [Info] [RunAsync] Running process: ffmpeg with 1 arguments
+[2025-10-10 10:08:22.306] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:22.306] [Info] [RunAsync] Process output: 2354 characters
+[2025-10-10 10:08:22.306] [Info] [RunAsync] Running process: ffmpeg with 1 arguments
+[2025-10-10 10:08:22.330] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:22.330] [Info] [RunAsync] Process output: 2354 characters
+[2025-10-10 10:08:22.331] [Info] [LogToolDetection] Tool 'FFmpeg' detected at ffmpeg (vN-121288-g5511641365-20251001)
+[2025-10-10 10:08:22.744] [Info] [SaveWindowStateAsync] Window state saved: 1397x780 at (118, 126)
+[2025-10-10 10:08:22.744] [Info] [SaveWindowStateAsync] Window state saved
+[2025-10-10 10:08:24.483] [Info] [IsNetworkPath] Detected network drive X:\ for path: X:\Movies\Universal Soldier (1992) {tmdb-9349}\Universal Soldier (1992).mkv
+[2025-10-10 10:08:24.484] [Info] [IsNetworkPath] Detected network drive X:\ for path: X:\Movies\Universal Soldier (1992) {tmdb-9349}\Universal Soldier (1992).mkv
+[2025-10-10 10:08:24.485] [Info] [IsNetworkPath] Detected network drive X:\ for path: X:\Movies\Universal Soldier (1992) {tmdb-9349}\Universal Soldier (1992).mkv
+[2025-10-10 10:08:24.485] [Info] [GetEstimatedProcessingTime] Estimated processing time for X:\Movies\Universal Soldier (1992) {tmdb-9349}\Universal Soldier (1992).mkv: 5.0 minutes (Size: 6.0 GB, Network: True)
+[2025-10-10 10:08:24.486] [Info] [PickMkvAsync] Selected MKV file: X:\Movies\Universal Soldier (1992) {tmdb-9349}\Universal Soldier (1992).mkv
+[2025-10-10 10:08:25.337] [Info] [ProbeTracksAsync] Probe started - cleared success state: ShowExtractionSuccess=False
+[2025-10-10 10:08:25.346] [Info] [ProbeAsync] Probing MKV file: Universal Soldier (1992).mkv
+[2025-10-10 10:08:25.357] [Info] [CheckMkvToolNixAsync] Checking MKVToolNix installation
+[2025-10-10 10:08:25.357] [Info] [FindToolPathAsync] Searching for mkvmerge.exe in 3 common paths
+[2025-10-10 10:08:25.357] [Info] [FindToolPathAsync] Checking path: C:\Program Files\MKVToolNix\mkvmerge.exe (exists: True)
+[2025-10-10 10:08:25.357] [Info] [FindToolPathAsync] Found mkvmerge.exe at C:\Program Files\MKVToolNix\mkvmerge.exe
+[2025-10-10 10:08:25.357] [Info] [RunAsync] Running process: mkvmerge.exe with 1 arguments
+[2025-10-10 10:08:25.404] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:25.404] [Info] [RunAsync] Process output: 42 characters
+[2025-10-10 10:08:25.404] [Info] [ValidateToolAsync] MKVToolNix validation successful: C:\Program Files\MKVToolNix\mkvmerge.exe
+[2025-10-10 10:08:25.404] [Info] [RunAsync] Running process: mkvmerge.exe with 1 arguments
+[2025-10-10 10:08:25.447] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:25.447] [Info] [RunAsync] Process output: 42 characters
+[2025-10-10 10:08:25.448] [Info] [LogToolDetection] Tool 'MKVToolNix' detected at C:\Program Files\MKVToolNix\mkvmerge.exe (v95.0)
+[2025-10-10 10:08:25.448] [Info] [RunAsync] Running process: mkvmerge.exe with 2 arguments
+[2025-10-10 10:08:26.105] [Info] [RunAsync] Process completed with exit code: 0
+[2025-10-10 10:08:26.105] [Info] [RunAsync] Process output: 3479 characters
+[2025-10-10 10:08:26.107] [Info] [ProbeAsync] Found 0 subtitle tracks
+[2025-10-10 10:08:26.109] [Info] [ProbeTracksAsync] Probe completed - ShowNoTracksError=True, ShowExtractionSuccess=False

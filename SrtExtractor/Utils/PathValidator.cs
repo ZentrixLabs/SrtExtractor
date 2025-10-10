@@ -47,8 +47,11 @@ public static class PathValidator
         }
         
         // Check for shell metacharacters that could be used for command injection
-        // These characters are dangerous when paths are used in command-line arguments
-        var dangerousChars = new[] { '&', '|', ';', '`', '$', '(', ')', '<', '>', '\n', '\r' };
+        // NOTE: Parentheses (), braces {}, and ampersands & are SAFE because we use ProcessRunner with argument arrays
+        // They are NOT passed through a shell, so they can't be exploited for injection
+        // Common in media filenames: "Movie (2012)", "Show {tmdb-12345}", "Willy Wonka & the Chocolate Factory"
+        // Only block truly dangerous shell operators
+        var dangerousChars = new[] { '|', ';', '`', '$', '<', '>', '\n', '\r' };
         if (path.Any(c => dangerousChars.Contains(c)))
         {
             throw new SecurityException("Path contains shell metacharacters");
