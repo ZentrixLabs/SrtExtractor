@@ -185,6 +185,12 @@
     <Duration x:Key="AnimationDurationFast">0:0:0.15</Duration>
     <Duration x:Key="AnimationDurationNormal">0:0:0.25</Duration>
     <Duration x:Key="AnimationDurationSlow">0:0:0.35</Duration>
+    
+    <!-- ============================================ -->
+    <!-- EASING FUNCTIONS                            -->
+    <!-- ============================================ -->
+    
+    <CubicEase x:Key="EaseOutCubic" EasingMode="EaseOut"/>
 
 </ResourceDictionary>
 

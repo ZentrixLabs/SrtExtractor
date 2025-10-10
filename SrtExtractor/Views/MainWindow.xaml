@@ -396,23 +396,22 @@
                     <StackPanel>
                         <!-- Action Buttons -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="Probe Tracks" 
-                                    Command="{Binding ProbeCommand}"
+                            <!-- TIER 2: Secondary Action - Probe -->
+                            <Button Command="{Binding ProbeCommand}"
                                     IsEnabled="{Binding State.CanProbe}"
                                     Style="{StaticResource SecondaryButton}"
-                                    Height="38"
-                                    Padding="16,8"
-                                    FontSize="14"
                                     Margin="0,0,12,0"
-                                    ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P"/>
+                                    ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P">
+                                <TextBlock>
+                                    <Run Text="Probe Tracks"/>
+                                    <Run Text=" [Ctrl+P]" Foreground="{StaticResource TextTertiaryBrush}" FontSize="12"/>
+                                </TextBlock>
+                            </Button>
+                            
+                            <!-- TIER 1: PRIMARY ACTION - Extract -->
                             <Button Command="{Binding ExtractCommand}"
                                     IsEnabled="{Binding State.CanExtract}"
-                                    Style="{StaticResource PrimaryButton}"
-                                    Height="52"
-                                    MinWidth="220"
-                                    FontSize="16"
-                                    FontWeight="{StaticResource FontWeightSemiBold}"
-                                    Padding="20,12"
+                                    Style="{StaticResource PrimaryButtonLarge}"
                                     Margin="0,0,12,0"
                                     ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E">
                                 <StackPanel Orientation="Horizontal">
@@ -421,18 +420,19 @@
                                                FontSize="20" 
                                                Margin="0,0,12,0"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="Extract to SRT" 
-                                               VerticalAlignment="Center"
-                                               FontSize="16"/>
+                                    <TextBlock VerticalAlignment="Center">
+                                        <Run Text="Extract to SRT" FontSize="16"/>
+                                        <LineBreak/>
+                                        <Run Text="[Ctrl+E]" Foreground="{StaticResource TextOnPrimaryBrush}" FontSize="11"/>
+                                    </TextBlock>
                                 </StackPanel>
                             </Button>
+                            
+                            <!-- TIER 3: Tertiary Danger - Cancel -->
                             <Button Content="Cancel" 
                                     Command="{Binding CancelCommand}"
                                     IsEnabled="{Binding State.IsProcessing}"
-                                    Style="{StaticResource WarningButton}"
-                                    Height="38"
-                                    Padding="16,8"
-                                    FontSize="14"
+                                    Style="{StaticResource DangerButtonOutlined}"
                                     Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
                                     ToolTip="Cancel the current extraction operation&#x0a;Temporary files will be cleaned up automatically&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
                         </StackPanel>
@@ -899,32 +899,31 @@
                             
                             <!-- Action Buttons -->
                             <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- TIER 2: Secondary - Resume -->
                                 <Button Content="Resume Batch" 
                                         Command="{Binding ResumeBatchCommand}"
-                                        Style="{StaticResource AccentButton}"
+                                        Style="{StaticResource SecondaryButtonSmall}"
                                         Margin="0,0,4,0"
-                                        Padding="8,4"
-                                        FontSize="12"
                                         MinWidth="0"
-                                        Height="24"
+                                        Height="28"
                                         Visibility="{Binding State.ShowResumeBatchButton, Converter={StaticResource BoolToVisibilityConverter}}"
                                         ToolTip="Resume batch processing from where it was interrupted&#x0a;Skips already completed files and continues with remaining files"/>
+                                
+                                <!-- TIER 3: Tertiary - Clear Completed -->
                                 <Button Content="Clear Completed" 
                                         Command="{Binding ClearCompletedBatchItemsCommand}"
-                                        Style="{StaticResource SuccessButton}"
+                                        Style="{StaticResource TertiaryButton}"
                                         Margin="0,0,4,0"
-                                        Padding="8,4"
-                                        FontSize="12"
                                         MinWidth="0"
-                                        Height="24"
+                                        Height="28"
                                         ToolTip="Remove only completed files from the queue&#x0a;Keeps pending and failed files for re-processing"/>
+                                
+                                <!-- TIER 3: Tertiary Danger - Clear All -->
                                 <Button Content="Clear All" 
                                         Command="{Binding ClearBatchQueueCommand}"
-                                        Style="{StaticResource DangerButton}"
-                                        Padding="8,4"
-                                        FontSize="12"
+                                        Style="{StaticResource DangerButtonOutlined}"
                                         MinWidth="0"
-                                        Height="24"
+                                        Height="28"
                                         Visibility="{Binding State.HasBatchQueue, Converter={StaticResource BoolToVisibilityConverter}}"
                                         ToolTip="Remove all files from the batch queue&#x0a;This will clear completed, pending, and failed files"/>
                             </StackPanel>
@@ -1117,34 +1116,35 @@
                     <StackPanel>
                         <!-- Action Buttons -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                            <!-- TIER 1: PRIMARY ACTION - Process Batch -->
                             <Button Command="{Binding ProcessBatchCommand}"
                                     IsEnabled="{Binding State.HasBatchQueue}"
-                                    Style="{StaticResource SuccessButton}"
-                                    Height="48"
-                                    MinWidth="200"
-                                    FontSize="16"
-                                    FontWeight="{StaticResource FontWeightSemiBold}"
-                                    Padding="20,10"
+                                    Style="{StaticResource PrimaryButtonLarge}"
                                     Margin="0,0,12,0"
                                     ToolTip="Process all files in the batch queue&#x0a;Uses your current subtitle preferences and OCR settings&#x0a;Each file is analyzed and best track is selected automatically&#x0a;Progress is displayed in real-time with status updates">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                                Text="{StaticResource IconPlay}" 
-                                               FontSize="18" 
-                                               Margin="0,0,8,0"
+                                               FontSize="20" 
+                                               Margin="0,0,12,0"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="Process Batch" VerticalAlignment="Center"/>
+                                    <TextBlock VerticalAlignment="Center">
+                                        <Run Text="Process Batch" FontSize="16"/>
+                                    </TextBlock>
                                 </StackPanel>
                             </Button>
-                            <Button Content="Cancel Batch" 
-                                    Command="{Binding CancelCommand}"
+                            
+                            <!-- TIER 3: Tertiary Danger - Cancel -->
+                            <Button Command="{Binding CancelCommand}"
                                     IsEnabled="{Binding State.IsProcessing}"
-                                    Style="{StaticResource WarningButton}"
-                                    Height="48"
-                                    Padding="20,10"
-                                    FontSize="16"
+                                    Style="{StaticResource DangerButtonOutlined}"
                                     Visibility="{Binding State.IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"
-                                    ToolTip="Cancel the current batch processing operation&#x0a;Files already completed will remain processed&#x0a;Current file being processed will stop gracefully&#x0a;Keyboard Shortcut: Ctrl+C or Esc"/>
+                                    ToolTip="Cancel the current batch processing operation&#x0a;Files already completed will remain processed&#x0a;Current file being processed will stop gracefully&#x0a;Keyboard Shortcut: Ctrl+C or Esc">
+                                <TextBlock>
+                                    <Run Text="Cancel"/>
+                                    <Run Text=" [Esc]" Foreground="{StaticResource ErrorBrush}" FontSize="11"/>
+                                </TextBlock>
+                            </Button>
                         </StackPanel>
                         
                         <!-- Queue Progress -->

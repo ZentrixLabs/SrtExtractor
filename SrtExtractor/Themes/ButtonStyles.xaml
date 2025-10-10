@@ -41,9 +41,19 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="Black" Opacity="0.3" ShadowDepth="2" BlurRadius="4"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Opacity" Value="0.8"/>
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="1" BlurRadius="2"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
@@ -56,19 +66,44 @@
     </Style>
 
     <!-- ============================================ -->
-    <!-- PRIMARY BUTTON (Main Actions)               -->
+    <!-- TIER 1: PRIMARY BUTTONS (Main Actions)      -->
+    <!-- Large, colored, icon + text                 -->
+    <!-- Usage: Extract, Process Batch               -->
     <!-- ============================================ -->
     
+    <!-- Primary Button - Large Size (Default Tier 1) -->
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
         <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
         <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+        <Setter Property="MinHeight" Value="48"/>
+        <Setter Property="MinWidth" Value="180"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Padding" Value="20,12"/>
         <Setter Property="Tag" Value="{StaticResource PrimaryHoverBrush}"/>
     </Style>
 
+    <!-- Primary Button - Large Size (Explicit) -->
+    <Style x:Key="PrimaryButtonLarge" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="MinHeight" Value="52"/>
+        <Setter Property="MinWidth" Value="220"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Padding" Value="24,14"/>
+    </Style>
+
+    <!-- Primary Button - Medium Size -->
+    <Style x:Key="PrimaryButtonMedium" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="MinWidth" Value="140"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="16,10"/>
+    </Style>
+
     <!-- ============================================ -->
-    <!-- SECONDARY BUTTON (Less Important Actions)   -->
+    <!-- TIER 2: SECONDARY BUTTONS (Common Actions)  -->
+    <!-- Medium, neutral, text only                  -->
+    <!-- Usage: Probe, Pick File, Clear, Settings    -->
     <!-- ============================================ -->
     
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
@@ -87,17 +122,76 @@
                 <SolidColorBrush Color="{DynamicResource SystemBaseMediumLowColor}"/>
             </Setter.Value>
         </Setter>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="14,9"/>
+    </Style>
+
+    <!-- Secondary Button - Small Size -->
+    <Style x:Key="SecondaryButtonSmall" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="12,7"/>
     </Style>
 
     <!-- ============================================ -->
-    <!-- SUCCESS BUTTON (Positive Actions)           -->
+    <!-- TIER 3: TERTIARY BUTTONS (Rare/Danger)     -->
+    <!-- Small, outlined or red, minimal             -->
+    <!-- Usage: Cancel, Remove, Delete               -->
     <!-- ============================================ -->
     
-    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+    <!-- Tertiary Button - Outlined Style -->
+    <Style x:Key="TertiaryButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinWidth" Value="90"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="10,6"/>
+    </Style>
+
+    <!-- Danger Button (Destructive Actions) -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <Setter Property="Background" Value="{StaticResource ErrorBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
         <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="MinWidth" Value="110"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="14,9"/>
+        <Setter Property="Tag">
+            <Setter.Value>
+                <SolidColorBrush Color="#B02E32"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- Danger Button - Outlined (for less destructive actions) -->
+    <Style x:Key="DangerButtonOutlined" TargetType="Button" BasedOn="{StaticResource TertiaryButton}">
+        <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ErrorBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ============================================ -->
+    <!-- LEGACY STYLES (Kept for compatibility)      -->
+    <!-- Consider migrating to new hierarchy          -->
+    <!-- ============================================ -->
+    
+    <!-- Success Button - Use PrimaryButton instead -->
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
         <Setter Property="Tag">
             <Setter.Value>
                 <SolidColorBrush Color="#0E6A0E"/>
@@ -105,11 +199,8 @@
         </Setter>
     </Style>
 
-    <!-- ============================================ -->
-    <!-- WARNING BUTTON (Caution Actions)            -->
-    <!-- ============================================ -->
-    
-    <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+    <!-- Warning Button - Use SecondaryButton or DangerButton instead -->
+    <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
         <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource WarningBrush}"/>
@@ -121,20 +212,11 @@
         </Setter>
     </Style>
 
-    <!-- ============================================ -->
-    <!-- DANGER BUTTON (Destructive Actions)         -->
-    <!-- ============================================ -->
-    
-    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="{StaticResource ErrorBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
-        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
-        <Setter Property="Tag">
-            <Setter.Value>
-                <SolidColorBrush Color="#B02E32"/>
-            </Setter.Value>
-        </Setter>
+    <!-- Accent Button - Use PrimaryButton instead -->
+    <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="Background" Value="{StaticResource InfoBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource InfoBrush}"/>
+        <Setter Property="Tag" Value="{StaticResource PrimaryHoverBrush}"/>
     </Style>
 
     <!-- ============================================ -->
@@ -168,18 +250,6 @@
                 <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
             </Trigger>
         </Style.Triggers>
-    </Style>
-
-    <!-- ============================================ -->
-    <!-- ACCENT BUTTON (Special Actions)             -->
-    <!-- ============================================ -->
-    
-    <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="{StaticResource InfoBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource InfoBrush}"/>
-        <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
-        <Setter Property="Tag" Value="{StaticResource PrimaryHoverBrush}"/>
     </Style>
 
     <!-- ============================================ -->

@@ -1745,21 +1745,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            _loggingService.LogInfo("User requested help");
-            _notificationService.ShowInfo(
-                "Keyboard Shortcuts:\n" +
-                "• Ctrl+O - Open Video File\n" +
-                "• Ctrl+P - Probe Tracks\n" +
-                "• Ctrl+E - Extract Subtitles\n" +
-                "• Ctrl+B - Toggle Batch Mode\n" +
-                "• Ctrl+C - Cancel Operation\n" +
-                "• F5 - Re-detect Tools\n" +
-                "• F1 - Show Help\n" +
-                "• Escape - Cancel Operation\n\n" +
-                "For more detailed help, visit the project repository:\n" +
-                "https://github.com/ZentrixLabs/SrtExtractor",
-                "SrtExtractor Help",
-                7000);
+            _loggingService.LogInfo("User requested keyboard shortcuts help");
+            
+            // Open the keyboard shortcuts window
+            var helpWindow = new Views.KeyboardShortcutsWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+            helpWindow.ShowDialog();
         }
         catch (Exception ex)
         {
