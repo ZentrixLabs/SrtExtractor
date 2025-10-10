@@ -144,7 +144,7 @@ namespace SrtExtractor.Models
                     _codecType = SubtitleCodecType.ImageBasedDvb;
                 else if (codec.Contains("S_TEXT/UTF8") || codec.Contains("SUBRIP") || codec.Contains("SRT"))
                     _codecType = SubtitleCodecType.TextBasedSrt;
-                else if (codec.Contains("S_TEXT/ASS") || codec.Contains("ASS") || codec.Contains("SSA"))
+                else if (codec.Contains("S_TEXT/ASS") || codec.Contains("ASS") || codec.Contains("SSA") || codec.Contains("SUBSTATIONALPHA"))
                     _codecType = SubtitleCodecType.TextBasedAss;
                 else if (codec.Contains("S_TEXT/WEBVTT") || codec.Contains("WEBVTT"))
                     _codecType = SubtitleCodecType.TextBasedWebVtt;

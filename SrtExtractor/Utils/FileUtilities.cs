@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace SrtExtractor.Utils;
 
 /// <summary>
@@ -34,6 +36,34 @@ public static class FileUtilities
             return $"{bytes / (double)KB:F1} KB";
             
         return $"{bytes} bytes";
+    }
+    
+    /// <summary>
+    /// Checks if a file is an MP4 video file.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>True if the file has .mp4 extension</returns>
+    public static bool IsMp4File(string filePath) => 
+        Path.GetExtension(filePath).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+    
+    /// <summary>
+    /// Checks if a file is an MKV video file.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>True if the file has .mkv extension</returns>
+    public static bool IsMkvFile(string filePath) => 
+        Path.GetExtension(filePath).Equals(".mkv", StringComparison.OrdinalIgnoreCase);
+    
+    /// <summary>
+    /// Checks if a file is a supported video file (MKV or MP4).
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>True if the file has .mkv or .mp4 extension</returns>
+    public static bool IsVideoFile(string filePath)
+    {
+        var ext = Path.GetExtension(filePath);
+        return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ||
+               ext.Equals(".mkv", StringComparison.OrdinalIgnoreCase);
     }
 }
 

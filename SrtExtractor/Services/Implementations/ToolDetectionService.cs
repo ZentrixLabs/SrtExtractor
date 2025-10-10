@@ -289,52 +289,55 @@ public class ToolDetectionService : IToolDetectionService
 
         try
         {
-            var toolName = Path.GetFileNameWithoutExtension(toolPath).ToLowerInvariant();
+            var tool = IdentifyTool(toolPath);
             
-            if (toolName.Contains("mkvmerge") || toolName.Contains("mkvextract"))
+            switch (tool)
             {
-                // MKVToolNix tools - try --version
-                var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { "--version" });
-                if (exitCode == 0)
-                {
-                    _loggingService.LogInfo($"MKVToolNix validation successful: {toolPath}");
-                    return true;
-                }
-            }
-            else if (toolName.Contains("subtitleedit"))
-            {
-                // Subtitle Edit - try /help (but it might open GUI, so we'll just check if file exists and is executable)
-                // For now, just verify the file exists and is executable
-                _loggingService.LogInfo($"Subtitle Edit validation successful (file exists): {toolPath}");
-                return true;
-            }
-            else if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
-            {
-                // FFmpeg tools - just check if file exists and is executable
-                // FFmpeg has quirky behavior with --version, so we'll trust that if it exists, it works
-                _loggingService.LogInfo($"FFmpeg validation successful (file exists): {toolPath}");
-                return true;
-            }
-            else
-            {
-                // Generic tool - try common help flags
-                var helpFlags = new[] { "--version", "/version", "--help", "/help", "/?" };
-                foreach (var flag in helpFlags)
-                {
-                    try
+                case KnownTool.MkvMerge:
+                case KnownTool.MkvExtract:
                     {
-                        var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { flag });
+                        var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { "--version" });
                         if (exitCode == 0)
                         {
-                            _loggingService.LogInfo($"Tool validation successful with {flag}: {toolPath}");
+                            _loggingService.LogInfo($"MKVToolNix validation successful: {toolPath}");
                             return true;
                         }
+                        break;
                     }
-                    catch
+                
+                case KnownTool.SubtitleEditCli:
+                    // Subtitle Edit - file exists is sufficient
+                    _loggingService.LogInfo($"Subtitle Edit CLI validation successful (file exists): {toolPath}");
+                    return true;
+                
+                case KnownTool.FFmpeg:
+                case KnownTool.FFprobe:
+                    // FFmpeg tools - file exists is sufficient
+                    _loggingService.LogInfo($"FFmpeg validation successful (file exists): {toolPath}");
+                    return true;
+                
+                default:
                     {
-                        // Continue to next flag
+                        // Generic tool - try common help flags
+                        var helpFlags = new[] { "--version", "/version", "--help", "/help", "/?" };
+                        foreach (var flag in helpFlags)
+                        {
+                            try
+                            {
+                                var (exitCode, _, _) = await _processRunner.RunAsync(toolPath, new[] { flag });
+                                if (exitCode == 0)
+                                {
+                                    _loggingService.LogInfo($"Tool validation successful with {flag}: {toolPath}");
+                                    return true;
+                                }
+                            }
+                            catch
+                            {
+                                // Continue to next flag
+                            }
+                        }
+                        break;
                     }
-                }
             }
 
             _loggingService.LogWarning($"Tool validation failed: {toolPath}");
@@ -347,26 +350,37 @@ public class ToolDetectionService : IToolDetectionService
         }
     }
 
+    /// <summary>
+    /// Identify which known tool a path corresponds to.
+    /// </summary>
+    /// <param name="toolPath">Path to the tool executable</param>
+    /// <returns>Identified tool type</returns>
+    private static KnownTool IdentifyTool(string toolPath)
+    {
+        var toolName = Path.GetFileNameWithoutExtension(toolPath).ToLowerInvariant();
+        
+        if (toolName.Contains("mkvmerge")) return KnownTool.MkvMerge;
+        if (toolName.Contains("mkvextract")) return KnownTool.MkvExtract;
+        if (toolName.Contains("seconv")) return KnownTool.SubtitleEditCli;
+        if (toolName.Contains("ffmpeg")) return KnownTool.FFmpeg;
+        if (toolName.Contains("ffprobe")) return KnownTool.FFprobe;
+        
+        return KnownTool.Unknown;
+    }
+
     private async Task<string?> GetToolVersionAsync(string toolPath)
     {
         try
         {
-            var toolName = Path.GetFileNameWithoutExtension(toolPath).ToLowerInvariant();
+            var tool = IdentifyTool(toolPath);
             
             // Different tools use different version flags
-            string[] versionArgs;
-            if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
+            var versionArgs = tool switch
             {
-                versionArgs = new[] { "-version" };
-            }
-            else if (toolName.Contains("seconv"))
-            {
-                versionArgs = new[] { "--version" };
-            }
-            else
-            {
-                versionArgs = new[] { "--version" };
-            }
+                KnownTool.FFmpeg or KnownTool.FFprobe => new[] { "-version" },
+                KnownTool.SubtitleEditCli or KnownTool.MkvMerge or KnownTool.MkvExtract => new[] { "--version" },
+                _ => new[] { "--version" }
+            };
             
             var (exitCode, stdout, stderr) = await _processRunner.RunAsync(toolPath, versionArgs);
             
@@ -379,34 +393,44 @@ public class ToolDetectionService : IToolDetectionService
                 {
                     var firstLine = lines[0].Trim();
                     
-                    // Parse version based on tool type
-                    if (toolName.Contains("ffmpeg") || toolName.Contains("ffprobe"))
+                    // Parse version based on tool type (using type-safe enum)
+                    // Note: 'tool' is already declared in outer scope
+                    switch (tool)
                     {
-                        // FFmpeg version format: "ffmpeg version N-xxxxx-gxxxxxxx Copyright..."
-                        // Extract just the version number
-                        var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"ffmpeg version\s+([^\s]+)");
-                        if (versionMatch.Success)
-                        {
-                            return versionMatch.Groups[1].Value;
-                        }
-                    }
-                    else if (toolName.Contains("mkvmerge") || toolName.Contains("mkvextract"))
-                    {
-                        // MKVToolNix format: "mkvmerge v84.0 ('Something') 64-bit"
-                        var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"v(\d+\.\d+(?:\.\d+)?)");
-                        if (versionMatch.Success)
-                        {
-                            return versionMatch.Groups[1].Value;
-                        }
-                    }
-                    else if (toolName.Contains("seconv"))
-                    {
-                        // Try to extract version number from various formats
-                        var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"(\d+\.\d+(?:\.\d+)?)");
-                        if (versionMatch.Success)
-                        {
-                            return versionMatch.Groups[1].Value;
-                        }
+                        case KnownTool.FFmpeg:
+                        case KnownTool.FFprobe:
+                            {
+                                // FFmpeg version format: "ffmpeg version N-xxxxx-gxxxxxxx Copyright..."
+                                var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"ffmpeg version\s+([^\s]+)");
+                                if (versionMatch.Success)
+                                {
+                                    return versionMatch.Groups[1].Value;
+                                }
+                                break;
+                            }
+                        
+                        case KnownTool.MkvMerge:
+                        case KnownTool.MkvExtract:
+                            {
+                                // MKVToolNix format: "mkvmerge v84.0 ('Something') 64-bit"
+                                var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"v(\d+\.\d+(?:\.\d+)?)");
+                                if (versionMatch.Success)
+                                {
+                                    return versionMatch.Groups[1].Value;
+                                }
+                                break;
+                            }
+                        
+                        case KnownTool.SubtitleEditCli:
+                            {
+                                // Try to extract version number from various formats
+                                var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"(\d+\.\d+(?:\.\d+)?)");
+                                if (versionMatch.Success)
+                                {
+                                    return versionMatch.Groups[1].Value;
+                                }
+                                break;
+                            }
                     }
                     
                     // Fallback: return first 50 chars of first line

@@ -332,7 +332,7 @@
                                         <Setter Property="Visibility" Value="{Binding State.ShowNetworkWarning, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                         <Style.Triggers>
                                             <!-- Hide network warning when success message is showing -->
-                                            <DataTrigger Binding="{Binding State.ShowExtractionSuccessMessage}" Value="True">
+                                            <DataTrigger Binding="{Binding State.ShowExtractionSuccess}" Value="True">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                             </DataTrigger>
                                         </Style.Triggers>
