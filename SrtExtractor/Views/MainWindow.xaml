@@ -214,12 +214,15 @@
     </Menu>
 
     <!-- Tab-Based Interface -->
-    <TabControl Margin="10" SelectedIndex="{Binding State.SelectedTabIndex}">
+    <TabControl Margin="10" SelectedIndex="{Binding State.SelectedTabIndex}"
+                AutomationProperties.Name="Main Navigation Tabs"
+                AutomationProperties.HelpText="Navigate between Extract, Batch, History, and Tools sections">
         
         <!-- ====================================== -->
         <!-- TAB 1: EXTRACT (Single File) -->
         <!-- ====================================== -->
-        <TabItem>
+        <TabItem AutomationProperties.Name="Extract Tab"
+                 AutomationProperties.HelpText="Extract subtitles from a single video file. Keyboard shortcut: Control plus 1">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
@@ -265,6 +268,8 @@
                                     IsEnabled="{Binding State.IsBusy, Converter={StaticResource InverseBoolConverter}}"
                                     Grid.Column="0"
                                     Margin="0,0,8,0"
+                                    AutomationProperties.Name="Pick Video File"
+                                    AutomationProperties.HelpText="Opens a file dialog to select an MKV or MP4 video file for subtitle extraction. Keyboard shortcut: Control plus O"
                                     ToolTip="Select a video file (MKV or MP4) to extract subtitles from&#x0a;Keyboard Shortcut: Ctrl+O"/>
                             
                             <TextBox Text="{Binding State.MkvPath}" 
@@ -408,6 +413,8 @@
                                     IsEnabled="{Binding State.CanProbe}"
                                     Style="{StaticResource SecondaryButton}"
                                     Margin="0,0,12,0"
+                                    AutomationProperties.Name="Probe Tracks"
+                                    AutomationProperties.HelpText="Analyzes the video file to discover all available subtitle tracks. Keyboard shortcut: Control plus P"
                                     ToolTip="Analyze the video file and discover all available subtitle tracks&#x0a;Shows format, language, and type for each track&#x0a;Automatically recommends the best track for extraction&#x0a;Keyboard Shortcut: Ctrl+P">
                                 <TextBlock>
                                     <Run Text="Probe Tracks"/>
@@ -420,6 +427,8 @@
                                     IsEnabled="{Binding State.CanExtract}"
                                     Style="{StaticResource PrimaryButtonLarge}"
                                     Margin="0,0,12,0"
+                                    AutomationProperties.Name="Extract to SRT"
+                                    AutomationProperties.HelpText="Extracts the selected subtitle track and converts it to SRT format. This is the main action. Keyboard shortcut: Control plus E"
                                     ToolTip="Extract the selected subtitle track and convert to SRT format&#x0a;Text subtitles are extracted instantly&#x0a;Image subtitles (PGS) require OCR processing (slower)&#x0a;Multi-pass correction is automatically applied&#x0a;Keyboard Shortcut: Ctrl+E">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock FontFamily="{StaticResource IconFontFamily}" 
