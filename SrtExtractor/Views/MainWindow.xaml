@@ -164,16 +164,6 @@
                       Command="{Binding ReDetectToolsCommand}"
                       InputGestureText="F5"
                       ToolTip="Re-detect and verify external tools (MKVToolNix, FFmpeg, etc.)"/>
-            <Separator/>
-            <MenuItem Header="Show _Welcome Screen (Debug)" 
-                      Click="ShowWelcome_Click"
-                      ToolTip="Display the first-run welcome screen (for testing)">
-                <MenuItem.Icon>
-                    <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                               Text="👋" 
-                               FontSize="14"/>
-                </MenuItem.Icon>
-            </MenuItem>
         </MenuItem>
         
         <!-- OPTIONS MENU: Settings & Preferences -->
@@ -1043,7 +1033,6 @@
                                      BorderThickness="1"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     AllowDrop="False"
                                      PreviewMouseLeftButtonDown="BatchQueueListBox_PreviewMouseLeftButtonDown"
                                      PreviewMouseMove="BatchQueueListBox_PreviewMouseMove"
                                      PreviewMouseLeftButtonUp="BatchQueueListBox_PreviewMouseLeftButtonUp"
