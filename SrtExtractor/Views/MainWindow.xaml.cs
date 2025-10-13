@@ -195,6 +195,24 @@ namespace SrtExtractor.Views
             }
         }
 
+        public void BatchSrtCorrection_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Create the Batch SRT Correction window with dependency injection
+                var batchSrtCorrectionWindow = _serviceProvider.GetRequiredService<BatchSrtCorrectionWindow>();
+                batchSrtCorrectionWindow.Owner = this;
+                batchSrtCorrectionWindow.ShowDialog();
+                
+                _loggingService.LogInfo("User opened Batch SRT Correction tool");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Failed to open Batch SRT Correction window", ex);
+                _notificationService.ShowError($"Failed to open Batch SRT Correction:\n{ex.Message}", "Error");
+            }
+        }
+
         private void VobSubTrackAnalyzer_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1035,6 +1053,35 @@ namespace SrtExtractor.Views
 
         #endregion
 
+        #region Menu Click Handlers
+
+        private void LoadSupFile_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var viewModel = new SupOcrViewModel(
+                    _serviceProvider.GetRequiredService<ISubtitleOcrService>(),
+                    _loggingService,
+                    _notificationService
+                );
+
+                var window = new SupOcrWindow
+                {
+                    DataContext = viewModel,
+                    Owner = this
+                };
+
+                _loggingService.LogInfo("Opened SUP OCR Tool window");
+                window.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Failed to open SUP OCR Tool", ex);
+                _notificationService.ShowError($"Failed to open SUP OCR Tool:\n{ex.Message}", "Error");
+            }
+        }
+
+        #endregion
 
     }
 }

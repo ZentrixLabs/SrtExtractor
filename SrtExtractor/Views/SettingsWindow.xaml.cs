@@ -14,8 +14,13 @@ public partial class SettingsWindow : Window
         DataContext = viewModel;
     }
 
-    private void OkButton_Click(object sender, RoutedEventArgs e)
+    private async void OkButton_Click(object sender, RoutedEventArgs e)
     {
+        // Save settings when user clicks OK
+        if (DataContext is MainViewModel viewModel)
+        {
+            await viewModel.SaveSettingsFromDialogAsync();
+        }
         DialogResult = true;
         Close();
     }

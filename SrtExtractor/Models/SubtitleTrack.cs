@@ -50,14 +50,17 @@ namespace SrtExtractor.Models
         [ObservableProperty]
         private bool _forced;
 
-        [ObservableProperty]
-        private bool _isClosedCaption;
+    [ObservableProperty]
+    private bool _isClosedCaption;
 
-        [ObservableProperty]
-        private bool _isRecommended;
+    [ObservableProperty]
+    private bool _isRecommended;
+    
+    [ObservableProperty]
+    private bool _isCommentary;
 
-        [ObservableProperty]
-        private Models.TrackType _type = Models.TrackType.Full;
+    [ObservableProperty]
+    private Models.TrackType _type = Models.TrackType.Full;
 
         [ObservableProperty]
         private int _frameCount;
@@ -99,6 +102,12 @@ namespace SrtExtractor.Models
             Forced = forced;
             IsClosedCaption = isClosedCaption;
             IsRecommended = isRecommended;
+            
+            // Detect commentary from title/name (case-insensitive)
+            var titleLower = title.ToLowerInvariant();
+            var nameLower = name.ToLowerInvariant();
+            IsCommentary = titleLower.Contains("commentary") || titleLower.Contains("comment") ||
+                          nameLower.Contains("commentary") || nameLower.Contains("comment");
             
             // Convert legacy string trackType to enum
             Type = trackType switch
@@ -233,8 +242,31 @@ namespace SrtExtractor.Models
                        $"Duration: {Duration}s\n" +
                        $"Forced: {(Forced ? "Yes" : "No")}\n" +
                        $"CC: {(IsClosedCaption ? "Yes" : "No")}\n" +
+                       $"Commentary: {(IsCommentary ? "Yes" : "No")}\n" +
                        $"Default: {(IsDefault ? "Yes" : "No")}\n" +
                        $"Name: {(string.IsNullOrEmpty(Name) ? "N/A" : Name)}";
+            }
+        }
+        
+        /// <summary>
+        /// Gets a user-friendly display name showing track type indicators.
+        /// </summary>
+        public string DisplayName
+        {
+            get
+            {
+                var parts = new List<string>();
+                
+                if (IsForced)
+                    parts.Add("🚨 Forced");
+                
+                if (IsClosedCaption)
+                    parts.Add("📑 CC");
+                    
+                if (IsCommentary)
+                    parts.Add("🎤 Commentary");
+                
+                return parts.Count > 0 ? string.Join(" • ", parts) : "";
             }
         }
     }

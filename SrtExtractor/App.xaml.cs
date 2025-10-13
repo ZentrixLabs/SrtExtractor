@@ -5,6 +5,8 @@ using SrtExtractor.Services.Implementations;
 using SrtExtractor.Services.Interfaces;
 using SrtExtractor.ViewModels;
 using SrtExtractor.Views;
+using ZentrixLabs.OcrCorrection.Core;
+using ZentrixLabs.OcrCorrection.Patterns;
 
 namespace SrtExtractor
 {
@@ -64,13 +66,18 @@ namespace SrtExtractor
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
-        services.AddSingleton<IWingetService, WingetService>();
         services.AddSingleton<IAsyncFileService, AsyncFileService>();
         services.AddSingleton<IFileLockDetectionService, FileLockDetectionService>();
         services.AddSingleton<IFileCacheService, FileCacheService>();
         services.AddSingleton<IMkvToolService, MkvToolService>();
         services.AddSingleton<IFfmpegService, FfmpegService>();
+        services.AddSingleton<ITesseractOcrService, TesseractOcrService>();
         services.AddSingleton<ISubtitleOcrService, SubtitleOcrService>();
+        
+        // Register ZentrixLabs.OcrCorrection services
+        services.AddSingleton<IPatternProvider, EnglishPatternProvider>();
+        services.AddSingleton<IOcrCorrectionEngine, OcrCorrectionEngine>();
+        
         services.AddSingleton<ISrtCorrectionService, SrtCorrectionService>();
         services.AddSingleton<IMultiPassCorrectionService, MultiPassCorrectionService>();
             services.AddSingleton<INetworkDetectionService, NetworkDetectionService>();

@@ -19,7 +19,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly ILoggingService _loggingService;
     private readonly INotificationService _notificationService;
     private readonly IToolDetectionService _toolDetectionService;
-    private readonly IWingetService _wingetService;
     private readonly IMkvToolService _mkvToolService;
     private readonly IFfmpegService _ffmpegService;
     private readonly ISubtitleOcrService _ocrService;
@@ -39,7 +38,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ILoggingService loggingService,
         INotificationService notificationService,
         IToolDetectionService toolDetectionService,
-        IWingetService wingetService,
         IMkvToolService mkvToolService,
         IFfmpegService ffmpegService,
         ISubtitleOcrService ocrService,
@@ -53,7 +51,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _loggingService = loggingService;
         _notificationService = notificationService;
         _toolDetectionService = toolDetectionService;
-        _wingetService = wingetService;
         _mkvToolService = mkvToolService;
         _ffmpegService = ffmpegService;
         _ocrService = ocrService;
@@ -95,6 +92,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ToggleBatchModeCommand = new RelayCommand(ToggleBatchMode);
         ShowHelpCommand = new RelayCommand(ShowHelp);
         OpenRecentFileCommand = new RelayCommand<string>(OpenRecentFile);
+        OpenBatchSrtCorrectionCommand = new RelayCommand(OpenBatchSrtCorrection);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -151,6 +149,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IRelayCommand ToggleBatchModeCommand { get; }
     public IRelayCommand ShowHelpCommand { get; }
     public IRelayCommand<string> OpenRecentFileCommand { get; }
+    public IRelayCommand OpenBatchSrtCorrectionCommand { get; }
 
     #endregion
 
@@ -436,6 +435,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         await _ffmpegService.ExtractSubtitleAsync(State.MkvPath!, State.SelectedTrack!.Id, outputPath, cancellationToken);
         State.UpdateProcessingMessage("MP4 extraction completed!");
         State.AddLogMessage($"Subtitles extracted to: {outputPath}");
+        
+        // BUGFIX: Convert ASS to SRT if needed (some MP4s contain ASS subtitles that get extracted with .srt extension)
+        await _ocrService.ConvertAssToSrtIfNeededAsync(outputPath, cancellationToken);
 
         // Apply multi-pass SRT corrections to MP4 subtitles
         await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
@@ -486,6 +488,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         
         State.UpdateProcessingMessage("Text extraction completed!");
         State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
+        
+        // BUGFIX: Convert ASS to SRT if needed (some MKVs contain ASS subtitles that get extracted with .srt extension)
+        await _ocrService.ConvertAssToSrtIfNeededAsync(outputPath, cancellationToken);
 
         // Apply multi-pass SRT corrections to text subtitles
         await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
@@ -516,15 +521,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Apply multi-pass OCR corrections
         await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
 
-        // Clean up temporary SUP file
-        State.UpdateProcessingMessage("Cleaning up temporary files...");
-        try
+        // Clean up temporary SUP file (unless user wants to preserve it for debugging)
+        if (State.PreserveSupFiles)
         {
-            File.Delete(tempSupPath);
+            _loggingService.LogInfo($"Preserving SUP file for debugging: {tempSupPath}");
+            State.AddLogMessage($"SUP file preserved: {Path.GetFileName(tempSupPath)}");
         }
-        catch
+        else
         {
-            // Ignore cleanup errors
+            State.UpdateProcessingMessage("Cleaning up temporary files...");
+            try
+            {
+                File.Delete(tempSupPath);
+                _loggingService.LogInfo("Temporary SUP file deleted");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogWarning($"Failed to delete temporary SUP file: {ex.Message}");
+                // Ignore cleanup errors
+            }
         }
         State.UpdateProcessingMessage("PGS extraction completed!");
     }
@@ -555,53 +570,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         });
     }
 
-    private async Task InstallMkvToolNixAsync()
+    private Task InstallMkvToolNixAsync()
     {
-        try
-        {
-            State.IsBusy = true;
-            
-            // Check if winget is available
-            var wingetAvailable = await _wingetService.IsWingetAvailableAsync();
-            if (!wingetAvailable)
-            {
-                State.AddLogMessage("Winget not available - showing manual installation dialog");
-                // Show Windows 10 dialog
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    var dialog = new Views.Windows10Dialog();
-                    dialog.Owner = Application.Current.MainWindow;
-                    dialog.ShowDialog();
-                });
-                return;
-            }
-
-            State.AddLogMessage("Installing MKVToolNix via winget...");
-
-            var success = await _wingetService.InstallPackageAsync("MoritzBunkus.MKVToolNix");
-            
-            if (success)
-            {
-                State.AddLogMessage("MKVToolNix installed successfully!");
-                // Re-detect tools
-                await DetectToolsAsync();
-            }
-            else
-            {
-                State.AddLogMessage("Failed to install MKVToolNix");
-                _notificationService.ShowWarning("Failed to install MKVToolNix. Please check the log for details.", "Installation Failed");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to install MKVToolNix", ex);
-            State.AddLogMessage($"Error installing MKVToolNix: {ex.Message}");
-            _notificationService.ShowError($"Failed to install MKVToolNix:\n{ex.Message}", "Installation Error");
-        }
-        finally
-        {
-            State.IsBusy = false;
-        }
+        // All tools are bundled - no installation needed
+        _loggingService.LogInfo("MKVToolNix is bundled with the application - no installation needed");
+        _notificationService.ShowInfo("All required tools are bundled with SrtExtractor.\n\nNo installation needed!", "Tools Already Available");
+        return Task.CompletedTask;
     }
 
 
@@ -638,6 +612,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 State.PreferClosedCaptions = settings.PreferClosedCaptions;
                 State.OcrLanguage = settings.DefaultOcrLanguage;
                 State.FileNamePattern = settings.FileNamePattern;
+                State.EnableSrtCorrection = settings.EnableSrtCorrection;
+                State.PreserveSupFiles = settings.PreserveSupFiles;
 
             // Load recent files
             await LoadRecentFilesAsync();
@@ -675,17 +651,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 MkvMergePath = mkvStatus.Path,
                 MkvExtractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe")
             };
-            settingsUpdated = true;
-        }
-
-        // Detect Subtitle Edit
-        var seStatus = await _toolDetectionService.CheckSubtitleEditAsync();
-        State.UpdateToolStatus("SubtitleEdit", seStatus);
-        
-        // Update settings if Subtitle Edit was found and not already configured
-        if (seStatus.IsInstalled && seStatus.Path != null && string.IsNullOrEmpty(settings.SubtitleEditPath))
-        {
-            settings = settings with { SubtitleEditPath = seStatus.Path };
             settingsUpdated = true;
         }
 
@@ -738,10 +703,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     MkvMergePath = toolPath,
                     MkvExtractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe")
                 };
-            }
-            else if (string.Equals(toolName, "SubtitleEdit", StringComparison.OrdinalIgnoreCase))
-            {
-                settings = settings with { SubtitleEditPath = toolPath };
             }
 
             await _settingsService.SaveSettingsAsync(settings);
@@ -883,14 +844,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Select the best quality track from a list of tracks based on bitrate, frame count, and codec type.
-    /// Now uses the SubtitleTrack model's cached codec properties for better performance.
+    /// Select the best quality track from a list of tracks based on codec type, reasonable quality threshold, and track order.
+    /// BUGFIX: Now prioritizes the FIRST high-quality track (by TrackId) to avoid commentary tracks which often have very high bitrates.
+    /// Uses the SubtitleTrack model's cached codec properties for better performance.
     /// </summary>
     /// <param name="tracks">List of tracks to choose from</param>
     /// <returns>Best quality track</returns>
     private SubtitleTrack GetBestQualityTrack(IList<SubtitleTrack> tracks)
     {
         if (!tracks.Any()) return tracks.First();
+
+        // CRITICAL: Filter out commentary tracks first (they should never be auto-selected)
+        var nonCommentaryTracks = tracks.Where(t => !t.IsCommentary).ToList();
+        if (nonCommentaryTracks.Any())
+        {
+            _loggingService.LogInfo($"Filtered out {tracks.Count - nonCommentaryTracks.Count} commentary track(s), selecting from {nonCommentaryTracks.Count} non-commentary tracks");
+            tracks = nonCommentaryTracks;
+        }
+        else
+        {
+            _loggingService.LogInfo("All tracks are commentary tracks - will select from all available");
+        }
 
         // Priority order: SubRip/SRT > Other text-based > HDMV PGS > Other PGS
         // Use the track's built-in codec properties instead of parsing strings
@@ -915,12 +889,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
-        // Sort by quality metrics: bitrate (desc), frame count (desc), then by codec priority
-        // Use the track's CodecPriority property instead of helper method
-        return tracks.OrderByDescending(t => t.Bitrate)
-                     .ThenByDescending(t => t.FrameCount)
-                     .ThenByDescending(t => t.CodecPriority)
-                     .First();
+        // BUGFIX: Prioritize FIRST (lowest TrackId) track among high-quality tracks
+        // This avoids selecting tracks that might have issues or come later in the file.
+        // Strategy: Filter tracks that meet a reasonable quality threshold, then pick the first one (lowest TrackId)
+        
+        // Define quality thresholds (tracks below these are likely incomplete/poor quality)
+        const long minBitrate = 500; // 500 bps minimum (very low bar, just to filter out clearly broken tracks)
+        const int minFrameCount = 100; // 100 frames minimum (filters out test/stub tracks)
+        
+        // Filter to high-quality tracks (meeting minimum thresholds)
+        var qualityTracks = tracks.Where(t => t.Bitrate >= minBitrate && t.FrameCount >= minFrameCount).ToList();
+        
+        // If we have quality tracks, pick the FIRST one (lowest TrackId = earliest in file)
+        // Otherwise fall back to first track in the original list
+        if (qualityTracks.Any())
+        {
+            var selectedTrack = qualityTracks.OrderBy(t => t.TrackId).First();
+            _loggingService.LogInfo($"Selected FIRST high-quality track (ID: {selectedTrack.TrackId}, Bitrate: {selectedTrack.Bitrate}, Frames: {selectedTrack.FrameCount})");
+            return selectedTrack;
+        }
+        
+        // Fallback: No tracks meet quality threshold, just return the first track
+        _loggingService.LogInfo($"No tracks met quality threshold, selecting first available track");
+        return tracks.OrderBy(t => t.TrackId).First();
     }
 
     // Codec helper methods removed - now using SubtitleTrack.CodecType, .IsSubRip, .IsTextBased, and .CodecPriority properties
@@ -1045,7 +1036,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task SaveSettingsAsync()
+    /// <summary>
+    /// Save settings when user changes them in the settings dialog.
+    /// Called by SettingsWindow when user clicks OK.
+    /// </summary>
+    public async Task SaveSettingsFromDialogAsync()
     {
         try
         {
@@ -1055,7 +1050,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var settings = new AppSettings(
                 MkvMergePath: null, // These will be updated when tools are detected
                 MkvExtractPath: null,
-                SubtitleEditPath: null,
                 TesseractDataPath: null,
                 AutoDetectTools: true,
                 LastToolCheck: DateTime.Now,
@@ -1063,7 +1057,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     PreferClosedCaptions: State.PreferClosedCaptions,
                     DefaultOcrLanguage: State.OcrLanguage,
                     FileNamePattern: State.FileNamePattern,
-                    ShowWelcomeScreen: existingSettings.ShowWelcomeScreen
+                    ShowWelcomeScreen: existingSettings.ShowWelcomeScreen,
+                    EnableSrtCorrection: State.EnableSrtCorrection,
+                    PreserveSupFiles: State.PreserveSupFiles
             );
 
             await _settingsService.SaveSettingsAsync(settings);
@@ -1787,6 +1783,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OpenBatchSrtCorrection()
+    {
+        try
+        {
+            _loggingService.LogInfo("User opened Batch SRT Correction via keyboard shortcut");
+            
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Find the MainWindow and call the click handler
+                if (Application.Current.MainWindow is Views.MainWindow mainWindow)
+                {
+                    mainWindow.BatchSrtCorrection_Click(this, new RoutedEventArgs());
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error opening Batch SRT Correction", ex);
+        }
+    }
+
     private void OpenRecentFile(string? filePath)
     {
         try
@@ -1843,6 +1860,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
+            // Check if SRT correction is completely disabled
+            if (!State.EnableSrtCorrection)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    State.AddLogMessage("ℹ️ SRT correction is disabled - using raw OCR output");
+                });
+                _loggingService.LogInfo("SRT correction disabled - skipping all corrections");
+                return;
+            }
+
             if (!State.EnableMultiPassCorrection)
             {
                 // Use single-pass correction if multi-pass is disabled

@@ -1,23 +1,24 @@
 using System.IO;
-using System.Text.RegularExpressions;
 using SrtExtractor.Services.Interfaces;
+using ZentrixLabs.OcrCorrection.Core;
+using ZentrixLabs.OcrCorrection.Configuration;
+using ZentrixLabs.OcrCorrection.Patterns;
 
 namespace SrtExtractor.Services.Implementations;
 
 /// <summary>
 /// Service for correcting common OCR errors in SRT files.
-/// Uses pre-compiled regex patterns for optimal performance.
+/// Uses ZentrixLabs.OcrCorrection library with ~837 comprehensive correction patterns.
 /// </summary>
 public class SrtCorrectionService : ISrtCorrectionService
 {
     private readonly ILoggingService _loggingService;
-    
-    // Pre-compiled regex patterns for 30-50% performance improvement
-    private static readonly Dictionary<Regex, string> CompiledCorrections = BuildCompiledCorrections();
+    private readonly IOcrCorrectionEngine _ocrCorrectionEngine;
 
-    public SrtCorrectionService(ILoggingService loggingService)
+    public SrtCorrectionService(ILoggingService loggingService, IOcrCorrectionEngine ocrCorrectionEngine)
     {
         _loggingService = loggingService;
+        _ocrCorrectionEngine = ocrCorrectionEngine;
     }
 
     public async Task<int> CorrectSrtFileAsync(string srtPath, CancellationToken cancellationToken = default)
@@ -37,7 +38,7 @@ public class SrtCorrectionService : ISrtCorrectionService
             if (content != correctedContent)
             {
                 await File.WriteAllTextAsync(srtPath, correctedContent, cancellationToken);
-                _loggingService.LogInfo("SRT file corrected successfully");
+                _loggingService.LogInfo($"✅ SRT file corrected successfully: {correctionCount} corrections applied");
             }
             else
             {
@@ -53,179 +54,41 @@ public class SrtCorrectionService : ISrtCorrectionService
         }
     }
 
-    /// <summary>
-    /// Build and compile all regex patterns at class initialization for performance.
-    /// This is called once and patterns are reused for all corrections.
-    /// </summary>
-    private static Dictionary<Regex, string> BuildCompiledCorrections()
-    {
-        var patterns = new Dictionary<string, string>
-        {
-            // Missing spaces before common words
-            { @"(\w)(is|are|was|were|have|has|had|will|would|could|should)(\s)", "$1 $2$3" },
-            { @"(\w)(the|and|or|but|for|with|from|to|of|in|on|at|by)(\s)", "$1 $2$3" },
-            { @"(\w)(I|you|he|she|it|we|they)(\s)", "$1 $2$3" },
-            
-            // Common character substitutions
-            { @"\bl've\b", "I've" },
-            { @"\bl'm\b", "I'm" },
-            { @"\bl'll\b", "I'll" },
-            { @"\bl'd\b", "I'd" },
-            { @"\bl\s", "I " },
-            { @"\bl$", "I" },
-            
-            // Missing apostrophes (contracted words where apostrophe is missing - clear OCR errors)
-            { @"\byoure\b", "you're" },
-            { @"\btheyre\b", "they're" },
-            { @"\bhes\b", "he's" },
-            { @"\bshes\b", "she's" },
-            { @"\bwont\b", "won't" },
-            { @"\bcant\b", "can't" },
-            { @"\bdont\b", "don't" },
-            { @"\bdoesnt\b", "doesn't" },
-            { @"\bdidnt\b", "didn't" },
-            { @"\bhavent\b", "haven't" },
-            { @"\bhasnt\b", "hasn't" },
-            { @"\bhadnt\b", "hadn't" },
-            
-            // Double letters that shouldn't be
-            { @"\bRattIing\b", "Rattling" },
-            { @"\bChatterIing\b", "Chattering" },
-            { @"\bClackIing\b", "Clacking" },
-            
-            // Common OCR mistakes
-            { @"\bterriblego\b", "terrible go" },
-            { @"\bWhatyou\b", "What you" },
-            { @"\bYougotany\b", "You got any" },
-            { @"\bIkeep\b", "I keep" },
-            { @"\bYellow lights\b", "Yellow light's" },
-            { @"\bget dressed\b", "get dressed" },
-            
-            // Extra spaces (OCR often adds spaces in the middle of words)
-            { @"\bT he\b", "The" },
-            { @"\bsh it\b", "shit" },
-            { @"\bwh at\b", "what" },
-            { @"\bf or\b", "for" },
-            { @"\bth e\b", "the" },
-            { @"\ban d\b", "and" },
-            { @"\bwi th\b", "with" },
-            { @"\bto o\b", "too" },
-            { @"\bso me\b", "some" },
-            { @"\bmo re\b", "more" },
-            { @"\bth is\b", "this" },
-            { @"\bth at\b", "that" },
-            { @"\bth ey\b", "they" },
-            { @"\bth eir\b", "their" },
-            { @"\bth ere\b", "there" },
-            { @"\bth en\b", "then" },
-            { @"\bth an\b", "than" },
-            { @"\bth rough\b", "through" },
-            { @"\bth ink\b", "think" },
-            { @"\bth ing\b", "thing" },
-            { @"\bth ose\b", "those" },
-            { @"\bth ree\b", "three" },
-            { @"\bth row\b", "throw" },
-            { @"\bth us\b", "thus" },
-            
-            // Missing spaces in common phrases
-            { @"\bYougotanybiscuits\b", "You got any biscuits" },
-            { @"\bWhatyoudoing\b", "What you doing" },
-            { @"\bHowyoudoing\b", "How you doing" },
-            { @"\bWhereyougoing\b", "Where you going" },
-            { @"\bWhenyoucoming\b", "When you coming" },
-            { @"\bWhyyouhere\b", "Why you here" },
-            { @"\bWhoareyou\b", "Who are you" },
-            { @"\bWhatareyou\b", "What are you" },
-            { @"\bHowareyou\b", "How are you" },
-            { @"\bWhereareyou\b", "Where are you" },
-            { @"\bWhenareyou\b", "When are you" },
-            { @"\bWhyareyou\b", "Why are you" },
-            
-            // Specific OCR phrase errors
-            { @"\bterrible go\b", "terrible" },
-            
-            // Common OCR character substitutions
-            { @"\b0\b", "O" }, // Zero to O in words
-            { @"\b1\b", "I" }, // One to I in words
-            { @"\b5\b", "S" }, // Five to S in words
-            { @"\b8\b", "B" }, // Eight to B in words
-            
-            // Apostrophe issues (OCR often uses wrong characters)
-            { @"\)re\b", "'re" }, // )re to 're
-            { @"\)ll\b", "'ll" }, // )ll to 'll
-            { @"\)ve\b", "'ve" }, // )ve to 've
-            { @"\)d\b", "'d" }, // )d to 'd
-            { @"\)m\b", "'m" }, // )m to 'm
-            { @"\)s\b", "'s" }, // )s to 's
-            { @"\)t\b", "'t" }, // )t to 't
-            
-            // More character substitutions
-            { @"\bRipIey\b", "Ripley" },
-            { @"\bfeeIdead\b", "feel dead" },
-            { @"\bfeeI\b", "feel" },
-            { @"\bIeeI\b", "feel" },
-            { @"\bIee\b", "feel" },
-            
-            // Common OCR mistakes with specific words
-            { @"\bI feeIdead\b", "I feel dead" },
-            { @"\bI feeI\b", "I feel" },
-            
-            // More apostrophe patterns
-            { @"\byou\)re\b", "you're" },
-            { @"\bwe\)re\b", "we're" },
-            { @"\bthey\)re\b", "they're" },
-            { @"\bit\)s\b", "it's" },
-            { @"\bhe\)s\b", "he's" },
-            { @"\bshe\)s\b", "she's" },
-            { @"\bI\)m\b", "I'm" },
-            { @"\bI\)ll\b", "I'll" },
-            { @"\bI\)ve\b", "I've" },
-            { @"\bI\)d\b", "I'd" },
-            { @"\bwon\)t\b", "won't" },
-            { @"\bcan\)t\b", "can't" },
-            { @"\bdon\)t\b", "don't" },
-            { @"\bdoesn\)t\b", "doesn't" },
-            { @"\bdidn\)t\b", "didn't" },
-            { @"\bhaven\)t\b", "haven't" },
-            { @"\bhasn\)t\b", "hasn't" },
-            { @"\bhadn\)t\b", "hadn't" },
-        };
-
-        // Compile all patterns with IgnoreCase flag for performance
-        var compiledPatterns = new Dictionary<Regex, string>();
-        foreach (var kvp in patterns)
-        {
-            var regex = new Regex(kvp.Key, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            compiledPatterns.Add(regex, kvp.Value);
-        }
-        
-        return compiledPatterns;
-    }
-
     public (string correctedContent, int correctionCount) CorrectSrtContentWithCount(string content)
     {
-        var corrected = content;
-        var totalCorrections = 0;
+        _loggingService.LogInfo("Starting OCR correction using ZentrixLabs.OcrCorrection engine (~837 patterns)");
 
-        // Use pre-compiled regex patterns for performance
-        foreach (var correction in CompiledCorrections)
+        try
         {
-            var beforeCount = correction.Key.Matches(corrected).Count;
-            corrected = correction.Key.Replace(corrected, correction.Value);
-            var afterCount = correction.Key.Matches(corrected).Count;
-            
-            if (beforeCount > afterCount)
+            // Use the comprehensive OCR correction engine
+            var options = new CorrectionOptions
             {
-                var instances = beforeCount - afterCount;
-                totalCorrections += instances;
-                _loggingService.LogInfo($"Applied correction: '{correction.Key}' → '{correction.Value}' ({instances} instances)");
+                EnableDetailedLogging = false, // Set to true for debugging if needed
+                TrackPerformanceMetrics = true,
+                CollectCorrectionDetails = false // Set to true for detailed logging if needed
+            };
+
+            var result = _ocrCorrectionEngine.Correct(content, options);
+
+            // Log summary
+            if (result.CorrectionCount > 0)
+            {
+                _loggingService.LogInfo($"🎯 OCR corrections applied: {result.CorrectionCount} corrections");
+                _loggingService.LogInfo($"   • Processing time: {result.ProcessingTime.TotalMilliseconds:F0}ms");
             }
+            else
+            {
+                _loggingService.LogInfo("No OCR corrections needed");
+            }
+
+            return (result.CorrectedText, result.CorrectionCount);
         }
-
-        // Log total corrections summary
-        _loggingService.LogInfo($"🎯 Total OCR corrections applied: {totalCorrections}");
-
-        return (corrected, totalCorrections);
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error during OCR correction", ex);
+            // Return original content if correction fails
+            return (content, 0);
+        }
     }
 
     public string CorrectSrtContent(string content)

@@ -14,24 +14,12 @@ public class ToolDetectionService : IToolDetectionService
 
     // Common installation paths for MKVToolNix
     private readonly string[] _mkvCommonPaths = {
+        // Priority 1: Bundled version (always check this first)
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mkvtoolnix-bin"),
+        // Priority 2: System installations
         @"C:\Program Files\MKVToolNix\",
         @"C:\Program Files (x86)\MKVToolNix\",
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "MKVToolNix")
-    };
-
-    // Common installation paths for Subtitle Edit CLI (seconv.exe)
-    private readonly string[] _subtitleEditCommonPaths = {
-        // First check our built CLI in the output directory
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "seconv.exe"),
-        // Then check common installation paths
-        @"C:\Program Files\Subtitle Edit\seconv.exe",
-        @"C:\Program Files (x86)\Subtitle Edit\seconv.exe",
-        @"C:\Program Files\SubtitleEdit-CLI\seconv.exe",
-        @"C:\Program Files (x86)\SubtitleEdit-CLI\seconv.exe",
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "SubtitleEdit-CLI", "seconv.exe"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools", "seconv.exe"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "tools", "seconv.exe"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "dotnet", "tools", "seconv.exe")
     };
 
     public ToolDetectionService(ILoggingService loggingService, IProcessRunner processRunner)
@@ -65,46 +53,6 @@ public class ToolDetectionService : IToolDetectionService
         return new ToolStatus(true, mkvmergePath, version, null);
     }
 
-    public async Task<ToolStatus> CheckSubtitleEditAsync()
-    {
-        _loggingService.LogInfo("Checking Subtitle Edit CLI installation");
-        _loggingService.LogInfo($"AppDomain.CurrentDomain.BaseDirectory: {AppDomain.CurrentDomain.BaseDirectory}");
-
-        // Look for seconv.exe (the actual CLI executable)
-        var cliPath = await FindToolPathAsync("seconv.exe", _subtitleEditCommonPaths);
-        if (cliPath != null)
-        {
-            var isValid = await ValidateToolAsync(cliPath);
-            if (isValid)
-            {
-                var version = await GetToolVersionAsync(cliPath);
-                var isBuiltIn = cliPath.Contains(AppDomain.CurrentDomain.BaseDirectory);
-                var statusText = isBuiltIn ? "Built-in" : "External";
-                _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, cliPath, version, null));
-                return new ToolStatus(true, cliPath, version, null);
-            }
-        }
-
-        // Also check if it's in PATH
-        try
-        {
-            var (exitCode, _, _) = await _processRunner.RunAsync("seconv", new[] { "--help" });
-            if (exitCode == 0 || exitCode == 1) // Help usually returns 1
-            {
-                // Try to get version even for PATH tools
-                var version = await GetToolVersionAsync("seconv");
-                _loggingService.LogToolDetection("Subtitle Edit CLI", new ToolStatus(true, "seconv", version, null));
-                return new ToolStatus(true, "seconv", version, null);
-            }
-        }
-        catch
-        {
-            // Tool not in PATH
-        }
-
-        return new ToolStatus(false, null, null, "Subtitle Edit CLI (seconv.exe) not found. Will be built automatically on next build.");
-    }
-
     public async Task<ToolStatus> CheckFfmpegAsync()
     {
         _loggingService.LogInfo("Checking FFmpeg installation");
@@ -112,13 +60,13 @@ public class ToolDetectionService : IToolDetectionService
         // Common installation paths for FFmpeg
         var commonPaths = new[]
         {
-            // First check our built FFmpeg in the output directory
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe"),
-            // Then check common installation paths
-            @"C:\ffmpeg\bin\ffmpeg.exe",
-            @"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
-            @"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "ffmpeg", "bin", "ffmpeg.exe")
+            // Priority 1: Bundled FFmpeg in the output directory
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg-bin"),
+            // Priority 2: System installations
+            @"C:\ffmpeg\bin",
+            @"C:\Program Files\ffmpeg\bin",
+            @"C:\Program Files (x86)\ffmpeg\bin",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "ffmpeg", "bin")
         };
 
         var ffmpegPath = await FindToolPathAsync("ffmpeg.exe", commonPaths);
@@ -305,11 +253,7 @@ public class ToolDetectionService : IToolDetectionService
                         break;
                     }
                 
-                case KnownTool.SubtitleEditCli:
-                    // Subtitle Edit - file exists is sufficient
-                    _loggingService.LogInfo($"Subtitle Edit CLI validation successful (file exists): {toolPath}");
-                    return true;
-                
+                case KnownTool.Tesseract:
                 case KnownTool.FFmpeg:
                 case KnownTool.FFprobe:
                     // FFmpeg tools - file exists is sufficient
@@ -361,7 +305,7 @@ public class ToolDetectionService : IToolDetectionService
         
         if (toolName.Contains("mkvmerge")) return KnownTool.MkvMerge;
         if (toolName.Contains("mkvextract")) return KnownTool.MkvExtract;
-        if (toolName.Contains("seconv")) return KnownTool.SubtitleEditCli;
+        if (toolName.Contains("tesseract")) return KnownTool.Tesseract;
         if (toolName.Contains("ffmpeg")) return KnownTool.FFmpeg;
         if (toolName.Contains("ffprobe")) return KnownTool.FFprobe;
         
@@ -378,7 +322,7 @@ public class ToolDetectionService : IToolDetectionService
             var versionArgs = tool switch
             {
                 KnownTool.FFmpeg or KnownTool.FFprobe => new[] { "-version" },
-                KnownTool.SubtitleEditCli or KnownTool.MkvMerge or KnownTool.MkvExtract => new[] { "--version" },
+                KnownTool.Tesseract or KnownTool.MkvMerge or KnownTool.MkvExtract => new[] { "--version" },
                 _ => new[] { "--version" }
             };
             
@@ -421,9 +365,9 @@ public class ToolDetectionService : IToolDetectionService
                                 break;
                             }
                         
-                        case KnownTool.SubtitleEditCli:
+                        case KnownTool.Tesseract:
                             {
-                                // Try to extract version number from various formats
+                                // Tesseract version format: "tesseract 5.x.x"
                                 var versionMatch = System.Text.RegularExpressions.Regex.Match(firstLine, @"(\d+\.\d+(?:\.\d+)?)");
                                 if (versionMatch.Success)
                                 {

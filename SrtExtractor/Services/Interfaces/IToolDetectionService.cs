@@ -3,7 +3,7 @@ using SrtExtractor.Models;
 namespace SrtExtractor.Services.Interfaces;
 
 /// <summary>
-/// Service for detecting and validating external tools (MKVToolNix and Subtitle Edit).
+/// Service for detecting and validating external tools (MKVToolNix, FFmpeg).
 /// </summary>
 public interface IToolDetectionService
 {
@@ -12,12 +12,6 @@ public interface IToolDetectionService
     /// </summary>
     /// <returns>Tool status with installation details</returns>
     Task<ToolStatus> CheckMkvToolNixAsync();
-
-    /// <summary>
-    /// Check if Subtitle Edit is installed and available.
-    /// </summary>
-    /// <returns>Tool status with installation details</returns>
-    Task<ToolStatus> CheckSubtitleEditAsync();
 
     /// <summary>
     /// Check if FFmpeg is installed and available.

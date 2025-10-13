@@ -213,7 +213,7 @@ public class FfmpegService : IFfmpegService
         {
             // SECURITY: Validate and sanitize paths
             var validatedMp4Path = PathValidator.ValidateFileExists(mp4Path);
-            var validatedOutputPath = SafeFileOperations.ValidateAndPrepareOutputPath(outputPath);
+            var validatedOutputPath = SafeFileOperations.ValidateAndPrepareOutputPath(outputPath, mp4Path);
 
             // Get FFmpeg path
             var ffmpegPath = await FindFfmpegPathAsync();
@@ -231,7 +231,7 @@ public class FfmpegService : IFfmpegService
             _loggingService.LogInfo($"Extracting subtitle track {trackId} from MP4...");
             var (exitCode, stdout, stderr) = await _processRunner.RunAsync(
                 ffmpegPath, 
-                new[] { "-i", validatedMp4Path, "-map", $"0:{actualStreamIndex}", "-c:s", "srt", validatedOutputPath }, 
+                new[] { "-y", "-i", validatedMp4Path, "-map", $"0:{actualStreamIndex}", "-c:s", "srt", validatedOutputPath }, 
                 cancellationToken);
             
             if (exitCode != 0)

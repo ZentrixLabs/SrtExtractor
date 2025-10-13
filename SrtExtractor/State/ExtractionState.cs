@@ -46,9 +46,6 @@ public partial class ExtractionState : ObservableObject
     private ToolStatus _mkvToolNixStatus = new(false, null, null, null);
 
     [ObservableProperty]
-    private ToolStatus _subtitleEditStatus = new(false, null, null, null);
-
-    [ObservableProperty]
     private ToolStatus _ffmpegStatus = new(false, null, null, null);
 
     // Settings
@@ -66,6 +63,15 @@ public partial class ExtractionState : ObservableObject
 
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
+
+    // SRT Correction Settings
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
+    private bool _enableSrtCorrection = true;
+
+    // Debugging Settings
+    [ObservableProperty]
+    private bool _preserveSupFiles = false;
 
     // Multi-Pass Correction Settings
     [ObservableProperty]
@@ -260,7 +266,7 @@ public partial class ExtractionState : ObservableObject
     private string _detailedProgressMessage = "";
 
     // Computed Properties
-    public bool AreToolsAvailable => MkvToolNixStatus.IsInstalled && SubtitleEditStatus.IsInstalled && FfmpegStatus.IsInstalled;
+    public bool AreToolsAvailable => MkvToolNixStatus.IsInstalled && FfmpegStatus.IsInstalled;
     
     public bool CanProbe => !string.IsNullOrEmpty(MkvPath) && AreToolsAvailable && !IsBusy;
     
@@ -305,8 +311,9 @@ public partial class ExtractionState : ObservableObject
         get
         {
             var preference = PreferForced ? "Forced" : "CC";
-            var multiPass = EnableMultiPassCorrection ? $"MultiPass({CorrectionMode})" : "SinglePass";
-            return $"⚙️ {OcrLanguage.ToUpper()} • {preference} • {multiPass}";
+            var correction = !EnableSrtCorrection ? "NoCorrection" : 
+                            EnableMultiPassCorrection ? $"MultiPass({CorrectionMode})" : "SinglePass";
+            return $"⚙️ {OcrLanguage.ToUpper()} • {preference} • {correction}";
         }
     }
 
@@ -353,10 +360,6 @@ public partial class ExtractionState : ObservableObject
         if (string.Equals(toolName, "MKVToolNix", StringComparison.OrdinalIgnoreCase))
         {
             MkvToolNixStatus = status;
-        }
-        else if (string.Equals(toolName, "SubtitleEdit", StringComparison.OrdinalIgnoreCase))
-        {
-            SubtitleEditStatus = status;
         }
         else if (string.Equals(toolName, "FFmpeg", StringComparison.OrdinalIgnoreCase))
         {

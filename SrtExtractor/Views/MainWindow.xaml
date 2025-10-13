@@ -25,6 +25,7 @@
         <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding ExtractCommand}"/>
         <KeyBinding Key="B" Modifiers="Ctrl" Command="{Binding ToggleBatchModeCommand}"/>
         <KeyBinding Key="C" Modifiers="Ctrl" Command="{Binding CancelCommand}"/>
+        <KeyBinding Key="R" Modifiers="Ctrl+Shift" Command="{Binding OpenBatchSrtCorrectionCommand}"/>
         <KeyBinding Key="F5" Command="{Binding ReDetectToolsCommand}"/>
         <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
         <KeyBinding Key="Escape" Command="{Binding CancelCommand}"/>
@@ -38,7 +39,7 @@
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                    <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
                     <Setter Property="FontWeight" Value="{StaticResource FontWeightSemiBold}"/>
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
@@ -153,18 +154,23 @@
         
         <!-- TOOLS MENU: Utility Tools -->
         <MenuItem Header="_Tools">
-            <MenuItem Header="_SRT Correction" 
-                      Click="SrtCorrection_Click"
-                      ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
-            <MenuItem Header="_VobSub Track Analyzer..." 
-                      Click="VobSubTrackAnalyzer_Click"
-                      ToolTip="Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit"/>
+            <MenuItem Header="Load _SUP File..." 
+                      Click="LoadSupFile_Click"
+                      ToolTip="Load a SUP file directly for OCR processing (bypasses MKV extraction)"/>
             <Separator/>
-            <MenuItem Header="Re-_detect Tools" 
-                      Command="{Binding ReDetectToolsCommand}"
-                      InputGestureText="F5"
-                      ToolTip="Re-detect and verify external tools (MKVToolNix, FFmpeg, etc.)"/>
-        </MenuItem>
+            <MenuItem Header="_Correct SRT File..." 
+                      Click="SrtCorrection_Click"
+                      InputGestureText="Ctrl+R"
+                      ToolTip="Fix OCR errors in a single SRT file"/>
+            <MenuItem Header="_Batch SRT Correction..." 
+                      Click="BatchSrtCorrection_Click"
+                      InputGestureText="Ctrl+Shift+R"
+                      ToolTip="Process multiple SRT files at once with bulk correction"/>
+            <Separator/>
+            <MenuItem Header="_VobSub Track Analyzer..." 
+                        Click="VobSubTrackAnalyzer_Click"
+                        ToolTip="Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit"/>
+                </MenuItem>
         
         <!-- OPTIONS MENU: Settings & Preferences -->
         <MenuItem Header="_Options">
@@ -662,8 +668,26 @@
                                             </ToolTip>
                                         </Setter.Value>
                                     </Setter>
+                                    <!-- BUGFIX: Ensure selected row has visible white text on blue background -->
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
+                            <!-- Cell Style to ensure text inherits row foreground when selected -->
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Extract This Track" 
@@ -758,41 +782,29 @@
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
                                 
-                                <!-- Type - Helpful Context -->
-                                <DataGridTextColumn Header="Type" 
-                                                    Binding="{Binding TrackType}" 
-                                                    Width="85">
+                                <!-- Indicators - Show Forced, CC, Commentary -->
+                                <DataGridTextColumn Header="Indicators" 
+                                                    Binding="{Binding DisplayName}" 
+                                                    Width="200">
                                     <DataGridTextColumn.HeaderStyle>
                                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Track type (subtitles, captions, etc.)"/>
+                                            <Setter Property="ToolTip" Value="Track type indicators&#x0a;🚨 Forced: Foreign dialogue only&#x0a;📑 CC: Closed captions (includes sounds/music)&#x0a;🎤 Commentary: Director/cast commentary (not auto-selected)"/>
                                         </Style>
                                     </DataGridTextColumn.HeaderStyle>
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                
-                                <!-- Forced - Important for Selection -->
-                                <DataGridTextColumn Header="Forced" 
-                                                    Binding="{Binding Forced}" 
-                                                    Width="70">
-                                    <DataGridTextColumn.HeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                                            <Setter Property="ToolTip" Value="Forced subtitles (foreign dialogue only)"/>
-                                        </Style>
-                                    </DataGridTextColumn.HeaderStyle>
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                                            <Setter Property="Text" Value="No"/>
-                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                            <Setter Property="FontSize" Value="12"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Forced}" Value="True">
-                                                    <Setter Property="Text" Value="✓ Yes"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                                <!-- Highlight commentary tracks in orange/warning color -->
+                                                <DataTrigger Binding="{Binding IsCommentary}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
                                                     <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <!-- Empty display name means normal Full track -->
+                                                <DataTrigger Binding="{Binding DisplayName}" Value="">
+                                                    <Setter Property="Text" Value="Full"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -1496,31 +1508,103 @@
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Utilities -->
-                <GroupBox Header="Utilities" Grid.Row="1" Margin="0,10,0,0">
-                    <WrapPanel Orientation="Horizontal">
-                        <Button Content="SRT Correction" 
+                <!-- Subtitle Tools -->
+                <GroupBox Header="Subtitle Tools" Grid.Row="1" Margin="0,10,0,0">
+                    <StackPanel>
+                        <!-- Load SUP File -->
+                        <Button Content="🔧 Load SUP File..." 
+                                Click="LoadSupFile_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                HorizontalAlignment="Left"
+                                Margin="0,5">
+                            <Button.ToolTip>
+                                <TextBlock TextWrapping="Wrap" MaxWidth="350">
+                                    Process SUP (PGS subtitle) files directly for OCR without extracting from MKV.&#x0a;
+                                    Useful for testing different OCR settings or re-processing existing SUP files.&#x0a;&#x0a;
+                                    Access: Tools → Load SUP File...
+                                </TextBlock>
+                            </Button.ToolTip>
+                        </Button>
+                        <TextBlock Text="Process SUP files for OCR conversion to SRT" 
+                                   FontStyle="Italic" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" 
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   Margin="20,0,0,10"/>
+                        
+                        <!-- Correct SRT File (Single) -->
+                        <Button Content="📝 Correct SRT File..." 
                                 Click="SrtCorrection_Click"
                                 Style="{StaticResource SecondaryButton}"
-                                Width="200"
-                                Height="50"
-                                Margin="0,0,10,10"
-                                ToolTip="Correct OCR errors in SRT files (single file or batch)"/>
-                        <Button Content="VobSub Track Analyzer" 
+                                HorizontalAlignment="Left"
+                                Margin="0,5">
+                            <Button.ToolTip>
+                                <TextBlock TextWrapping="Wrap" MaxWidth="350">
+                                    Fix OCR errors in a single SRT file.&#x0a;
+                                    Applies ~841 correction patterns to improve subtitle quality.&#x0a;&#x0a;
+                                    Access: Tools → Correct SRT File... (Ctrl+R)
+                                </TextBlock>
+                            </Button.ToolTip>
+                        </Button>
+                        <TextBlock Text="Fix OCR errors in a single SRT file using 841 correction patterns" 
+                                   FontStyle="Italic" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" 
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   Margin="20,0,0,10"/>
+                        
+                        <!-- Batch SRT Correction - NEW! -->
+                        <Button Content="📂 Batch SRT Correction..." 
+                                Click="BatchSrtCorrection_Click"
+                                Style="{StaticResource SecondaryButton}"
+                                HorizontalAlignment="Left"
+                                Margin="0,5">
+                            <Button.ToolTip>
+                                <TextBlock TextWrapping="Wrap" MaxWidth="350">
+                                    Process hundreds of SRT files simultaneously with bulk correction.&#x0a;
+                                    Typical results: 1000+ corrections per file!&#x0a;&#x0a;
+                                    Features:&#x0a;
+                                    • Lightning fast batch processing&#x0a;
+                                    • Optional backup creation&#x0a;
+                                    • Real-time progress tracking&#x0a;&#x0a;
+                                    Access: Tools → Batch SRT Correction... (Ctrl+Shift+R)
+                                </TextBlock>
+                            </Button.ToolTip>
+                        </Button>
+                        <Border Background="{StaticResource PrimaryBrush}" 
+                                CornerRadius="4" 
+                                Padding="8,4"
+                                HorizontalAlignment="Left"
+                                Margin="20,2,0,0">
+                            <TextBlock Text="NEW! Process 100+ SRT files at once with bulk correction" 
+                                       FontStyle="Italic" 
+                                       Foreground="White" 
+                                       FontSize="{StaticResource FontSizeSmall}"
+                                       FontWeight="SemiBold"/>
+                        </Border>
+                        <TextBlock Text="Typical results: 1000+ corrections per file, hundreds of files in minutes" 
+                                   FontStyle="Italic" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" 
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Margin="20,4,0,10"/>
+                        
+                        <!-- VobSub Track Analyzer -->
+                        <Button Content="🎬 VobSub Track Analyzer..." 
                                 Click="VobSubTrackAnalyzer_Click"
                                 Style="{StaticResource SecondaryButton}"
-                                Width="200"
-                                Height="50"
-                                Margin="0,0,10,10"
-                                ToolTip="Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit"/>
-                        <Button Content="Re-detect Tools" 
-                                Command="{Binding ReDetectToolsCommand}"
-                                Style="{StaticResource SecondaryButton}"
-                                Width="200"
-                                Height="50"
-                                Margin="0,0,10,10"
-                                ToolTip="Re-detect and verify external tools (MKVToolNix, FFmpeg, etc.)&#x0a;Keyboard Shortcut: F5"/>
-                    </WrapPanel>
+                                HorizontalAlignment="Left"
+                                Margin="0,5">
+                            <Button.ToolTip>
+                                <TextBlock TextWrapping="Wrap" MaxWidth="350">
+                                    Analyze VobSub (image-based) subtitle tracks for batch processing in Subtitle Edit.&#x0a;&#x0a;
+                                    Helps identify track numbers across multiple files for consistent batch extraction.
+                                </TextBlock>
+                            </Button.ToolTip>
+                        </Button>
+                        <TextBlock Text="Analyze VobSub subtitle tracks across multiple files" 
+                                   FontStyle="Italic" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" 
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   Margin="20,0,0,10"/>
+                    </StackPanel>
                 </GroupBox>
 
                 <!-- Tool Status -->
@@ -1555,39 +1639,6 @@
                                                FontSize="{StaticResource FontSizeSmall}" 
                                                Foreground="{StaticResource ErrorBrush}"
                                                Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        
-                        <!-- SubtitleEdit Status -->
-                        <Border BorderBrush="{StaticResource BorderBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="{StaticResource RadiusS}" 
-                                Padding="{StaticResource ThicknessS}" 
-                                Margin="0,0,0,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBlock Grid.Column="0"
-                                           FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToStatusIconConverter}}" 
-                                           FontSize="20" 
-                                           Margin="0,0,12,0"
-                                           VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="Subtitle Edit" 
-                                               FontWeight="{StaticResource FontWeightSemiBold}"/>
-                                    <TextBlock Text="{Binding State.SubtitleEditStatus.Version, StringFormat='Version: {0}'}" 
-                                               FontSize="{StaticResource FontSizeSmall}" 
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               Visibility="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    <TextBlock Text="Not installed" 
-                                               FontSize="{StaticResource FontSizeSmall}" 
-                                               Foreground="{StaticResource ErrorBrush}"
-                                               Visibility="{Binding State.SubtitleEditStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
                                 </StackPanel>
                             </Grid>
                         </Border>

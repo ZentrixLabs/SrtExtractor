@@ -12,17 +12,21 @@ A powerful and easy-to-use desktop application for extracting subtitles from MKV
 
 SrtExtractor simplifies the process of extracting subtitles from your video files. Whether you're dealing with MKV containers or MP4 files with embedded "Timed Text" subtitles, SrtExtractor provides a seamless experience to convert them into the widely compatible SRT format.
 
-### 🆕 What's New in v2.0
+### 🆕 What's New in v2.0.4
 
-Version 2.0 brings major UX improvements and performance enhancements:
+**Critical OCR Quality Fix:**
+- **🔥 Fixed Tesseract OCR Garbage Output** - OCR accuracy improved from ~98% to ~100%
+- **📦 Bundled Tesseract OCR** - No system installation required, fully portable (~160 MB)
+- **🛠️ New SUP OCR Tool** - Dedicated window for processing SUP files with progress tracking
+- **✨ Enhanced Corrections** - Updated to ZentrixLabs.OcrCorrection v1.0.1 with pipe-to-I patterns
+- **🐛 Multiple Bug Fixes** - SUP preservation, settings persistence, path validation
 
-- **🎨 Clean Tab-Based Interface** - Separate Extract, Batch, History, and Tools tabs for focused workflows
-- **👤 Humanized Track Information** - User-friendly labels like "Image-based (PGS)" instead of technical jargon
-- **⚡ Speed Indicators** - Know instantly which tracks are fast (text) vs slow (OCR required)
-- **⌨️ Enhanced Keyboard Shortcuts** - Press F1 to see all shortcuts in a beautiful help window
+**Previous v2.0 Features:**
+- **🎨 Clean Tab-Based Interface** - Separate Extract, Batch, History, and Tools tabs
+- **👤 Humanized Track Information** - User-friendly labels instead of technical jargon
+- **⚡ Speed Indicators** - Know instantly which tracks are fast (text) vs slow (OCR)
+- **⌨️ Enhanced Keyboard Shortcuts** - Press F1 for comprehensive help
 - **🚀 Performance Boost** - 2-3x faster codec detection and batch processing
-- **♿ Better Accessibility** - Screen reader support and comprehensive keyboard navigation
-- **🐛 Bug Fixes** - ASS/SSA subtitle support, accurate batch reporting, and more
 
 ## ✨ Features
 
@@ -35,9 +39,12 @@ Version 2.0 brings major UX improvements and performance enhancements:
 - **Flexible Output**: Generates SRT files with customizable naming patterns
 - **Real-time Logging**: Provides detailed logs of all operations
 - **User-friendly Interface**: Clean, intuitive WPF interface with modern design
-- **OCR Support**: Converts image-based subtitles (PGS) to text using Subtitle Edit
-- **Smart OCR Correction**: Automatically fixes common OCR errors in subtitle text
-- **Multi-Pass Correction**: Advanced correction system with multiple passes to catch different OCR errors
+- **Professional OCR**: High-quality image-based subtitle conversion using Tesseract OCR (~100% accuracy)
+- **Bundled Tesseract**: No external installation required, fully portable and self-contained
+- **SUP OCR Tool**: Dedicated window for processing SUP files directly with progress tracking
+- **SUP Preservation**: Optional debugging mode to keep SUP files for inspection
+- **Smart OCR Correction**: Automatically fixes common OCR errors using ZentrixLabs.OcrCorrection v1.0.1
+- **Multi-Pass Correction**: Advanced correction system with ~841 professionally-tested patterns
 - **Standalone Correction Tool**: Correct existing SRT files independently
 - **Batch SRT Correction**: Process hundreds of SRT files simultaneously with bulk correction
 - **Preference Settings**: Choose between forced subtitles or closed captions
@@ -83,20 +90,17 @@ SrtExtractor features an intelligent recommendation engine that automatically se
 
 - **Windows 10/11** (x64)
 - **.NET 9.0 Runtime**
-- **External Tools** (auto-detected and managed):
-  - MKVToolNix (for MKV processing)
-  - Subtitle Edit CLI (for OCR conversion)
-  - FFmpeg (for MP4 processing)
+- **That's it!** ✨
 
-### ⚠️ Windows 10 Users
+### 📦 Everything Bundled
 
-**Important**: The automatic tool installation via winget requires **Windows 10 version 1809 (build 17763) or later**. If you're using an older version of Windows 10, you'll need to manually install MKVToolNix:
+**No external tools or installation required!** SrtExtractor comes with everything you need:
+- **Tesseract OCR** - For image-based subtitle conversion (~160 MB)
+- **MKVToolNix** - For MKV file processing (~37 MB)
+- **FFmpeg** - For MP4 file processing (~334 MB)
+- **Total size**: ~530 MB (completely portable)
 
-1. Download MKVToolNix from: https://mkvtoolnix.download/downloads.html
-2. Install it to the default location
-3. SrtExtractor will automatically detect the installation
-
-The app will show a helpful dialog with download instructions if winget is not available.
+**Just download, extract, and run!** No setup, no configuration, no internet connection needed.
 
 **To check your Windows 10 version**: Press `Win + R`, type `winver`, and press Enter.
 
@@ -106,7 +110,7 @@ The app will show a helpful dialog with download instructions if winget is not a
 2. **Extract** the ZIP file to your desired location
 3. **Run** `SrtExtractor.exe`
 
-The application will automatically detect and download required external tools on first run.
+**That's it!** All tools are bundled - no setup, no downloads, no configuration required.
 
 ## 🚀 Usage
 

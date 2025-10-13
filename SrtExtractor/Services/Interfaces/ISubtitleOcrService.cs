@@ -21,4 +21,12 @@ public interface ISubtitleOcrService
         bool fixCommonErrors = true, 
         bool removeHi = true,
         CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Convert ASS subtitle format to SRT format if the file contains ASS content.
+    /// This method checks if a file is in ASS format and converts it to SRT if needed.
+    /// </summary>
+    /// <param name="filePath">Path to the subtitle file to check and convert</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task ConvertAssToSrtIfNeededAsync(string filePath, CancellationToken cancellationToken = default);
 }

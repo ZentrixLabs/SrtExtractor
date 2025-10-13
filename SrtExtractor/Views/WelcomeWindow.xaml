@@ -154,9 +154,11 @@
                             <TextBlock Text="Batch Processing" 
                                        Style="{StaticResource FeatureTitle}"
                                        TextAlignment="Center"/>
-                            <TextBlock Text="Process multiple files at once with drag &amp; drop" 
-                                       Style="{StaticResource FeatureDescription}"
-                                       TextAlignment="Center"/>
+                            <TextBlock Style="{StaticResource FeatureDescription}"
+                                       TextAlignment="Center">
+                                <Run Text="Process 100+ files at once • Drag &amp; drop support"/><LineBreak/>
+                                <Run Text="✨ NEW: Batch SRT Correction!" FontWeight="SemiBold" Foreground="{StaticResource PrimaryBrush}"/>
+                            </TextBlock>
                         </StackPanel>
                     </Grid>
                 </StackPanel>

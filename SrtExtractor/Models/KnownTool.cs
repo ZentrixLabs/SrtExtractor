@@ -22,11 +22,6 @@ public enum KnownTool
     MkvExtract,
     
     /// <summary>
-    /// seconv.exe from Subtitle Edit CLI - Used for OCR conversion
-    /// </summary>
-    SubtitleEditCli,
-    
-    /// <summary>
     /// ffmpeg.exe - Used for extracting from MP4 files
     /// </summary>
     FFmpeg,
@@ -34,6 +29,11 @@ public enum KnownTool
     /// <summary>
     /// ffprobe.exe - Used for probing MP4 files
     /// </summary>
-    FFprobe
+    FFprobe,
+    
+    /// <summary>
+    /// tesseract.exe - Used for OCR conversion of image-based subtitles (bundled with app)
+    /// </summary>
+    Tesseract
 }
 

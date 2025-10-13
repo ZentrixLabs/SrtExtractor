@@ -30,14 +30,43 @@
     <PackageReference Include="Sdcb.PaddleInference.runtime.win64.mkl" Version="3.1.0.54" />
     <PackageReference Include="Sdcb.PaddleOCR" Version="3.0.1" />
     <PackageReference Include="Sdcb.PaddleOCR.Models.Local" Version="3.0.1" />
+    <PackageReference Include="SkiaSharp" Version="3.116.1" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.9" />
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
-    <PackageReference Include="Tesseract" Version="5.2.0" />
+    <PackageReference Include="ZentrixLabs.OcrCorrection" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference SubtitleEdit CLI ONLY as a library for BluRay SUP parsing -->
+    <!-- We use Tesseract for OCR, SubtitleEdit is NOT called as executable -->
+    <ProjectReference Include="..\SubtitleEdit-CLI\src\se-cli\seconv.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="ZLLogo.png" />
     <Resource Include="SrtExtractor.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copy Tesseract language training data to output directory -->
+    <None Include="tessdata\**\*.traineddata">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    
+    <!-- Copy bundled Tesseract OCR executable and DLLs -->
+    <None Include="tesseract-bin\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    
+    <!-- Copy bundled MKVToolNix executables and DLLs -->
+    <None Include="mkvtoolnix-bin\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    
+    <!-- Copy bundled FFmpeg executables -->
+    <None Include="ffmpeg-bin\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -5,19 +5,20 @@ using SrtExtractor.Utils;
 namespace SrtExtractor.Services.Implementations;
 
 /// <summary>
-/// Service for Subtitle Edit OCR operations.
+/// Service for OCR operations on subtitle files.
+/// Uses Tesseract OCR for high-quality PGS subtitle recognition.
 /// </summary>
 public class SubtitleOcrService : ISubtitleOcrService
 {
     private readonly ILoggingService _loggingService;
-    private readonly IProcessRunner _processRunner;
-    private readonly ISettingsService _settingsService;
+    private readonly ITesseractOcrService _tesseractOcrService;
 
-    public SubtitleOcrService(ILoggingService loggingService, IProcessRunner processRunner, ISettingsService settingsService)
+    public SubtitleOcrService(
+        ILoggingService loggingService,
+        ITesseractOcrService tesseractOcrService)
     {
         _loggingService = loggingService;
-        _processRunner = processRunner;
-        _settingsService = settingsService;
+        _tesseractOcrService = tesseractOcrService;
     }
 
     public async Task OcrSupToSrtAsync(
@@ -28,155 +29,279 @@ public class SubtitleOcrService : ISubtitleOcrService
         bool removeHi = true,
         CancellationToken cancellationToken = default)
     {
-        _loggingService.LogInfo($"Starting OCR conversion");
+        _loggingService.LogInfo("Starting OCR conversion with Tesseract");
 
-        // SECURITY: Validate and sanitize paths
-        var validatedSupPath = PathValidator.ValidateFileExists(supPath);
-        var validatedOutSrt = SafeFileOperations.ValidateAndPrepareOutputPath(outSrt);
+        // Check if Tesseract is available
+        var tesseractAvailable = await _tesseractOcrService.IsTesseractAvailableAsync();
+        if (!tesseractAvailable)
+        {
+            throw new InvalidOperationException(
+                "Tesseract OCR is not available. Please ensure tessdata folder with language files is present.");
+        }
 
+        // Use Tesseract OCR for high-quality recognition
+        _loggingService.LogInfo("Using Tesseract OCR engine for high-quality recognition");
+        await _tesseractOcrService.OcrSupToSrtAsync(supPath, outSrt, language, cancellationToken);
+        
+        // CRITICAL FIX: Check if we need to convert output format (ASS/WebVTT to SRT)
+        await ConvertAssToSrtIfNeededAsync(outSrt, cancellationToken);
+    }
+
+    /// <summary>
+    /// Convert ASS or WebVTT format to SRT format if the file is not already in SRT format.
+    /// Subtitle Edit CLI sometimes outputs ASS format even when told to output SRT.
+    /// Similarly, mkvextract and ffmpeg preserve WebVTT format when extracting.
+    /// </summary>
+    /// <param name="filePath">Path to the subtitle file</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    public async Task ConvertAssToSrtIfNeededAsync(string filePath, CancellationToken cancellationToken = default)
+    {
         try
         {
-            var settings = await _settingsService.LoadSettingsAsync();
-            if (string.IsNullOrEmpty(settings.SubtitleEditPath))
+            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            string? srtContent = null;
+            
+            // Check if file is in ASS format (starts with [Script Info] or contains [Events] section)
+            if (content.Contains("[Script Info]") || content.Contains("[Events]"))
             {
-                throw new InvalidOperationException("Subtitle Edit path not configured");
+                _loggingService.LogInfo("Detected ASS format - converting to SRT format");
+                srtContent = ConvertAssToSrt(content);
             }
-
-            // Build Subtitle Edit command line arguments
-            var argsArray = BuildOcrArgumentsArray(validatedSupPath, validatedOutSrt, language, fixCommonErrors, removeHi);
-            
-            _loggingService.LogInfo($"Running Subtitle Edit CLI with {argsArray.Length} arguments");
-            
-            // Calculate timeout based on file size (OCR is slow, especially for large files)
-            var timeout = CalculateOcrTimeout(validatedSupPath);
-            _loggingService.LogInfo($"Using OCR timeout of {timeout.TotalMinutes:F0} minutes for file size {GetFileSizeMB(validatedSupPath):F1} MB");
-            
-            using var cts = new CancellationTokenSource(timeout);
-            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-            
-            // SECURITY: Use argument array to prevent command injection
-            var (exitCode, stdout, stderr) = await _processRunner.RunAsync(settings.SubtitleEditPath, argsArray, combinedCts.Token);
-
-            if (exitCode != 0)
+            // Check if file is in WebVTT format (starts with WEBVTT or has WebVTT header)
+            else if (content.TrimStart().StartsWith("WEBVTT") || content.Contains("\nWEBVTT"))
             {
-                throw new InvalidOperationException($"Subtitle Edit failed with exit code {exitCode}: {stderr}");
+                _loggingService.LogInfo("Detected WebVTT format - converting to SRT format");
+                srtContent = ConvertWebVttToSrt(content);
             }
-
-            if (!File.Exists(validatedOutSrt))
+            
+            // Write converted content if we detected a non-SRT format
+            if (srtContent != null)
             {
-                throw new InvalidOperationException($"Output SRT file was not created: {outSrt}");
+                await File.WriteAllTextAsync(filePath, srtContent, cancellationToken);
+                _loggingService.LogInfo("Successfully converted to SRT format");
             }
-
-            _loggingService.LogExtraction($"OCR conversion ({language})", true);
         }
         catch (Exception ex)
         {
-            _loggingService.LogExtraction($"OCR conversion ({language})", false, ex.Message);
-            throw;
+            _loggingService.LogWarning($"Failed to convert subtitle format to SRT: {ex.Message}");
+            // Don't throw - let the file be processed as-is
         }
     }
 
     /// <summary>
-    /// SECURITY: Build OCR arguments as array to prevent command injection.
+    /// Convert ASS subtitle format to SRT format.
     /// </summary>
-    private static string[] BuildOcrArgumentsArray(string supPath, string outSrt, string language, bool fixCommonErrors, bool removeHi)
+    /// <param name="assContent">ASS format content</param>
+    /// <returns>SRT format content</returns>
+    private static string ConvertAssToSrt(string assContent)
     {
-        // seconv syntax: seconv <pattern> <format> [options]
-        // For SUP to SRT conversion with OCR
-        // Map language codes to OCR database names
-        var ocrDb = MapLanguageToOcrDb(language);
+        var srtLines = new List<string>();
+        var subtitleNumber = 1;
         
-        var argsList = new List<string>
-        {
-            supPath,
-            "subrip",
-            $"/outputfilename:{outSrt}",
-            $"/ocrdb:{ocrDb}"
-        };
+        // Find the [Events] section
+        var lines = assContent.Split('\n');
+        var inEventsSection = false;
+        var formatLine = "";
         
-        if (fixCommonErrors)
+        foreach (var line in lines)
         {
-            // Note: fixCommonErrors functionality might be handled differently in this version
-            // Check if there's a specific parameter for this
+            var trimmedLine = line.Trim();
+            
+            if (trimmedLine == "[Events]")
+            {
+                inEventsSection = true;
+                continue;
+            }
+            
+            if (inEventsSection && trimmedLine.StartsWith("["))
+            {
+                // Left the Events section
+                break;
+            }
+            
+            if (inEventsSection && trimmedLine.StartsWith("Format:"))
+            {
+                formatLine = trimmedLine.Substring(7).Trim(); // Remove "Format:"
+                continue;
+            }
+            
+            if (inEventsSection && trimmedLine.StartsWith("Dialogue:"))
+            {
+                // Parse ASS dialogue line
+                var dialoguePart = trimmedLine.Substring(9).Trim(); // Remove "Dialogue:"
+                var parts = dialoguePart.Split(',');
+                
+                if (parts.Length >= 10) // ASS dialogue has at least 10 fields
+                {
+                    // Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+                    var startTime = parts[1].Trim();
+                    var endTime = parts[2].Trim();
+                    var text = string.Join(",", parts.Skip(9)).Trim(); // Text might contain commas
+                    
+                    // Remove ASS formatting tags
+                    text = System.Text.RegularExpressions.Regex.Replace(text, @"\{[^}]*\}", "");
+                    text = text.Replace("\\N", "\n").Replace("\\n", "\n"); // Handle line breaks
+                    
+                    // Convert ASS time format (0:00:00.00) to SRT format (00:00:00,000)
+                    var srtStartTime = ConvertAssTimeToSrtTime(startTime);
+                    var srtEndTime = ConvertAssTimeToSrtTime(endTime);
+                    
+                    // Add to SRT format
+                    srtLines.Add(subtitleNumber.ToString());
+                    srtLines.Add($"{srtStartTime} --> {srtEndTime}");
+                    srtLines.Add(text);
+                    srtLines.Add(""); // Empty line between subtitles
+                    
+                    subtitleNumber++;
+                }
+            }
         }
-
-        if (removeHi)
-        {
-            argsList.Add("/RemoveTextForHI");
-        }
-
-        return argsList.ToArray();
+        
+        return string.Join("\n", srtLines);
     }
 
     /// <summary>
-    /// Map language codes to OCR database names.
+    /// Convert ASS time format to SRT time format.
+    /// ASS: 0:00:00.00 (H:MM:SS.CS where CS is centiseconds)
+    /// SRT: 00:00:00,000 (HH:MM:SS,MMM where MMM is milliseconds)
     /// </summary>
-    /// <param name="language">Language code (e.g., "eng", "spa", "fre")</param>
-    /// <returns>OCR database name</returns>
-    private static string MapLanguageToOcrDb(string language)
-    {
-        // Map common language codes to available OCR databases
-        return language.ToLowerInvariant() switch
-        {
-            "eng" or "en" => "Latin",  // English uses Latin script
-            "spa" or "es" => "Latin",  // Spanish uses Latin script
-            "fre" or "fr" => "Latin",  // French uses Latin script
-            "deu" or "de" => "Latin",  // German uses Latin script
-            "ita" or "it" => "Latin",  // Italian uses Latin script
-            "por" or "pt" => "Latin",  // Portuguese uses Latin script
-            _ => "Latin"               // Default to Latin for most Western languages
-        };
-    }
-
-    /// <summary>
-    /// Calculate appropriate OCR timeout based on SUP file size.
-    /// OCR is very slow, especially for large PGS subtitle files.
-    /// </summary>
-    /// <param name="supPath">Path to the SUP file</param>
-    /// <returns>Calculated timeout duration</returns>
-    private static TimeSpan CalculateOcrTimeout(string supPath)
+    /// <param name="assTime">Time in ASS format</param>
+    /// <returns>Time in SRT format</returns>
+    private static string ConvertAssTimeToSrtTime(string assTime)
     {
         try
         {
-            var fileInfo = new FileInfo(supPath);
-            var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
+            var parts = assTime.Split(':');
+            if (parts.Length != 3) return "00:00:00,000";
             
-            // OCR is much slower than extraction
-            // Base: 5 minutes, add 3 minutes per 50MB
-            // Network files and large files need more time
-            var baseMinutes = 5.0;
-            var additionalMinutes = (sizeMB / 50.0) * 3.0;
+            var hours = int.Parse(parts[0]);
+            var minutes = int.Parse(parts[1]);
+            var secondsParts = parts[2].Split('.');
+            var seconds = int.Parse(secondsParts[0]);
+            var centiseconds = secondsParts.Length > 1 ? int.Parse(secondsParts[1].PadRight(2, '0')) : 0;
             
-            var totalMinutes = baseMinutes + additionalMinutes;
+            // Convert centiseconds to milliseconds
+            var milliseconds = centiseconds * 10;
             
-            // Cap at 2 hours for very large files
-            var maxMinutes = 120;
-            totalMinutes = Math.Min(totalMinutes, maxMinutes);
-            
-            return TimeSpan.FromMinutes(totalMinutes);
+            return $"{hours:D2}:{minutes:D2}:{seconds:D2},{milliseconds:D3}";
         }
         catch
         {
-            // If we can't determine file size, use a safe default of 30 minutes
-            return TimeSpan.FromMinutes(30);
+            return "00:00:00,000";
         }
     }
 
     /// <summary>
-    /// Get file size in MB for logging purposes.
+    /// Convert WebVTT subtitle format to SRT format.
+    /// WebVTT format uses dots for milliseconds and may have cue settings/identifiers.
     /// </summary>
-    /// <param name="filePath">Path to the file</param>
-    /// <returns>File size in MB</returns>
-    private static double GetFileSizeMB(string filePath)
+    /// <param name="webvttContent">WebVTT format content</param>
+    /// <returns>SRT format content</returns>
+    private static string ConvertWebVttToSrt(string webvttContent)
+    {
+        var srtLines = new List<string>();
+        var subtitleNumber = 1;
+        
+        var lines = webvttContent.Split('\n');
+        var i = 0;
+        
+        // Skip WebVTT header and any metadata
+        while (i < lines.Length)
+        {
+            var line = lines[i].Trim();
+            
+            // Skip WEBVTT header, STYLE, REGION, NOTE blocks
+            if (line.StartsWith("WEBVTT") || line.StartsWith("STYLE") || 
+                line.StartsWith("REGION") || line.StartsWith("NOTE"))
+            {
+                i++;
+                // Skip until we find an empty line or timing line
+                while (i < lines.Length && !string.IsNullOrWhiteSpace(lines[i].Trim()) && !lines[i].Contains("-->"))
+                {
+                    i++;
+                }
+                continue;
+            }
+            
+            // Found timing line
+            if (line.Contains("-->"))
+            {
+                // Parse timing line
+                var timingPart = line.Split(new[] { "-->" }, StringSplitOptions.None);
+                if (timingPart.Length >= 2)
+                {
+                    var startTime = timingPart[0].Trim();
+                    // Remove cue settings (everything after the end time)
+                    var endTimePart = timingPart[1].Trim();
+                    var endTime = endTimePart.Split(new[] { ' ' }, 2)[0]; // Get just the time, ignore settings
+                    
+                    // Convert WebVTT time to SRT time (dots to commas)
+                    var srtStartTime = ConvertWebVttTimeToSrtTime(startTime);
+                    var srtEndTime = ConvertWebVttTimeToSrtTime(endTime);
+                    
+                    // Collect subtitle text
+                    i++;
+                    var textLines = new List<string>();
+                    while (i < lines.Length && !string.IsNullOrWhiteSpace(lines[i].Trim()))
+                    {
+                        textLines.Add(lines[i].TrimEnd('\r'));
+                        i++;
+                    }
+                    
+                    // Add to SRT format (only if we have text)
+                    if (textLines.Count > 0)
+                    {
+                        srtLines.Add(subtitleNumber.ToString());
+                        srtLines.Add($"{srtStartTime} --> {srtEndTime}");
+                        srtLines.AddRange(textLines);
+                        srtLines.Add(""); // Empty line between subtitles
+                        subtitleNumber++;
+                    }
+                }
+            }
+            
+            i++;
+        }
+        
+        return string.Join("\n", srtLines);
+    }
+
+    /// <summary>
+    /// Convert WebVTT time format to SRT time format.
+    /// WebVTT: 00:00:00.000 (uses dots for milliseconds)
+    /// SRT: 00:00:00,000 (uses commas for milliseconds)
+    /// </summary>
+    /// <param name="webvttTime">Time in WebVTT format</param>
+    /// <returns>Time in SRT format</returns>
+    private static string ConvertWebVttTimeToSrtTime(string webvttTime)
     {
         try
         {
-            var fileInfo = new FileInfo(filePath);
-            return fileInfo.Length / (1024.0 * 1024.0);
+            // WebVTT format: HH:MM:SS.mmm or MM:SS.mmm
+            // SRT format: HH:MM:SS,mmm
+            
+            // Simply replace the last dot with a comma
+            var lastDotIndex = webvttTime.LastIndexOf('.');
+            if (lastDotIndex > 0)
+            {
+                var result = webvttTime.Substring(0, lastDotIndex) + "," + webvttTime.Substring(lastDotIndex + 1);
+                
+                // Ensure HH:MM:SS,mmm format (WebVTT may omit hours if 0)
+                var parts = result.Split(':');
+                if (parts.Length == 2)
+                {
+                    // Add missing hours
+                    result = "00:" + result;
+                }
+                
+                return result;
+            }
+            
+            return "00:00:00,000";
         }
         catch
         {
-            return 0;
+            return "00:00:00,000";
         }
     }
 }

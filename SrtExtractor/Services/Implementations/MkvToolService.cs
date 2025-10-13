@@ -94,7 +94,7 @@ public class MkvToolService : IMkvToolService
         {
             // SECURITY: Validate and sanitize paths
             var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
-            var validatedOutSrt = SafeFileOperations.ValidateAndPrepareOutputPath(outSrt);
+            var validatedOutSrt = SafeFileOperations.ValidateAndPrepareOutputPath(outSrt, mkvPath);
 
             // Get the tool path directly from tool detection
             var toolStatus = await _toolDetectionService.CheckMkvToolNixAsync();
@@ -146,7 +146,7 @@ public class MkvToolService : IMkvToolService
         {
             // SECURITY: Validate and sanitize paths
             var validatedMkvPath = PathValidator.ValidateFileExists(mkvPath);
-            var validatedOutSup = SafeFileOperations.ValidateAndPrepareOutputPath(outSup);
+            var validatedOutSup = SafeFileOperations.ValidateAndPrepareOutputPath(outSup, mkvPath);
 
             // Calculate timeout based on file size
             var timeout = CalculateTimeoutForFile(validatedMkvPath);

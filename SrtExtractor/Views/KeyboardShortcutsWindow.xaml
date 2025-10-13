@@ -112,13 +112,17 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Re-detect External Tools" Style="{StaticResource ShortcutDescStyle}" Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="F5" Style="{StaticResource ShortcutKeyStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Batch SRT Correction" Style="{StaticResource ShortcutDescStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Ctrl + Shift + R" Style="{StaticResource ShortcutKeyStyle}" Margin="0,0,0,8"/>
                     
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Show This Help" Style="{StaticResource ShortcutDescStyle}" Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="F1" Style="{StaticResource ShortcutKeyStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Re-detect External Tools" Style="{StaticResource ShortcutDescStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="F5" Style="{StaticResource ShortcutKeyStyle}" Margin="0,0,0,8"/>
+                    
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Show This Help" Style="{StaticResource ShortcutDescStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="F1" Style="{StaticResource ShortcutKeyStyle}" Margin="0,0,0,8"/>
                 </Grid>
                 
                 <!-- Tips -->
@@ -141,7 +145,8 @@
                             <Run Text="• Hover over any button to see its keyboard shortcut in the tooltip"/><LineBreak/>
                             <Run Text="• Keyboard shortcuts work from anywhere in the application"/><LineBreak/>
                             <Run Text="• Use Escape key as a quick way to cancel any running operation"/><LineBreak/>
-                            <Run Text="• Press Ctrl+B to quickly switch to the Batch tab for multi-file processing"/>
+                            <Run Text="• Press Ctrl+B to quickly switch to the Batch tab for multi-file processing"/><LineBreak/>
+                            <Run Text="• Press Ctrl+Shift+R to open Batch SRT Correction tool (process 100+ files!)"/>
                         </TextBlock>
                     </StackPanel>
                 </Border>
