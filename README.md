@@ -240,22 +240,30 @@ Built with modern .NET 9 and WPF, SrtExtractor follows the MVVM pattern with cle
 - **State**: Observable state management for data binding
 - **Recommendation Engine**: Intelligent track selection prioritizing SubRip/SRT over HDMV PGS
 
-## 🔧 External Tools
+## 🔧 Bundled Tools
+
+All tools are included in the SrtExtractor release - no installation, downloads, or internet connection required!
+
+### Tesseract OCR
+- **Purpose**: High-quality OCR for image-based (PGS) subtitles
+- **Included**: `tesseract.exe` + 51 DLLs (~160 MB)
+- **Language Data**: English training data (`eng.traineddata`) included
+- **License**: Apache 2.0
+- **Quality**: ~100% accuracy on clear subtitle images
 
 ### MKVToolNix
-- **Purpose**: MKV file probing and subtitle extraction
-- **Installation**: Auto-detected or installed via winget
-- **Tools Used**: `mkvmerge.exe`, `mkvextract.exe`
-
-### Subtitle Edit CLI
-- **Purpose**: OCR conversion of image-based subtitles
-- **Installation**: Auto-built from source during development
-- **Tool Used**: `seconv.exe`
+- **Purpose**: MKV file analysis and subtitle extraction
+- **Included**: `mkvmerge.exe`, `mkvextract.exe` + DLLs (~37 MB)
+- **License**: GPL-2.0
+- **Version**: Latest stable release bundled
 
 ### FFmpeg
 - **Purpose**: MP4 file processing and subtitle extraction
-- **Installation**: Auto-downloaded during development
-- **Tools Used**: `ffmpeg.exe`, `ffprobe.exe`
+- **Included**: `ffmpeg.exe`, `ffprobe.exe` (~334 MB)
+- **License**: GPL
+- **Version**: Latest stable release bundled
+
+**Total Size**: ~530 MB (fully portable, zero dependencies)
 
 ## 🧠 Smart OCR Correction
 
