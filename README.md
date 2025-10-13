@@ -97,7 +97,7 @@ SrtExtractor features an intelligent recommendation engine that automatically se
 
 ## 🔧 Requirements
 
-- **Windows 10/11** (x64)
+- **Windows 10/11** (x64) - **Any version of Windows 10 works!**
 - **.NET 9.0 Runtime**
 - **That's it!** ✨
 
@@ -111,7 +111,13 @@ SrtExtractor features an intelligent recommendation engine that automatically se
 
 **Just download, extract, and run!** No setup, no configuration, no internet connection needed.
 
-**To check your Windows 10 version**: Press `Win + R`, type `winver`, and press Enter.
+### ✅ Full Windows 10 Compatibility
+
+Since v2.0.4, all tools are bundled - no Windows Package Manager (winget) needed! This means SrtExtractor works on:
+- ✅ **All Windows 10 versions** (including older builds like 1507, 1607, 1703, etc.)
+- ✅ **Windows 11** (all versions)
+- ✅ **Offline installations** (no internet required)
+- ✅ **Restricted environments** (no admin rights needed for app usage)
 
 ## 📦 Installation
 
