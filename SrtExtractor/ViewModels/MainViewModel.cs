@@ -518,7 +518,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
         State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
         State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrStart), "Starting OCR conversion");
-        await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, cancellationToken: cancellationToken);
+        await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, true, true, cancellationToken);
         State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrComplete), "OCR conversion completed");
         State.UpdateProcessingMessage("OCR conversion completed!");
         State.AddLogMessage($"OCR conversion completed: {outputPath}");

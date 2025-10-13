@@ -111,22 +111,144 @@
                           Margin="0,0,0,15"
                           Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel>
+                        <!-- Status Message -->
                         <TextBlock Text="{Binding StatusMessage}" 
                                    FontSize="14" 
                                    FontWeight="SemiBold"
                                    Margin="0,5"/>
                         
-                        <ProgressBar Height="24" 
-                                     Margin="0,10"
-                                     IsIndeterminate="{Binding IsIndeterminate}"
-                                     Value="{Binding ProgressPercentage}"
-                                     Minimum="0"
-                                     Maximum="100"/>
-                        
-                        <TextBlock Text="{Binding ProgressText}" 
+                        <!-- Current Phase -->
+                        <TextBlock Text="{Binding CurrentPhase}" 
                                    FontSize="12" 
+                                   Foreground="{StaticResource PrimaryBrush}"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,10"
+                                   Visibility="{Binding CurrentPhase, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        
+                        <!-- Enhanced Progress Bar -->
+                        <Grid Margin="0,5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Progress Bar with Animation -->
+                            <Border Grid.Row="0" 
+                                    Background="{StaticResource BackgroundAltBrush}" 
+                                    BorderBrush="{StaticResource BorderBrush}" 
+                                    BorderThickness="1" 
+                                    CornerRadius="12" 
+                                    Height="24" 
+                                    Margin="0,0,0,8">
+                                <Grid>
+                                    <ProgressBar Value="{Binding ProgressPercentage}" 
+                                                 Maximum="100" 
+                                                 Minimum="0"
+                                                 IsIndeterminate="{Binding IsIndeterminate}"
+                                                 Background="Transparent"
+                                                 Foreground="{StaticResource PrimaryBrush}"
+                                                 BorderThickness="0"
+                                                 Height="24"
+                                                 VerticalAlignment="Center"/>
+                                    
+                                    <!-- Progress Text Overlay -->
+                                    <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:F1}%}" 
+                                               HorizontalAlignment="Center" 
+                                               VerticalAlignment="Center"
+                                               FontSize="11" 
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextOnPrimaryBrush}"
+                                               Visibility="{Binding IsIndeterminate, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Frame Count -->
+                            <Grid Grid.Row="1" Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" 
+                                           Text="{Binding ProcessedFrames}" 
+                                           FontSize="14" 
+                                           FontWeight="Bold" 
+                                           Foreground="{StaticResource PrimaryBrush}"
+                                           HorizontalAlignment="Right"
+                                           Margin="0,0,5,0"/>
+                                
+                                <TextBlock Grid.Column="1" 
+                                           Text=" / " 
+                                           FontSize="14" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           HorizontalAlignment="Center"/>
+                                
+                                <TextBlock Grid.Column="2" 
+                                           Text="{Binding TotalFrames}" 
+                                           FontSize="14" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           HorizontalAlignment="Left"
+                                           Margin="5,0,0,0"/>
+                            </Grid>
+                            
+                            <!-- Performance Metrics -->
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Processing Speed -->
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                    <TextBlock Text="Speed" 
+                                               FontSize="10" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ProcessingSpeed, StringFormat={}{0:F1} fps}" 
+                                               FontSize="12" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                
+                                <!-- Elapsed Time -->
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                    <TextBlock Text="Elapsed" 
+                                               FontSize="10" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ElapsedTime, StringFormat={}{0:mm\\:ss}}" 
+                                               FontSize="12" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                
+                                <!-- ETA -->
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                    <TextBlock Text="ETA" 
+                                               FontSize="10" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding EstimatedTimeRemaining, StringFormat={}{0:mm\\:ss}}" 
+                                               FontSize="12" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                        
+                        <!-- Additional Progress Text -->
+                        <TextBlock Text="{Binding ProgressText}" 
+                                   FontSize="11" 
                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                   Margin="0,5"/>
+                                   Margin="0,8,0,0"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"/>
                     </StackPanel>
                 </GroupBox>
 

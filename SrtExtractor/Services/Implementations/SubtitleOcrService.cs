@@ -29,6 +29,19 @@ public class SubtitleOcrService : ISubtitleOcrService
         bool removeHi = true,
         CancellationToken cancellationToken = default)
     {
+        // Call the overload with progress reporting (passing null for progress)
+        await OcrSupToSrtAsync(supPath, outSrt, language, fixCommonErrors, removeHi, cancellationToken, null);
+    }
+
+    public async Task OcrSupToSrtAsync(
+        string supPath, 
+        string outSrt, 
+        string language, 
+        bool fixCommonErrors = true, 
+        bool removeHi = true,
+        CancellationToken cancellationToken = default,
+        IProgress<(int processed, int total, string phase)>? progress = null)
+    {
         _loggingService.LogInfo("Starting OCR conversion with Tesseract");
 
         // Check if Tesseract is available
@@ -39,9 +52,9 @@ public class SubtitleOcrService : ISubtitleOcrService
                 "Tesseract OCR is not available. Please ensure tessdata folder with language files is present.");
         }
 
-        // Use Tesseract OCR for high-quality recognition
+        // Use Tesseract OCR for high-quality recognition with progress reporting
         _loggingService.LogInfo("Using Tesseract OCR engine for high-quality recognition");
-        await _tesseractOcrService.OcrSupToSrtAsync(supPath, outSrt, language, cancellationToken);
+        await _tesseractOcrService.OcrSupToSrtAsync(supPath, outSrt, language, cancellationToken, progress);
         
         // CRITICAL FIX: Check if we need to convert output format (ASS/WebVTT to SRT)
         await ConvertAssToSrtIfNeededAsync(outSrt, cancellationToken);

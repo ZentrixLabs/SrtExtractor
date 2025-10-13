@@ -43,7 +43,27 @@ public partial class SupOcrViewModel : ObservableObject
     [ObservableProperty]
     private string _logMessages = string.Empty;
 
+    [ObservableProperty]
+    private int _totalFrames = 0;
+
+    [ObservableProperty]
+    private int _processedFrames = 0;
+
+    [ObservableProperty]
+    private double _processingSpeed = 0; // frames per second
+
+    [ObservableProperty]
+    private TimeSpan _estimatedTimeRemaining = TimeSpan.Zero;
+
+    [ObservableProperty]
+    private TimeSpan _elapsedTime = TimeSpan.Zero;
+
+    [ObservableProperty]
+    private string _currentPhase = string.Empty;
+
     private StringBuilder _logBuilder = new();
+    private DateTime _startTime;
+    private readonly object _progressLock = new();
 
     public SupOcrViewModel(
         ISubtitleOcrService ocrService,
@@ -87,20 +107,28 @@ public partial class SupOcrViewModel : ObservableObject
         try
         {
             IsProcessing = true;
-            IsIndeterminate = true;
+            IsIndeterminate = false; // We'll have determinate progress now
             _cancellationTokenSource = new CancellationTokenSource();
 
-            StatusMessage = "Processing SUP file...";
-            ProgressText = "Starting OCR extraction";
+            // Reset progress tracking
+            ResetProgress();
+
+            StatusMessage = "Preparing SUP file for processing...";
+            CurrentPhase = "Initializing";
             AddLog($"Starting OCR processing: {Path.GetFileName(SupFilePath)}");
 
             var outputPath = Path.ChangeExtension(SupFilePath, ".srt");
 
-            // Run OCR
-            StatusMessage = "Performing OCR on subtitle images...";
+            // Run OCR with progress tracking
+            StatusMessage = "Extracting subtitle images from SUP file...";
+            CurrentPhase = "Parsing SUP";
             AddLog($"Output will be saved to: {Path.GetFileName(outputPath)}");
             AddLog($"Using language: {OcrLanguage}");
             AddLog($"Auto-correction: {(ApplyCorrection ? "Enabled" : "Disabled")}");
+
+            // Create a progress callback for the OCR service
+            var progressCallback = new Progress<(int processed, int total, string phase)>(
+                progress => UpdateProgress(progress.processed, progress.total, progress.phase));
 
             await _ocrService.OcrSupToSrtAsync(
                 SupFilePath,
@@ -108,14 +136,17 @@ public partial class SupOcrViewModel : ObservableObject
                 OcrLanguage,
                 fixCommonErrors: ApplyCorrection,
                 removeHi: false,
-                _cancellationTokenSource.Token
+                _cancellationTokenSource.Token,
+                progressCallback
             );
 
             // Success
             StatusMessage = "OCR completed successfully!";
-            ProgressText = $"Output: {Path.GetFileName(outputPath)}";
+            CurrentPhase = "Completed";
+            ProgressText = $"✓ Completed: {Path.GetFileName(outputPath)}";
             AddLog($"✓ OCR completed successfully!");
             AddLog($"✓ Output file: {outputPath}");
+            AddLog($"✓ Total processing time: {FormatTimeSpan(ElapsedTime)}");
 
             _notificationService.ShowSuccess(
                 $"SUP file processed successfully!\n\nOutput: {Path.GetFileName(outputPath)}",
@@ -159,6 +190,126 @@ public partial class SupOcrViewModel : ObservableObject
         var timestamp = DateTime.Now.ToString("HH:mm:ss");
         _logBuilder.AppendLine($"[{timestamp}] {message}");
         LogMessages = _logBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Update progress information with detailed metrics.
+    /// </summary>
+    public void UpdateProgress(int processedFrames, int totalFrames, string phase = "")
+    {
+        lock (_progressLock)
+        {
+            ProcessedFrames = processedFrames;
+            TotalFrames = totalFrames;
+            
+            if (!string.IsNullOrEmpty(phase))
+            {
+                CurrentPhase = phase;
+                UpdateStatusMessageForPhase(phase, processedFrames, totalFrames);
+            }
+
+            // Calculate progress percentage
+            if (totalFrames > 0)
+            {
+                ProgressPercentage = (double)processedFrames / totalFrames * 100;
+            }
+
+            // Calculate elapsed time
+            ElapsedTime = DateTime.Now - _startTime;
+
+            // Calculate processing speed (frames per second)
+            if (ElapsedTime.TotalSeconds > 0)
+            {
+                ProcessingSpeed = processedFrames / ElapsedTime.TotalSeconds;
+            }
+
+            // Calculate estimated time remaining
+            if (ProcessingSpeed > 0 && processedFrames > 0)
+            {
+                var remainingFrames = totalFrames - processedFrames;
+                EstimatedTimeRemaining = TimeSpan.FromSeconds(remainingFrames / ProcessingSpeed);
+            }
+
+            // Update progress text with detailed information
+            ProgressText = $"{processedFrames}/{totalFrames} frames ({ProgressPercentage:F1}%) • " +
+                          $"{ProcessingSpeed:F1} fps • " +
+                          $"ETA: {FormatTimeSpan(EstimatedTimeRemaining)}";
+        }
+    }
+
+    /// <summary>
+    /// Update status message based on the current processing phase.
+    /// </summary>
+    private void UpdateStatusMessageForPhase(string phase, int processedFrames, int totalFrames)
+    {
+        switch (phase.ToLowerInvariant())
+        {
+            case "parsing sup file":
+                StatusMessage = "Analyzing SUP file structure...";
+                break;
+            case "initializing tesseract":
+                StatusMessage = "Setting up Tesseract OCR engine...";
+                break;
+            case "processing frames":
+                if (totalFrames > 0)
+                {
+                    var percentage = (double)processedFrames / totalFrames * 100;
+                    if (percentage < 25)
+                        StatusMessage = "Starting OCR processing...";
+                    else if (percentage < 50)
+                        StatusMessage = "Processing subtitle images...";
+                    else if (percentage < 75)
+                        StatusMessage = "Converting images to text...";
+                    else if (percentage < 90)
+                        StatusMessage = "Finalizing OCR results...";
+                    else
+                        StatusMessage = "Completing OCR processing...";
+                }
+                else
+                {
+                    StatusMessage = "Processing subtitle images...";
+                }
+                break;
+            case "saving srt file":
+                StatusMessage = "Saving results to SRT file...";
+                break;
+            default:
+                StatusMessage = "Processing SUP file...";
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Reset progress information for a new operation.
+    /// </summary>
+    public void ResetProgress()
+    {
+        lock (_progressLock)
+        {
+            _startTime = DateTime.Now;
+            TotalFrames = 0;
+            ProcessedFrames = 0;
+            ProcessingSpeed = 0;
+            EstimatedTimeRemaining = TimeSpan.Zero;
+            ElapsedTime = TimeSpan.Zero;
+            CurrentPhase = string.Empty;
+            ProgressPercentage = 0;
+            ProgressText = string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Format TimeSpan for display (h:mm:ss or m:ss).
+    /// </summary>
+    private static string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        if (timeSpan == TimeSpan.Zero)
+            return "0s";
+
+        if (timeSpan.TotalHours >= 1)
+            return $"{(int)timeSpan.TotalHours}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
+        else
+            return $"{timeSpan.Minutes}:{timeSpan.Seconds:D2}";
     }
 }
 

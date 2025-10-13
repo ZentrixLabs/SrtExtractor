@@ -33,6 +33,17 @@ public class TesseractOcrService : ITesseractOcrService
         string language,
         CancellationToken cancellationToken = default)
     {
+        // Call the overload with progress reporting (passing null for progress)
+        await OcrSupToSrtAsync(supPath, outSrt, language, cancellationToken, null);
+    }
+
+    public async Task OcrSupToSrtAsync(
+        string supPath,
+        string outSrt,
+        string language,
+        CancellationToken cancellationToken = default,
+        IProgress<(int processed, int total, string phase)>? progress = null)
+    {
         var validatedSupPath = Path.GetFullPath(supPath);
         if (!File.Exists(validatedSupPath))
         {
@@ -42,6 +53,7 @@ public class TesseractOcrService : ITesseractOcrService
         SafeFileOperations.ValidateAndPrepareOutputPath(outSrt, supPath);
 
         // Parse the BluRay SUP file to extract subtitle images and timecodes
+        progress?.Report((0, 0, "Parsing SUP file"));
         _loggingService.LogInfo($"Parsing PGS SUP file: {Path.GetFileName(validatedSupPath)}");
         var log = new StringBuilder();
         var bluRaySubtitles = BluRaySupParser.ParseBluRaySup(validatedSupPath, log);
@@ -51,9 +63,11 @@ public class TesseractOcrService : ITesseractOcrService
             throw new InvalidOperationException($"No subtitle images found in SUP file: {Path.GetFileName(validatedSupPath)}");
         }
 
-        _loggingService.LogInfo($"Found {bluRaySubtitles.Count} subtitle images to OCR using command-line Tesseract");
+        var totalFrames = bluRaySubtitles.Count;
+        _loggingService.LogInfo($"Found {totalFrames} subtitle images to OCR using command-line Tesseract");
 
         // Find tesseract.exe
+        progress?.Report((0, totalFrames, "Initializing Tesseract"));
         var tesseractExe = FindTesseractExecutable();
         if (string.IsNullOrEmpty(tesseractExe))
         {
@@ -66,6 +80,8 @@ public class TesseractOcrService : ITesseractOcrService
         var srtBuilder = new StringBuilder();
         int subtitleIndex = 1;
 
+        progress?.Report((0, totalFrames, "Processing frames"));
+
         foreach (var pcsData in bluRaySubtitles)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -77,6 +93,7 @@ public class TesseractOcrService : ITesseractOcrService
                 if (bitmap == null || bitmap.Width == 0 || bitmap.Height == 0)
                 {
                     _loggingService.LogInfo($"Skipping empty/invalid bitmap at index {subtitleIndex}");
+                    progress?.Report((subtitleIndex - 1, totalFrames, "Processing frames"));
                     continue;
                 }
 
@@ -86,6 +103,7 @@ public class TesseractOcrService : ITesseractOcrService
                 if (string.IsNullOrWhiteSpace(text))
                 {
                     _loggingService.LogInfo($"No text recognized in subtitle {subtitleIndex}");
+                    progress?.Report((subtitleIndex - 1, totalFrames, "Processing frames"));
                     continue;
                 }
 
@@ -100,15 +118,20 @@ public class TesseractOcrService : ITesseractOcrService
                 srtBuilder.AppendLine();
 
                 subtitleIndex++;
+                
+                // Report progress after processing each frame
+                progress?.Report((subtitleIndex - 1, totalFrames, "Processing frames"));
             }
             catch (Exception ex)
             {
                 _loggingService.LogWarning($"Failed to OCR subtitle at index {subtitleIndex}: {ex.Message}");
+                progress?.Report((subtitleIndex - 1, totalFrames, "Processing frames"));
                 // Continue with next subtitle
             }
         }
 
         // Write SRT file
+        progress?.Report((totalFrames, totalFrames, "Saving SRT file"));
         await File.WriteAllTextAsync(outSrt, srtBuilder.ToString(), cancellationToken);
         _loggingService.LogInfo($"Successfully completed Tesseract OCR conversion ({language})");
     }
