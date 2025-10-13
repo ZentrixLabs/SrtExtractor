@@ -12,20 +12,29 @@ A powerful and easy-to-use desktop application for extracting subtitles from MKV
 
 SrtExtractor simplifies the process of extracting subtitles from your video files. Whether you're dealing with MKV containers or MP4 files with embedded "Timed Text" subtitles, SrtExtractor provides a seamless experience to convert them into the widely compatible SRT format.
 
-### 🆕 What's New in v2.0.4
+### 🆕 What's New in v2.5.0
 
-**Critical OCR Quality Fix:**
-- **🔥 Fixed Tesseract OCR Garbage Output** - OCR accuracy improved from ~98% to ~100%
-- **📦 Bundled Tesseract OCR** - No system installation required, fully portable (~160 MB)
-- **🛠️ New SUP OCR Tool** - Dedicated window for processing SUP files with progress tracking
-- **✨ Enhanced Corrections** - Updated to ZentrixLabs.OcrCorrection v1.0.1 with pipe-to-I patterns
-- **🐛 Multiple Bug Fixes** - SUP preservation, settings persistence, path validation
+**Architecture Refactoring & Code Quality:**
+- **🏗️ Major Code Restructuring** - Eliminated God Object anti-pattern from MainViewModel
+- **📉 46% Code Reduction** - MainViewModel reduced from 2,190 to 1,172 lines
+- **🎯 Coordinator Pattern** - Introduced 5 focused coordinators for better separation of concerns
+- **✨ Better Maintainability** - Each coordinator has a single, clear responsibility
+- **🧪 Improved Testability** - Coordinators can be unit tested independently
+- **📚 Enhanced Readability** - No file exceeds 600 lines, easier to understand
+- **🔧 Zero Breaking Changes** - Fully backward compatible, all features preserved
 
-**Previous v2.0 Features:**
+**What This Means for You:**
+- Same powerful features, better code architecture
+- Foundation for faster future development
+- More reliable and maintainable codebase
+- Easier to extend with new features
+
+**Previous Major Updates (v2.0.4 & v2.0):**
+- **🔥 Fixed Tesseract OCR Quality** - OCR accuracy improved to ~100%
+- **📦 Fully Bundled Tools** - No external dependencies (~530 MB, completely portable)
 - **🎨 Clean Tab-Based Interface** - Separate Extract, Batch, History, and Tools tabs
 - **👤 Humanized Track Information** - User-friendly labels instead of technical jargon
 - **⚡ Speed Indicators** - Know instantly which tracks are fast (text) vs slow (OCR)
-- **⌨️ Enhanced Keyboard Shortcuts** - Press F1 for comprehensive help
 - **🚀 Performance Boost** - 2-3x faster codec detection and batch processing
 
 ## ✨ Features
@@ -210,11 +219,17 @@ Example: `Movie.eng.forced.srt` or `Show.eng.cc.srt`
 
 ## 🏗️ Architecture
 
-Built with modern .NET 9 and WPF, SrtExtractor follows the MVVM pattern with intelligent subtitle recommendation:
+Built with modern .NET 9 and WPF, SrtExtractor follows the MVVM pattern with clean separation of concerns:
 
 - **Models**: Data structures for tracks, settings, and tool status
-- **ViewModels**: Business logic, UI state management, and smart track recommendation
-- **Views**: XAML-based user interface with recommendation indicators
+- **ViewModels**: UI coordination, track selection, and settings management
+- **Views**: XAML-based user interface with modern design
+- **Coordinators** (NEW in v2.5.0): Focused business logic handlers
+  - **ExtractionCoordinator**: Extraction strategies and OCR correction
+  - **BatchCoordinator**: Batch queue management and processing
+  - **FileCoordinator**: File picking, recent files, network detection
+  - **ToolCoordinator**: Tool detection and path management
+  - **CleanupCoordinator**: Temporary file cleanup operations
 - **Services**: External tool integration and file operations
 - **State**: Observable state management for data binding
 - **Recommendation Engine**: Intelligent track selection prioritizing SubRip/SRT over HDMV PGS
