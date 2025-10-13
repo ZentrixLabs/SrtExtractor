@@ -42,6 +42,15 @@ public partial class BatchFile : ObservableObject
     [ObservableProperty]
     private DateTime _addedAt = DateTime.Now;
 
+    [ObservableProperty]
+    private double _progressPercentage = 0;
+
+    [ObservableProperty]
+    private string _progressText = "";
+
+    [ObservableProperty]
+    private bool _showProgress = false;
+
     /// <summary>
     /// Gets the display name for the file.
     /// </summary>

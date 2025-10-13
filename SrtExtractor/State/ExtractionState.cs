@@ -278,7 +278,9 @@ public partial class ExtractionState : ObservableObject
 
     public bool HasBatchQueue => BatchQueue.Any();
 
-    public string BatchProgressText => $"Processing {CurrentBatchIndex + 1} of {TotalBatchFiles} files";
+    public string BatchProgressText => CurrentBatchIndex >= TotalBatchFiles 
+        ? $"Processing {TotalBatchFiles} of {TotalBatchFiles} files" 
+        : $"Processing {CurrentBatchIndex + 1} of {TotalBatchFiles} files";
 
     public bool ShowNetworkWarning => IsNetworkFile && !string.IsNullOrEmpty(MkvPath);
 

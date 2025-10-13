@@ -1306,6 +1306,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (_extractionCancellationTokenSource?.Token.IsCancellationRequested == true)
                 {
                     State.AddLogMessage("Batch processing cancelled by user");
+                    // Update progress to show current state before breaking
+                    State.UpdateBatchProgress(processedCount, totalFiles, "Batch processing cancelled");
                     break;
                 }
 
@@ -1341,6 +1343,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                         batchFile.Status = BatchFileStatus.Cancelled;
                         batchFile.StatusMessage = "Cancelled";
                         State.AddLogMessage($"⏹️ Cancelled: {batchFile.FileName}");
+                        // Update progress to show current state before breaking
+                        State.UpdateBatchProgress(processedCount, totalFiles, "Batch processing cancelled");
                         break; // Exit the loop when cancelled
                     }
 
@@ -1364,6 +1368,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     // Clean up any temporary files that might have been created
                     await CleanupTemporaryFiles(batchFile.FilePath, State.SelectedTrack);
                     
+                    // Update progress to show current state before breaking
+                    State.UpdateBatchProgress(processedCount, totalFiles, "Batch processing cancelled");
                     break; // Exit the loop when cancelled
                 }
                 catch (Exception ex)
@@ -1383,6 +1389,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 State.LastProcessedBatchIndex = processedCount - 1;
             }
 
+            // Update progress to 100% before stopping
+            State.UpdateBatchProgress(totalFiles, totalFiles, "Batch processing completed!");
+            
             State.StopProcessingWithProgress();
             
             // Final statistics update with full UI notifications after batch processing completes
@@ -1468,8 +1477,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 _notificationService.ShowInfo(message, "Batch Processing Complete");
             }
             
-            // Clear the batch queue and reset progress after completion
-            State.ClearBatchQueue();
+            // Keep the batch queue visible after completion so users can review results
+            // Users can manually clear the queue using "Clear All" or "Clear Completed" buttons
+            // State.ClearBatchQueue(); // Removed - queue now persists after completion
         }
         catch (Exception ex)
         {

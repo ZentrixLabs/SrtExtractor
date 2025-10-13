@@ -88,7 +88,7 @@
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
         
-        <!-- ListBoxItem Style for Batch Queue -->
+        <!-- ListBoxItem Style for Batch Queue with Animations -->
         <Style TargetType="ListBoxItem">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -97,13 +97,79 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0"/>
             <Setter Property="MinHeight" Value="84"/>
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Style.Triggers>
+                <!-- Fade-in animation when item is loaded -->
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" 
+                                           From="0" To="1" 
+                                           Duration="0:0:0.3" 
+                                           EasingFunction="{StaticResource EaseOutCubic}"/>
+                            <ThicknessAnimation Storyboard.TargetProperty="Margin" 
+                                              From="0,-10,0,0" To="0,0,0,0" 
+                                              Duration="0:0:0.3" 
+                                              EasingFunction="{StaticResource EaseOutCubic}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
                     <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" 
+                                               From="0.98" To="1.0" 
+                                               Duration="0:0:0.15" 
+                                               EasingFunction="{StaticResource EaseOutCubic}"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" 
+                                               From="0.98" To="1.0" 
+                                               Duration="0:0:0.15" 
+                                               EasingFunction="{StaticResource EaseOutCubic}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
                 </Trigger>
+                
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource BackgroundAltBrush}"/>
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" 
+                                               To="1.02" 
+                                               Duration="0:0:0.15" 
+                                               EasingFunction="{StaticResource EaseOutCubic}"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" 
+                                               To="1.02" 
+                                               Duration="0:0:0.15" 
+                                               EasingFunction="{StaticResource EaseOutCubic}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" 
+                                               To="1.0" 
+                                               Duration="0:0:0.15" 
+                                               EasingFunction="{StaticResource EaseOutCubic}"/>
+                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" 
+                                               To="1.0" 
+                                               Duration="0:0:0.15" 
+                                               EasingFunction="{StaticResource EaseOutCubic}"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -1113,12 +1179,58 @@
                                 </ListBox.ContextMenu>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusM}" Margin="2" Padding="12" MinHeight="80">
-                                            <Border.Background>
-                                                <Binding Path="Status" Converter="{StaticResource StatusToBackgroundConverter}"/>
-                                            </Border.Background>
+                                        <Border BorderThickness="1" CornerRadius="{StaticResource RadiusM}" Margin="2" Padding="12" MinHeight="80">
+                                            <!-- Enhanced Border with Status-Based Styling -->
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Pending">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                                            <Setter Property="Background">
+                                                                <Setter.Value>
+                                                                    <SolidColorBrush Color="{StaticResource PrimaryColor}" Opacity="0.05"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Processing">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                            <Setter Property="Background">
+                                                                <Setter.Value>
+                                                                    <SolidColorBrush Color="{StaticResource PrimaryColor}" Opacity="0.1"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+                                                            <Setter Property="Background">
+                                                                <Setter.Value>
+                                                                    <SolidColorBrush Color="{StaticResource SuccessColor}" Opacity="0.05"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
+                                                            <Setter Property="Background">
+                                                                <Setter.Value>
+                                                                    <SolidColorBrush Color="{StaticResource ErrorColor}" Opacity="0.05"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Cancelled">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource TextTertiaryBrush}"/>
+                                                            <Setter Property="Background" Value="{StaticResource BackgroundAltBrush}"/>
+                                                            <Setter Property="Opacity" Value="0.6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            
                                             <Grid>
                                                 <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
@@ -1130,15 +1242,37 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 
-                                                <!-- Status Indicator (Icon Font) -->
+                                                <!-- Enhanced Status Indicator (Icon Font with Color) -->
                                                 <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" 
                                                            FontFamily="{StaticResource IconFontFamily}"
-                                                           FontSize="24" 
+                                                           FontSize="28" 
                                                            VerticalAlignment="Center"
                                                            Margin="0,0,12,0">
                                                     <TextBlock.Text>
                                                         <Binding Path="Status" Converter="{StaticResource StatusToIconConverter}"/>
                                                     </TextBlock.Text>
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Pending">
+                                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Processing">
+                                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Error">
+                                                                    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Cancelled">
+                                                                    <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
                                                 </TextBlock>
                                                 
                                                 <!-- File Info -->
@@ -1158,8 +1292,55 @@
                                                     <TextBlock Text="{Binding FormattedEstimatedTime}" FontSize="11" Foreground="{StaticResource PrimaryBrush}" Margin="6,0,0,0"/>
                                                 </StackPanel>
                                                 
+                                                <!-- Inline Progress Bar (for Processing status) -->
+                                                <Border Grid.Row="3" Grid.Column="1" 
+                                                        Margin="0,8,0,0"
+                                                        Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        
+                                                        <!-- Progress Bar -->
+                                                        <Border Grid.Row="0" 
+                                                                Background="{StaticResource BackgroundAltBrush}" 
+                                                                BorderBrush="{StaticResource PrimaryBrush}" 
+                                                                BorderThickness="1" 
+                                                                CornerRadius="8" 
+                                                                Height="16">
+                                                            <Grid>
+                                                                <ProgressBar Value="{Binding ProgressPercentage}" 
+                                                                             Maximum="100" 
+                                                                             Minimum="0"
+                                                                             Background="Transparent"
+                                                                             Foreground="{StaticResource PrimaryBrush}"
+                                                                             BorderThickness="0"
+                                                                             Height="16"
+                                                                             VerticalAlignment="Center"/>
+                                                                
+                                                                <!-- Progress Text Overlay -->
+                                                                <TextBlock Text="{Binding ProgressPercentage, StringFormat={}{0:F0}%}" 
+                                                                           HorizontalAlignment="Center" 
+                                                                           VerticalAlignment="Center"
+                                                                           FontSize="9" 
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="{StaticResource TextOnPrimaryBrush}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                        
+                                                        <!-- Progress Text -->
+                                                        <TextBlock Grid.Row="1" 
+                                                                   Text="{Binding ProgressText}" 
+                                                                   FontSize="9" 
+                                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                                   Margin="0,2,0,0"
+                                                                   HorizontalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                                
                                                 <!-- Status Message -->
-                                                <TextBlock Grid.Row="3" Grid.Column="1" 
+                                                <TextBlock Grid.Row="4" Grid.Column="1" 
                                                            Text="{Binding StatusMessage}" 
                                                            FontSize="10" 
                                                            Foreground="{StaticResource TextTertiaryBrush}"
@@ -1168,7 +1349,7 @@
                                                            TextWrapping="Wrap"/>
                                                 
                                                 <!-- Remove Button (Larger) -->
-                                                <Button Grid.Row="0" Grid.RowSpan="4" Grid.Column="2" 
+                                                <Button Grid.Row="0" Grid.RowSpan="5" Grid.Column="2" 
                                                         Command="{Binding DataContext.RemoveFromBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}"
                                                         Style="{StaticResource IconButton}"
