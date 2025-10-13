@@ -30,6 +30,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IRecentFilesService _recentFilesService;
     private readonly IFileCacheService _fileCacheService;
     private readonly ExtractionCoordinator _extractionCoordinator;
+    private readonly BatchCoordinator _batchCoordinator;
     private CancellationTokenSource? _extractionCancellationTokenSource;
     private Task? _initializationTask;
 
@@ -73,6 +74,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
             srtCorrectionService,
             multiPassCorrectionService,
             State);
+
+        // Create BatchCoordinator with delegates to our methods (it needs to call ProbeTracksAsync and ExtractSubtitlesAsync)
+        _batchCoordinator = new BatchCoordinator(
+            loggingService,
+            notificationService,
+            networkDetectionService,
+            fileCacheService,
+            State,
+            () => ProbeTracksAsync(),
+            (ct) => ExtractSubtitlesAsync(ct),
+            (path) => UpdateNetworkDetection(path));
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
@@ -1279,244 +1291,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task ProcessBatchAsync()
     {
-        if (!State.BatchQueue.Any())
-            return;
-
-        await ProcessBatchFromIndexAsync(0);
+        await _batchCoordinator.ProcessBatchAsync(_extractionCancellationTokenSource);
     }
 
-    /// <summary>
-    /// Process batch files starting from a specific index.
-    /// </summary>
-    /// <param name="startIndex">The index to start processing from</param>
-    private async Task ProcessBatchFromIndexAsync(int startIndex)
-    {
-        if (!State.BatchQueue.Any() || startIndex >= State.BatchQueue.Count)
-            return;
+    // ========================================================================================================
+    // COMMENTED OUT: Batch processing methods moved to BatchCoordinator
+    // ========================================================================================================
+    // These methods are now handled by BatchCoordinator.cs - DO NOT DELETE until refactoring is complete
+    // ========================================================================================================
 
-        try
-        {
-            State.IsBusy = true;
-            State.StartProcessing("Starting batch processing...");
-            State.AddLogMessage($"Starting batch processing of {State.BatchQueue.Count} files from index {startIndex}");
+    ///// <summary>
+    ///// Process batch files starting from a specific index.
+    ///// </summary>
+    ///// <param name="startIndex">The index to start processing from</param>
+    //private async Task ProcessBatchFromIndexAsync(int startIndex)
+    //{
+    //    // Method body removed - now handled by BatchCoordinator
+    //}
 
-            var totalFiles = State.BatchQueue.Count;
-            var processedCount = startIndex;
-            var successCount = State.BatchQueue.Take(startIndex).Count(f => f.Status == BatchFileStatus.Completed);
-            var errorCount = State.BatchQueue.Take(startIndex).Count(f => f.Status == BatchFileStatus.Error);
-
-            // Reset the last processed index
-            State.LastProcessedBatchIndex = startIndex - 1;
-
-            foreach (var batchFile in State.BatchQueue.Skip(startIndex).ToList())
-            {
-                // Check for cancellation before processing each file
-                if (_extractionCancellationTokenSource?.Token.IsCancellationRequested == true)
-                {
-                    State.AddLogMessage("Batch processing cancelled by user");
-                    // Update progress to show current state before breaking
-                    State.UpdateBatchProgress(processedCount, totalFiles, "Batch processing cancelled");
-                    break;
-                }
-
-                try
-                {
-                    State.UpdateBatchProgress(processedCount, totalFiles, $"Processing {batchFile.FileName}...");
-                    batchFile.Status = BatchFileStatus.Processing;
-                    batchFile.StatusMessage = "Processing...";
-
-                    // Set the current file as the active file for processing
-                    State.MkvPath = batchFile.FilePath;
-                    State.Tracks.Clear();
-                    State.SelectedTrack = null;
-
-                    // Update network detection for this file
-                    UpdateNetworkDetection(batchFile.FilePath);
-                    batchFile.UpdateNetworkStatus(State.IsNetworkFile, State.EstimatedProcessingTimeMinutes);
-
-                    // Probe tracks
-                    await ProbeTracksAsync();
-                    
-                    if (State.SelectedTrack == null)
-                    {
-                        throw new InvalidOperationException("No suitable track found for extraction");
-                    }
-
-                    // Extract subtitles with cancellation token
-                    await ExtractSubtitlesAsync(_extractionCancellationTokenSource?.Token);
-
-                    // Check for cancellation after extraction
-                    if (_extractionCancellationTokenSource?.Token.IsCancellationRequested == true)
-                    {
-                        batchFile.Status = BatchFileStatus.Cancelled;
-                        batchFile.StatusMessage = "Cancelled";
-                        State.AddLogMessage($"⏹️ Cancelled: {batchFile.FileName}");
-                        // Update progress to show current state before breaking
-                        State.UpdateBatchProgress(processedCount, totalFiles, "Batch processing cancelled");
-                        break; // Exit the loop when cancelled
-                    }
-
-                    // Only increment success count after extraction is actually complete
-                    batchFile.Status = BatchFileStatus.Completed;
-                    batchFile.StatusMessage = "Completed successfully";
-                    batchFile.OutputPath = State.GenerateOutputFilename(batchFile.FilePath, State.SelectedTrack);
-                    
-                    successCount++;
-                    State.AddLogMessage($"✅ Completed: {batchFile.FileName}");
-                    
-                    // Use fast statistics update during batch processing to reduce UI overhead
-                    State.UpdateBatchStatisticsFast();
-                }
-                catch (OperationCanceledException)
-                {
-                    batchFile.Status = BatchFileStatus.Cancelled;
-                    batchFile.StatusMessage = "Cancelled";
-                    State.AddLogMessage($"⏹️ Cancelled: {batchFile.FileName}");
-                    
-                    // Clean up any temporary files that might have been created
-                    await CleanupTemporaryFiles(batchFile.FilePath, State.SelectedTrack);
-                    
-                    // Update progress to show current state before breaking
-                    State.UpdateBatchProgress(processedCount, totalFiles, "Batch processing cancelled");
-                    break; // Exit the loop when cancelled
-                }
-                catch (Exception ex)
-                {
-                    batchFile.Status = BatchFileStatus.Error;
-                    batchFile.StatusMessage = $"Error: {ex.Message}";
-                    errorCount++;
-                    
-                    _loggingService.LogError($"Failed to process batch file {batchFile.FileName}", ex);
-                    State.AddLogMessage($"❌ Failed: {batchFile.FileName} - {ex.Message}");
-                    
-                    // Use fast statistics update during batch processing to reduce UI overhead
-                    State.UpdateBatchStatisticsFast();
-                }
-
-                processedCount++;
-                State.LastProcessedBatchIndex = processedCount - 1;
-            }
-
-            // Update progress to 100% before stopping
-            State.UpdateBatchProgress(totalFiles, totalFiles, "Batch processing completed!");
-            
-            State.StopProcessingWithProgress();
-            
-            // Final statistics update with full UI notifications after batch processing completes
-            State.UpdateBatchStatistics();
-            
-            // Create detailed summary
-            var successfulFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Completed).ToList();
-            var errorFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Error).ToList();
-            var cancelledFiles = State.BatchQueue.Where(f => f.Status == BatchFileStatus.Cancelled).ToList();
-            
-            // Log detailed summary
-            State.AddLogMessage($"🎯 Batch processing completed! Success: {successCount}, Errors: {errorCount}, Cancelled: {cancelledFiles.Count}");
-            
-            if (successfulFiles.Any())
-            {
-                State.AddLogMessage("✅ Successful files:");
-                foreach (var file in successfulFiles)
-                {
-                    State.AddLogMessage($"   • {file.FileName}");
-                }
-            }
-            
-            if (errorFiles.Any())
-            {
-                State.AddLogMessage("❌ Failed files:");
-                foreach (var file in errorFiles)
-                {
-                    State.AddLogMessage($"   • {file.FileName} - {file.StatusMessage}");
-                }
-            }
-            
-            if (cancelledFiles.Any())
-            {
-                State.AddLogMessage("⏹️ Cancelled files:");
-                foreach (var file in cancelledFiles)
-                {
-                    State.AddLogMessage($"   • {file.FileName}");
-                }
-            }
-
-            // Create detailed message box
-            var message = $"Batch processing completed!\n\n" +
-                         $"Total files: {totalFiles}\n" +
-                         $"Successful: {successCount}\n" +
-                         $"Errors: {errorCount}\n" +
-                         $"Cancelled: {cancelledFiles.Count}\n\n";
-            
-            if (successfulFiles.Any())
-            {
-                message += "✅ Successful files:\n";
-                foreach (var file in successfulFiles)
-                {
-                    message += $"   • {file.FileName}\n";
-                }
-                message += "\n";
-            }
-            
-            if (errorFiles.Any())
-            {
-                message += "❌ Failed files:\n";
-                foreach (var file in errorFiles)
-                {
-                    message += $"   • {file.FileName} - {file.StatusMessage}\n";
-                }
-                message += "\n";
-            }
-            
-            if (cancelledFiles.Any())
-            {
-                message += "⏹️ Cancelled files:\n";
-                foreach (var file in cancelledFiles)
-                {
-                    message += $"   • {file.FileName}\n";
-                }
-            }
-
-            if (errorCount > 0)
-            {
-                _notificationService.ShowWarning(message, "Batch Processing Complete");
-            }
-            else
-            {
-                _notificationService.ShowInfo(message, "Batch Processing Complete");
-            }
-            
-            // Keep the batch queue visible after completion so users can review results
-            // Users can manually clear the queue using "Clear All" or "Clear Completed" buttons
-            // State.ClearBatchQueue(); // Removed - queue now persists after completion
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Batch processing failed", ex);
-            State.AddLogMessage($"Batch processing failed: {ex.Message}");
-            _notificationService.ShowError($"Batch processing failed:\n{ex.Message}", "Batch Processing Error");
-        }
-        finally
-        {
-            State.IsBusy = false;
-            State.StopProcessingWithProgress();
-        }
-    }
+    // ========================================================================================================
+    // END COMMENTED OUT SECTION
+    // ========================================================================================================
 
     /// <summary>
     /// Clear the batch queue.
     /// </summary>
     private void ClearBatchQueue()
     {
-        try
-        {
-            State.ClearBatchQueue();
-            State.AddLogMessage("Batch queue cleared");
-            _loggingService.LogInfo("User cleared batch queue");
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to clear batch queue", ex);
-        }
+        _batchCoordinator.ClearBatchQueue();
     }
 
     /// <summary>
@@ -1524,17 +1326,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private void ClearCompletedBatchItems()
     {
-        try
-        {
-            var completedCount = State.BatchCompletedCount;
-            State.ClearCompletedBatchItems();
-            State.AddLogMessage($"Cleared {completedCount} completed items from batch queue");
-            _loggingService.LogInfo($"User cleared {completedCount} completed batch items");
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to clear completed batch items", ex);
-        }
+        _batchCoordinator.ClearCompletedBatchItems();
     }
 
     /// <summary>
@@ -1542,35 +1334,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task ResumeBatchAsync()
     {
-        try
-        {
-            if (!State.AreToolsAvailable)
-            {
-                _notificationService.ShowWarning("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required");
-                return;
-            }
-
-            var startIndex = State.LastProcessedBatchIndex + 1;
-            var remainingFiles = State.BatchQueue.Skip(startIndex).ToList();
-            
-            if (!remainingFiles.Any())
-            {
-                State.AddLogMessage("No remaining files to process in batch queue");
-                return;
-            }
-
-            State.AddLogMessage($"Resuming batch processing from file {startIndex + 1} of {State.BatchQueue.Count}");
-            _loggingService.LogInfo($"User resumed batch processing from index {startIndex}");
-
-            // Start processing from the next unprocessed file
-            await ProcessBatchFromIndexAsync(startIndex);
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to resume batch processing", ex);
-            State.AddLogMessage($"Failed to resume batch processing: {ex.Message}");
-            _notificationService.ShowError($"Failed to resume batch processing:\n{ex.Message}", "Resume Error");
-        }
+        await _batchCoordinator.ResumeBatchAsync(_extractionCancellationTokenSource);
     }
 
     /// <summary>
@@ -1579,19 +1343,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="batchFile">The batch file to remove</param>
     private void RemoveFromBatch(BatchFile? batchFile)
     {
-        try
-        {
-            if (batchFile != null)
-            {
-                State.RemoveFromBatchQueue(batchFile);
-                State.AddLogMessage($"Removed from queue: {batchFile.FileName}");
-                _loggingService.LogInfo($"User removed file from batch queue: {batchFile.FileName}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to remove file from batch queue", ex);
-        }
+        _batchCoordinator.RemoveFromBatch(batchFile);
     }
 
     /// <summary>
@@ -1601,67 +1353,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="filePaths">Array of file paths to add</param>
     public async Task AddFilesToBatchQueueAsync(string[] filePaths)
     {
-        try
-        {
-            var addedCount = 0;
-            var skippedCount = 0;
-            var filesToAdd = new List<BatchFile>();
-
-            // First pass: validate and prepare files without adding to ObservableCollection
-            foreach (var filePath in filePaths)
-            {
-                // Check for duplicates
-                if (string.IsNullOrEmpty(filePath) || 
-                    State.BatchQueue.Any(f => f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
-                {
-                    skippedCount++;
-                    continue;
-                }
-
-                var batchFile = new BatchFile { FilePath = filePath };
-                await batchFile.UpdateFromFileSystemAsync(_fileCacheService);
-                
-                // Update network detection
-                var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
-                var estimatedMinutes = _networkDetectionService.GetEstimatedProcessingTime(filePath);
-                batchFile.UpdateNetworkStatus(isNetwork, estimatedMinutes);
-                
-                filesToAdd.Add(batchFile);
-                addedCount++;
-            }
-
-            // Second pass: bulk add to ObservableCollection (single UI update per file, but better than alternative)
-            // Note: WPF doesn't support true bulk operations on ObservableCollection,
-            // but this pattern is still better than State.AddToBatchQueue which does more work per item
-            foreach (var file in filesToAdd)
-            {
-                State.BatchQueue.Add(file);
-            }
-
-            // Update statistics once at the end
-            if (filesToAdd.Any())
-            {
-                State.TotalBatchFiles = State.BatchQueue.Count;
-                State.UpdateBatchStatistics();
-                // Note: UpdateBatchStatistics() already calls OnPropertyChanged for computed properties
-            }
-
-            if (addedCount > 0)
-            {
-                State.AddLogMessage($"Added {addedCount} files to batch queue");
-                _loggingService.LogInfo($"Added {addedCount} files to batch queue via drag and drop");
-            }
-
-            if (skippedCount > 0)
-            {
-                State.AddLogMessage($"Skipped {skippedCount} duplicate files");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to add files to batch queue", ex);
-            State.AddLogMessage($"Error adding files to batch queue: {ex.Message}");
-        }
+        await _batchCoordinator.AddFilesToBatchQueueAsync(filePaths);
     }
 
     /// <summary>
@@ -1670,20 +1362,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="batchFile">The batch file to move</param>
     public void MoveBatchItemToTop(BatchFile batchFile)
     {
-        try
-        {
-            if (State.BatchQueue.Contains(batchFile))
-            {
-                State.BatchQueue.Remove(batchFile);
-                State.BatchQueue.Insert(0, batchFile);
-                State.AddLogMessage($"Moved to top of queue: {batchFile.FileName}");
-                _loggingService.LogInfo($"User moved batch item to top: {batchFile.FileName}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError($"Error moving batch item to top: {batchFile.FileName}", ex);
-        }
+        _batchCoordinator.MoveBatchItemToTop(batchFile);
     }
 
     /// <summary>
@@ -1692,20 +1371,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="batchFile">The batch file to move</param>
     public void MoveBatchItemToBottom(BatchFile batchFile)
     {
-        try
-        {
-            if (State.BatchQueue.Contains(batchFile))
-            {
-                State.BatchQueue.Remove(batchFile);
-                State.BatchQueue.Add(batchFile);
-                State.AddLogMessage($"Moved to bottom of queue: {batchFile.FileName}");
-                _loggingService.LogInfo($"User moved batch item to bottom: {batchFile.FileName}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError($"Error moving batch item to bottom: {batchFile.FileName}", ex);
-        }
+        _batchCoordinator.MoveBatchItemToBottom(batchFile);
     }
 
     /// <summary>
@@ -1715,31 +1381,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="targetItem">The item being dropped on</param>
     public void ReorderBatchQueue(BatchFile draggedItem, BatchFile targetItem)
     {
-        try
-        {
-            if (State.BatchQueue.Contains(draggedItem) && State.BatchQueue.Contains(targetItem) && draggedItem != targetItem)
-            {
-                var draggedIndex = State.BatchQueue.IndexOf(draggedItem);
-                var targetIndex = State.BatchQueue.IndexOf(targetItem);
-                
-                State.BatchQueue.RemoveAt(draggedIndex);
-                
-                // Adjust target index if we removed an item before it
-                if (draggedIndex < targetIndex)
-                {
-                    targetIndex--;
-                }
-                
-                State.BatchQueue.Insert(targetIndex, draggedItem);
-                
-                State.AddLogMessage($"Reordered queue: {draggedItem.FileName} moved to position {targetIndex + 1}");
-                _loggingService.LogInfo($"User reordered batch queue: {draggedItem.FileName} moved to position {targetIndex + 1}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError($"Error reordering batch queue: {draggedItem.FileName}", ex);
-        }
+        _batchCoordinator.ReorderBatchQueue(draggedItem, targetItem);
     }
 
     /// <summary>
@@ -1748,52 +1390,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="batchFile">The batch file to process</param>
     public async Task ProcessSingleBatchFileAsync(BatchFile? batchFile)
     {
-        if (batchFile == null)
-        {
-            _loggingService.LogWarning("ProcessSingleBatchFileAsync called with null batchFile");
-            return;
-        }
-
-        try
-        {
-            if (!State.AreToolsAvailable)
-            {
-                _notificationService.ShowWarning("Required tools are not available. Please install MKVToolNix and Subtitle Edit first.", "Tools Required");
-                return;
-            }
-
-            State.AddLogMessage($"Processing single file: {batchFile.FileName}");
-            _loggingService.LogInfo($"User requested single file processing: {batchFile.FilePath}");
-
-            // Set the current file path and probe tracks
-            State.MkvPath = batchFile.FilePath;
-            await ProbeTracksAsync(CancellationToken.None);
-
-            // If we found tracks, extract the best one
-            if (State.SelectedTrack != null)
-            {
-                await ExtractSubtitlesAsync(CancellationToken.None);
-                
-                // Mark this batch item as completed
-                batchFile.Status = BatchFileStatus.Completed;
-                batchFile.StatusMessage = "Processed successfully";
-                
-                State.AddLogMessage($"✅ Single file processing completed: {batchFile.FileName}");
-            }
-            else
-            {
-                batchFile.Status = BatchFileStatus.Error;
-                batchFile.StatusMessage = "No suitable tracks found";
-                State.AddLogMessage($"❌ No suitable tracks found in: {batchFile.FileName}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError($"Error processing single batch file: {batchFile.FileName}", ex);
-            batchFile.Status = BatchFileStatus.Error;
-            batchFile.StatusMessage = ex.Message;
-            State.AddLogMessage($"❌ Error processing {batchFile.FileName}: {ex.Message}");
-        }
+        await _batchCoordinator.ProcessSingleBatchFileAsync(batchFile);
     }
 
     private void ToggleBatchMode()
