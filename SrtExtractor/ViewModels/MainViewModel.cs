@@ -31,6 +31,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IFileCacheService _fileCacheService;
     private readonly ExtractionCoordinator _extractionCoordinator;
     private readonly BatchCoordinator _batchCoordinator;
+    private readonly FileCoordinator _fileCoordinator;
+    private readonly ToolCoordinator _toolCoordinator;
+    private readonly CleanupCoordinator _cleanupCoordinator;
     private CancellationTokenSource? _extractionCancellationTokenSource;
     private Task? _initializationTask;
 
@@ -75,6 +78,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
             multiPassCorrectionService,
             State);
 
+        // Create FileCoordinator for file-related operations (created before BatchCoordinator since batch needs it)
+        _fileCoordinator = new FileCoordinator(
+            loggingService,
+            notificationService,
+            networkDetectionService,
+            recentFilesService,
+            State);
+
+        // Create ToolCoordinator for tool management
+        _toolCoordinator = new ToolCoordinator(
+            loggingService,
+            notificationService,
+            toolDetectionService,
+            settingsService,
+            State);
+
+        // Create CleanupCoordinator for temporary file cleanup
+        _cleanupCoordinator = new CleanupCoordinator(
+            loggingService,
+            State);
+
         // Create BatchCoordinator with delegates to our methods (it needs to call ProbeTracksAsync and ExtractSubtitlesAsync)
         _batchCoordinator = new BatchCoordinator(
             loggingService,
@@ -84,7 +108,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             State,
             () => ProbeTracksAsync(),
             (ct) => ExtractSubtitlesAsync(ct),
-            (path) => UpdateNetworkDetection(path));
+            (path) => _fileCoordinator.UpdateNetworkDetection(path));
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
@@ -187,33 +211,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private Task PickMkvAsync()
     {
-        try
-        {
-            var openFileDialog = new OpenFileDialog
-            {
-                Title = "Select Video File",
-                Filter = "Video Files (*.mkv;*.mp4)|*.mkv;*.mp4|MKV Files (*.mkv)|*.mkv|MP4 Files (*.mp4)|*.mp4|All Files (*.*)|*.*",
-                DefaultExt = "mkv"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                State.MkvPath = openFileDialog.FileName;
-                State.ClearFileState();
-                
-                // Update network detection
-                UpdateNetworkDetection(State.MkvPath);
-                
-                _loggingService.LogInfo($"Selected MKV file: {State.MkvPath}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to pick MKV file", ex);
-            _notificationService.ShowError($"Failed to select MKV file:\n{ex.Message}", "File Selection Error");
-        }
-        
-        return Task.CompletedTask;
+        return _fileCoordinator.PickMkvAsync();
     }
 
     private async Task ProbeTracksAsync(CancellationToken cancellationToken = default)
@@ -606,27 +604,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private Task InstallMkvToolNixAsync()
     {
-        // All tools are bundled - no installation needed
-        _loggingService.LogInfo("MKVToolNix is bundled with the application - no installation needed");
-        _notificationService.ShowInfo("All required tools are bundled with SrtExtractor.\n\nNo installation needed!", "Tools Already Available");
-        return Task.CompletedTask;
+        return _toolCoordinator.InstallMkvToolNixAsync();
     }
-
 
     private void BrowseMkvToolNix()
     {
-        var openFileDialog = new OpenFileDialog
-        {
-            Title = "Select mkvmerge.exe",
-            Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
-            FileName = "mkvmerge.exe"
-        };
-
-        if (openFileDialog.ShowDialog() == true)
-        {
-            // Update settings and re-detect
-            _ = UpdateToolPathAsync("MKVToolNix", openFileDialog.FileName);
-        }
+        _toolCoordinator.BrowseMkvToolNix();
     }
 
 
@@ -680,90 +663,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task DetectToolsAsync()
     {
-        State.AddLogMessage("Detecting external tools...");
-
-        // Load current settings
-        var settings = await _settingsService.LoadSettingsAsync();
-        var settingsUpdated = false;
-
-        // Detect MKVToolNix
-        var mkvStatus = await _toolDetectionService.CheckMkvToolNixAsync();
-        State.UpdateToolStatus("MKVToolNix", mkvStatus);
-        
-        // Update settings if MKVToolNix was found and not already configured
-        if (mkvStatus.IsInstalled && mkvStatus.Path != null && string.IsNullOrEmpty(settings.MkvMergePath))
-        {
-            var mkvDir = Path.GetDirectoryName(mkvStatus.Path);
-            settings = settings with 
-            { 
-                MkvMergePath = mkvStatus.Path,
-                MkvExtractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe")
-            };
-            settingsUpdated = true;
-        }
-
-        // Detect FFmpeg
-        var ffmpegStatus = await _toolDetectionService.CheckFfmpegAsync();
-        State.UpdateToolStatus("FFmpeg", ffmpegStatus);
-
-        // Save updated settings if any tool paths were detected
-        if (settingsUpdated)
-        {
-            await _settingsService.SaveSettingsAsync(settings);
-            _loggingService.LogInfo("Updated settings with detected tool paths");
-        }
-
-        if (State.AreToolsAvailable)
-        {
-            State.AddLogMessage("All required tools are available");
-        }
-        else
-        {
-            State.AddLogMessage("Some required tools are missing. Please configure them in Settings.");
-            
-            // Show a message directing users to settings (fire and forget)
-            _ = Application.Current.Dispatcher.InvokeAsync(async () =>
-            {
-                var result = await _notificationService.ShowConfirmationAsync(
-                    "Some required tools are missing and need to be configured.\n\nWould you like to open Settings to configure the tools now?",
-                    "Tools Missing");
-                
-                if (result)
-                {
-                    // Trigger the event to open settings immediately
-                    State.TriggerOpenSettings();
-                }
-            });
-        }
+        await _toolCoordinator.DetectToolsAsync();
     }
 
     private async Task UpdateToolPathAsync(string toolName, string toolPath)
     {
-        try
-        {
-            var settings = await _settingsService.LoadSettingsAsync();
-            
-            if (string.Equals(toolName, "MKVToolNix", StringComparison.OrdinalIgnoreCase))
-            {
-                var mkvDir = Path.GetDirectoryName(toolPath);
-                settings = settings with 
-                { 
-                    MkvMergePath = toolPath,
-                    MkvExtractPath = Path.Combine(mkvDir ?? "", "mkvextract.exe")
-                };
-            }
-
-            await _settingsService.SaveSettingsAsync(settings);
-            State.AddLogMessage($"Updated {toolName} path: {toolPath}");
-            
-            // Re-detect tools
-            await DetectToolsAsync();
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError($"Failed to update {toolName} path", ex);
-            State.AddLogMessage($"Error updating {toolName} path: {ex.Message}");
-        }
+        await _toolCoordinator.UpdateToolPathAsync(toolName, toolPath);
     }
 
     /// <summary>
@@ -996,55 +901,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task ReDetectToolsAsync()
     {
-        try
-        {
-            State.IsBusy = true;
-            State.AddLogMessage("Re-detecting tools...");
-            
-            await DetectToolsAsync();
-            
-            State.AddLogMessage("Tool detection completed!");
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to re-detect tools", ex);
-            State.AddLogMessage($"Error re-detecting tools: {ex.Message}");
-        }
-        finally
-        {
-            State.IsBusy = false;
-        }
+        await _toolCoordinator.ReDetectToolsAsync();
     }
 
     private async Task CleanupTempFilesAsync()
     {
-        try
-        {
-            State.IsBusy = true;
-            State.UpdateProcessingMessage("Cleaning up temporary files...");
-            State.AddLogMessage("🧹 Cleaning up temporary files...");
-
-            // Clean up VobSub temp directories
-            await CleanupVobSubTempDirectories();
-
-            // Clean up any other temp files if needed
-            if (State.SelectedTrack != null && !string.IsNullOrEmpty(State.MkvPath))
-            {
-                await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
-            }
-
-            State.UpdateProcessingMessage("Cleanup completed!");
-            State.AddLogMessage("✅ Temporary files cleaned up successfully");
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to clean up temporary files", ex);
-            State.AddLogMessage($"❌ Failed to clean up temporary files: {ex.Message}");
-        }
-        finally
-        {
-            State.IsBusy = false;
-        }
+        await _cleanupCoordinator.CleanupTempFilesAsync();
     }
 
     private async Task CorrectSrtAsync()
@@ -1124,166 +986,35 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="filePath">The file path to analyze</param>
     private void UpdateNetworkDetection(string filePath)
     {
-        try
-        {
-            if (string.IsNullOrEmpty(filePath))
-            {
-                State.UpdateNetworkDetection(false, 0, "", "");
-                return;
-            }
-
-            var isNetwork = _networkDetectionService.IsNetworkPath(filePath);
-            var estimatedMinutes = _networkDetectionService.GetEstimatedProcessingTime(filePath);
-            var formattedSize = _networkDetectionService.GetFormattedFileSize(filePath);
-            
-            // Get network drive info
-            var networkDriveInfo = "";
-            if (isNetwork)
-            {
-                var root = Path.GetPathRoot(filePath);
-                if (!string.IsNullOrEmpty(root))
-                {
-                    networkDriveInfo = root.TrimEnd('\\');
-                }
-            }
-
-            State.UpdateNetworkDetection(isNetwork, estimatedMinutes, formattedSize, networkDriveInfo);
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to update network detection", ex);
-        }
+        _fileCoordinator.UpdateNetworkDetection(filePath);
     }
 
-    /// <summary>
-    /// Clean up temporary files that might have been created during extraction.
-    /// This is called automatically after each extraction to ensure no temp files are left behind.
-    /// </summary>
-    private async Task CleanupTemporaryFiles(string mkvPath, SubtitleTrack? selectedTrack)
-    {
-        if (selectedTrack == null || string.IsNullOrEmpty(mkvPath))
-            return;
+    // ========================================================================================================
+    // COMMENTED OUT: Cleanup methods moved to CleanupCoordinator
+    // ========================================================================================================
+    // These methods are now handled by CleanupCoordinator.cs - DO NOT DELETE until refactoring is complete
+    // ========================================================================================================
 
-        try
-        {
-            var outputPath = State.GenerateOutputFilename(mkvPath, selectedTrack);
-            
-            // Check if this was a PGS extraction (which creates a .sup file)
-            if (selectedTrack.Codec.Contains("PGS") || selectedTrack.Codec.Contains("S_HDMV/PGS"))
-            {
-                var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
-                
-                if (File.Exists(tempSupPath))
-                {
-                    _loggingService.LogInfo($"Cleaning up temporary SUP file: {tempSupPath}");
-                    
-                    // Use exponential backoff with shorter total time to prevent UI blocking
-                    var retryDelays = new[] { 100, 200, 500, 1000, 1500 }; // Total: max 3.3 seconds
-                    for (int i = 0; i < retryDelays.Length; i++)
-                    {
-                        try
-                        {
-                            File.Delete(tempSupPath);
-                            _loggingService.LogInfo($"Successfully cleaned up temporary file: {Path.GetFileName(tempSupPath)}");
-                            break;
-                        }
-                        catch (IOException) when (i < retryDelays.Length - 1)
-                        {
-                            _loggingService.LogInfo($"File still in use, retrying in {retryDelays[i]}ms... (attempt {i + 1}/{retryDelays.Length})");
-                            await Task.Delay(retryDelays[i]);
-                        }
-                        catch (UnauthorizedAccessException) when (i < retryDelays.Length - 1)
-                        {
-                            _loggingService.LogInfo($"Access denied, retrying in {retryDelays[i]}ms... (attempt {i + 1}/{retryDelays.Length})");
-                            await Task.Delay(retryDelays[i]);
-                        }
-                        catch (Exception ex) when (i == retryDelays.Length - 1)
-                        {
-                            // Log final failure but don't throw - cleanup is best-effort
-                            _loggingService.LogWarning($"Failed to clean up temporary file after {retryDelays.Length} attempts: {ex.Message}");
-                        }
-                    }
-                }
-            }
-            // Check if this was a VobSub extraction (which creates temporary .idx/.sub files)
-            else if (selectedTrack.Codec.Contains("VobSub") || selectedTrack.Codec.Contains("S_VOBSUB"))
-            {
-                // Clean up VobSub temporary directories
-                await CleanupVobSubTempDirectories();
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to clean up temporary files", ex);
-            // Don't show this to the user as it's automatic cleanup - just log it
-        }
-    }
+    ///// <summary>
+    ///// Clean up temporary files that might have been created during extraction.
+    ///// This is called automatically after each extraction to ensure no temp files are left behind.
+    ///// </summary>
+    //private async Task CleanupTemporaryFiles(string mkvPath, SubtitleTrack? selectedTrack)
+    //{
+    //    // Method body removed - now handled by CleanupCoordinator
+    //}
 
-    /// <summary>
-    /// Cleans up VobSub temporary directories created during extraction.
-    /// </summary>
-    private async Task CleanupVobSubTempDirectories()
-    {
-        try
-        {
-            var srtExtractorTempDir = Path.Combine(Path.GetTempPath(), "SrtExtractor");
-            
-            if (!Directory.Exists(srtExtractorTempDir))
-            {
-                _loggingService.LogInfo("No SrtExtractor temp directory found to clean up");
-                return;
-            }
+    ///// <summary>
+    ///// Cleans up VobSub temporary directories created during extraction.
+    ///// </summary>
+    //private async Task CleanupVobSubTempDirectories()
+    //{
+    //    // Method body removed - now handled by CleanupCoordinator
+    //}
 
-            _loggingService.LogInfo($"Cleaning up VobSub temporary directories in: {srtExtractorTempDir}");
-
-            // Get all subdirectories (each extraction creates a GUID-named directory)
-            var tempDirectories = Directory.GetDirectories(srtExtractorTempDir);
-            var cleanedCount = 0;
-
-            foreach (var tempDir in tempDirectories)
-            {
-                try
-                {
-                    // Check if this directory contains VobSub files (.idx/.sub)
-                    var idxFiles = Directory.GetFiles(tempDir, "*.idx");
-                    var subFiles = Directory.GetFiles(tempDir, "*.sub");
-                    
-                    if (idxFiles.Length > 0 || subFiles.Length > 0)
-                    {
-                        _loggingService.LogInfo($"Cleaning up VobSub temp directory: {Path.GetFileName(tempDir)}");
-                        
-                        // Give processes time to release file handles
-                        await Task.Delay(1000);
-                        
-                        // Delete the entire directory
-                        Directory.Delete(tempDir, true);
-                        cleanedCount++;
-                    }
-                }
-                catch (IOException ex)
-                {
-                    _loggingService.LogWarning($"Could not clean up temp directory {Path.GetFileName(tempDir)}: {ex.Message}");
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    _loggingService.LogWarning($"Access denied cleaning up temp directory {Path.GetFileName(tempDir)}: {ex.Message}");
-                }
-            }
-
-            if (cleanedCount > 0)
-            {
-                _loggingService.LogInfo($"Successfully cleaned up {cleanedCount} VobSub temporary directories");
-            }
-            else
-            {
-                _loggingService.LogInfo("No VobSub temporary directories found to clean up");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to clean up VobSub temporary directories", ex);
-        }
-    }
+    // ========================================================================================================
+    // END COMMENTED OUT SECTION
+    // ========================================================================================================
 
 
     /// <summary>
@@ -1470,49 +1201,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void OpenRecentFile(string? filePath)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(filePath))
-                return;
-
-            _loggingService.LogInfo($"User selected recent file: {filePath}");
-            State.MkvPath = filePath;
-            State.ClearFileState();
-            
-            // Update network detection
-            UpdateNetworkDetection(filePath);
-            
-            State.AddLogMessage($"Opened recent file: {Path.GetFileName(filePath)}");
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError($"Error opening recent file: {filePath}", ex);
-            _notificationService.ShowError($"Failed to open recent file:\n{ex.Message}", "Error");
-        }
+        _fileCoordinator.OpenRecentFile(filePath);
     }
 
     private async Task LoadRecentFilesAsync()
     {
-        try
-        {
-            var recentFiles = await _recentFilesService.GetRecentFilesAsync().ConfigureAwait(false);
-            
-            // Update UI on UI thread (non-blocking)
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                State.RecentFiles.Clear();
-                foreach (var file in recentFiles)
-                {
-                    State.RecentFiles.Add(file);
-                }
-            });
-            
-            _loggingService.LogInfo($"Loaded {recentFiles.Count} recent files");
-        }
-        catch (Exception ex)
-        {
-            _loggingService.LogError("Failed to load recent files", ex);
-        }
+        await _fileCoordinator.LoadRecentFilesAsync();
     }
 
     /// <summary>
