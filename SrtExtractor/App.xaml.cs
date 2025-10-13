@@ -1,8 +1,10 @@
 ﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using ModernWpf;
+using SrtExtractor.Coordinators;
 using SrtExtractor.Services.Implementations;
 using SrtExtractor.Services.Interfaces;
+using SrtExtractor.State;
 using SrtExtractor.ViewModels;
 using SrtExtractor.Views;
 using ZentrixLabs.OcrCorrection.Core;
@@ -85,6 +87,7 @@ namespace SrtExtractor
             services.AddSingleton<IWindowStateService, WindowStateService>();
 
             // Register ViewModels
+            // Note: MainViewModel creates its own ExtractionCoordinator to ensure it shares the State instance
             services.AddTransient<MainViewModel>();
             services.AddTransient<BatchSrtCorrectionViewModel>();
             services.AddTransient<VobSubTrackAnalyzerViewModel>();

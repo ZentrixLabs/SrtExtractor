@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using SrtExtractor.Constants;
+using SrtExtractor.Coordinators;
 using SrtExtractor.Models;
 using SrtExtractor.Services.Interfaces;
 using SrtExtractor.State;
@@ -28,6 +29,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly INetworkDetectionService _networkDetectionService;
     private readonly IRecentFilesService _recentFilesService;
     private readonly IFileCacheService _fileCacheService;
+    private readonly ExtractionCoordinator _extractionCoordinator;
     private CancellationTokenSource? _extractionCancellationTokenSource;
     private Task? _initializationTask;
 
@@ -60,6 +62,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _networkDetectionService = networkDetectionService;
         _recentFilesService = recentFilesService;
         _fileCacheService = fileCacheService;
+        
+        // Create ExtractionCoordinator with our State instance to ensure they share state
+        _extractionCoordinator = new ExtractionCoordinator(
+            loggingService,
+            notificationService,
+            mkvToolService,
+            ffmpegService,
+            ocrService,
+            srtCorrectionService,
+            multiPassCorrectionService,
+            State);
 
         // Subscribe to preference changes
         State.PreferencesChanged += OnPreferencesChanged;
@@ -365,17 +378,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             var outputPath = State.GenerateOutputFilename(State.MkvPath, State.SelectedTrack);
 
-            // Use appropriate extraction strategy based on file type and codec
-            var fileExtension = Path.GetExtension(State.MkvPath).ToLowerInvariant();
-            if (fileExtension == ".mp4")
-            {
-                await ExtractFromMp4Async(outputPath, cancellationToken ?? CancellationToken.None);
-            }
-            else
-            {
-                // Use CodecType enum for type-safe dispatch (no more string Contains!)
-                await ExecuteExtractionByCodecType(outputPath, cancellationToken ?? CancellationToken.None);
-            }
+            // Delegate to ExtractionCoordinator
+            await _extractionCoordinator.ExtractSubtitlesAsync(State.MkvPath, State.SelectedTrack, outputPath, cancellationToken ?? CancellationToken.None);
 
             State.AddLogMessage("Subtitle extraction completed successfully!");
             
@@ -398,18 +402,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _loggingService.LogInfo("Subtitle extraction was cancelled by user");
             State.AddLogMessage("Extraction cancelled by user");
             
-            // Clean up any temporary files that might have been created
-            await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
-            
             // Don't show error message for user cancellation
         }
         catch (Exception ex)
         {
             _loggingService.LogError("Failed to extract subtitles", ex);
             State.AddLogMessage($"Error extracting subtitles: {ex.Message}");
-            
-            // Clean up any temporary files that might have been created
-            await CleanupTemporaryFiles(State.MkvPath, State.SelectedTrack);
             
             // Show error notification only for single file extraction (not batch)
             // For batch processing, let the exception propagate so batch can handle it
@@ -431,158 +429,168 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// Extract subtitles from MP4 files using FFmpeg.
-    /// </summary>
-    private async Task ExtractFromMp4Async(string outputPath, CancellationToken cancellationToken)
-    {
-        State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
-        await _ffmpegService.ExtractSubtitleAsync(State.MkvPath!, State.SelectedTrack!.Id, outputPath, cancellationToken);
-        State.UpdateProcessingMessage("MP4 extraction completed!");
-        State.AddLogMessage($"Subtitles extracted to: {outputPath}");
-        
-        // BUGFIX: Convert ASS to SRT if needed (some MP4s contain ASS subtitles that get extracted with .srt extension)
-        await _ocrService.ConvertAssToSrtIfNeededAsync(outputPath, cancellationToken);
+    // ========================================================================================================
+    // COMMENTED OUT: Extraction methods moved to ExtractionCoordinator
+    // ========================================================================================================
+    // These methods are now handled by ExtractionCoordinator.cs - DO NOT DELETE until refactoring is complete
+    // ========================================================================================================
 
-        // Apply multi-pass SRT corrections to MP4 subtitles
-        await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
-    }
+    ///// <summary>
+    ///// Extract subtitles from MP4 files using FFmpeg.
+    ///// </summary>
+    //private async Task ExtractFromMp4Async(string outputPath, CancellationToken cancellationToken)
+    //{
+    //    State.UpdateProcessingMessage("Extracting subtitles with FFmpeg...");
+    //    await _ffmpegService.ExtractSubtitleAsync(State.MkvPath!, State.SelectedTrack!.Id, outputPath, cancellationToken);
+    //    State.UpdateProcessingMessage("MP4 extraction completed!");
+    //    State.AddLogMessage($"Subtitles extracted to: {outputPath}");
+    //    
+    //    // BUGFIX: Convert ASS to SRT if needed (some MP4s contain ASS subtitles that get extracted with .srt extension)
+    //    await _ocrService.ConvertAssToSrtIfNeededAsync(outputPath, cancellationToken);
 
-    /// <summary>
-    /// Execute extraction strategy based on codec type (type-safe dispatch).
-    /// Uses the CodecType enum to avoid string Contains checks.
-    /// </summary>
-    private async Task ExecuteExtractionByCodecType(string outputPath, CancellationToken cancellationToken)
-    {
-        switch (State.SelectedTrack!.CodecType)
-        {
-            case SubtitleCodecType.TextBasedSrt:
-            case SubtitleCodecType.TextBasedAss:
-            case SubtitleCodecType.TextBasedWebVtt:
-            case SubtitleCodecType.TextBasedGeneric:
-                await ExtractTextSubtitlesAsync(outputPath, cancellationToken);
-                break;
+    //    // Apply multi-pass SRT corrections to MP4 subtitles
+    //    await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
+    //}
 
-            case SubtitleCodecType.ImageBasedPgs:
-                await ExtractPgsSubtitlesAsync(outputPath, cancellationToken);
-                break;
+    ///// <summary>
+    ///// Execute extraction strategy based on codec type (type-safe dispatch).
+    ///// Uses the CodecType enum to avoid string Contains checks.
+    ///// </summary>
+    //private async Task ExecuteExtractionByCodecType(string outputPath, CancellationToken cancellationToken)
+    //{
+    //    switch (State.SelectedTrack!.CodecType)
+    //    {
+    //        case SubtitleCodecType.TextBasedSrt:
+    //        case SubtitleCodecType.TextBasedAss:
+    //        case SubtitleCodecType.TextBasedWebVtt:
+    //        case SubtitleCodecType.TextBasedGeneric:
+    //            await ExtractTextSubtitlesAsync(outputPath, cancellationToken);
+    //            break;
 
-            case SubtitleCodecType.ImageBasedVobSub:
-                ShowVobSubGuidance();
-                throw new InvalidOperationException("VobSub subtitles require Subtitle Edit for OCR processing. See the VobSub Track Analyzer tool for help.");
+    //        case SubtitleCodecType.ImageBasedPgs:
+    //            await ExtractPgsSubtitlesAsync(outputPath, cancellationToken);
+    //            break;
 
-            case SubtitleCodecType.ImageBasedDvb:
-                throw new NotSupportedException("DVB subtitles are not currently supported");
+    //        case SubtitleCodecType.ImageBasedVobSub:
+    //            ShowVobSubGuidance();
+    //            throw new InvalidOperationException("VobSub subtitles require Subtitle Edit for OCR processing. See the VobSub Track Analyzer tool for help.");
 
-            default:
-                throw new NotSupportedException($"Unsupported subtitle codec: {State.SelectedTrack.Codec}");
-        }
-    }
+    //        case SubtitleCodecType.ImageBasedDvb:
+    //            throw new NotSupportedException("DVB subtitles are not currently supported");
 
-    /// <summary>
-    /// Extract text-based subtitles (SRT, ASS, WebVTT).
-    /// </summary>
-    private async Task ExtractTextSubtitlesAsync(string outputPath, CancellationToken cancellationToken)
-    {
-        State.UpdateProcessingMessage("Extracting text subtitles...");
-        
-        // Simulate progress for text extraction (this is typically very fast)
-        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionStart), "Extracting text subtitles");
-        await _mkvToolService.ExtractTextAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, outputPath, cancellationToken);
-        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionComplete), "Text extraction completed");
-        
-        State.UpdateProcessingMessage("Text extraction completed!");
-        State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
-        
-        // BUGFIX: Convert ASS to SRT if needed (some MKVs contain ASS subtitles that get extracted with .srt extension)
-        await _ocrService.ConvertAssToSrtIfNeededAsync(outputPath, cancellationToken);
+    //        default:
+    //            throw new NotSupportedException($"Unsupported subtitle codec: {State.SelectedTrack.Codec}");
+    //    }
+    //}
 
-        // Apply multi-pass SRT corrections to text subtitles
-        await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
-    }
+    ///// <summary>
+    ///// Extract text-based subtitles (SRT, ASS, WebVTT).
+    ///// </summary>
+    //private async Task ExtractTextSubtitlesAsync(string outputPath, CancellationToken cancellationToken)
+    //{
+    //    State.UpdateProcessingMessage("Extracting text subtitles...");
+    //    
+    //    // Simulate progress for text extraction (this is typically very fast)
+    //    State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionStart), "Extracting text subtitles");
+    //    await _mkvToolService.ExtractTextAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, outputPath, cancellationToken);
+    //    State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.TextExtractionComplete), "Text extraction completed");
+    //    
+    //    State.UpdateProcessingMessage("Text extraction completed!");
+    //    State.AddLogMessage($"Text subtitles extracted to: {outputPath}");
+    //    
+    //    // BUGFIX: Convert ASS to SRT if needed (some MKVs contain ASS subtitles that get extracted with .srt extension)
+    //    await _ocrService.ConvertAssToSrtIfNeededAsync(outputPath, cancellationToken);
 
-    /// <summary>
-    /// Extract PGS (image-based) subtitles and convert to SRT using OCR.
-    /// </summary>
-    private async Task ExtractPgsSubtitlesAsync(string outputPath, CancellationToken cancellationToken)
-    {
-        var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
-        
-        // Extract PGS to SUP file
-        State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
-        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.PgsExtractionStart), "Extracting PGS subtitles");
-        await _mkvToolService.ExtractPgsAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, tempSupPath, cancellationToken);
-        State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
+    //    // Apply multi-pass SRT corrections to text subtitles
+    //    await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
+    //}
 
-        // Convert SUP to SRT using OCR
-        State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
-        State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
-        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrStart), "Starting OCR conversion");
-        await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, true, true, cancellationToken);
-        State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrComplete), "OCR conversion completed");
-        State.UpdateProcessingMessage("OCR conversion completed!");
-        State.AddLogMessage($"OCR conversion completed: {outputPath}");
+    ///// <summary>
+    ///// Extract PGS (image-based) subtitles and convert to SRT using OCR.
+    ///// </summary>
+    //private async Task ExtractPgsSubtitlesAsync(string outputPath, CancellationToken cancellationToken)
+    //{
+    //    var tempSupPath = Path.ChangeExtension(outputPath, ".sup");
+    //    
+    //    // Extract PGS to SUP file
+    //    State.UpdateProcessingMessage("Extracting PGS subtitles... (this can take a while, please be patient)");
+    //    State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.PgsExtractionStart), "Extracting PGS subtitles");
+    //    await _mkvToolService.ExtractPgsAsync(State.MkvPath!, State.SelectedTrack!.ExtractionId, tempSupPath, cancellationToken);
+    //    State.AddLogMessage($"PGS subtitles extracted to: {tempSupPath}");
 
-        // Apply multi-pass OCR corrections
-        await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
+    //    // Convert SUP to SRT using OCR
+    //    State.UpdateProcessingMessage("Starting OCR conversion... (this is the slowest step, please be patient)");
+    //    State.AddLogMessage($"Starting OCR conversion to: {outputPath}");
+    //    State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrStart), "Starting OCR conversion");
+    //    await _ocrService.OcrSupToSrtAsync(tempSupPath, outputPath, State.OcrLanguage, true, true, cancellationToken);
+    //    State.UpdateProgress(ProgressMilestones.CalculateBytes(State.TotalBytes, ProgressMilestones.OcrComplete), "OCR conversion completed");
+    //    State.UpdateProcessingMessage("OCR conversion completed!");
+    //    State.AddLogMessage($"OCR conversion completed: {outputPath}");
 
-        // Clean up temporary SUP file (unless user wants to preserve it for debugging)
-        if (State.PreserveSupFiles)
-        {
-            _loggingService.LogInfo($"Preserving SUP file for debugging: {tempSupPath}");
-            State.AddLogMessage($"SUP file preserved: {Path.GetFileName(tempSupPath)}");
-            
-            // Show guidance notification to help users know what to do next
-            _notificationService.ShowInfo(
-                "SUP file preserved for debugging!\n\n" +
-                "💡 Next steps:\n" +
-                "• Use Tools → Load SUP File... to re-process with different settings\n" +
-                "• Try different OCR languages or correction levels\n" +
-                "• Perfect for testing OCR quality improvements",
-                "SUP File Preserved");
-        }
-        else
-        {
-            State.UpdateProcessingMessage("Cleaning up temporary files...");
-            try
-            {
-                File.Delete(tempSupPath);
-                _loggingService.LogInfo("Temporary SUP file deleted");
-            }
-            catch (Exception ex)
-            {
-                _loggingService.LogWarning($"Failed to delete temporary SUP file: {ex.Message}");
-                // Ignore cleanup errors
-            }
-        }
-        State.UpdateProcessingMessage("PGS extraction completed!");
-    }
+    //    // Apply multi-pass OCR corrections
+    //    await ApplyMultiPassCorrectionAsync(outputPath, cancellationToken).ConfigureAwait(false);
 
-    /// <summary>
-    /// Show guidance message for VobSub subtitles which require Subtitle Edit.
-    /// </summary>
-    private void ShowVobSubGuidance()
-    {
-        _loggingService.LogInfo("VobSub track detected - directing user to Subtitle Edit for OCR processing");
-        
-        var message = "VobSub Image-Based Subtitles Detected\n\n" +
-                     "This subtitle track is VobSub (image-based) which requires OCR processing.\n\n" +
-                     "We recommend using Subtitle Edit for VobSub extraction:\n\n" +
-                     "1. Open Subtitle Edit\n" +
-                     "2. Go to: Tools → Batch Convert\n" +
-                     "3. Add your MKV file(s)\n" +
-                     "4. Set format: SubRip (.srt)\n" +
-                     "5. Configure OCR settings\n" +
-                     "6. Click Convert\n\n" +
-                     "Tip: Use Tools → VobSub Track Analyzer in SrtExtractor to identify track numbers across multiple files!";
-        
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            _notificationService.ShowInfo(message, "VobSub Subtitles - Use Subtitle Edit", 8000);
-            State.UpdateProcessingMessage("VobSub extraction cancelled - please use Subtitle Edit");
-            State.AddLogMessage("VobSub track detected. Please use Subtitle Edit's batch convert feature for OCR.");
-        });
-    }
+    //    // Clean up temporary SUP file (unless user wants to preserve it for debugging)
+    //    if (State.PreserveSupFiles)
+    //    {
+    //        _loggingService.LogInfo($"Preserving SUP file for debugging: {tempSupPath}");
+    //        State.AddLogMessage($"SUP file preserved: {Path.GetFileName(tempSupPath)}");
+    //        
+    //        // Show guidance notification to help users know what to do next
+    //        _notificationService.ShowInfo(
+    //            "SUP file preserved for debugging!\n\n" +
+    //            "💡 Next steps:\n" +
+    //            "• Use Tools → Load SUP File... to re-process with different settings\n" +
+    //            "• Try different OCR languages or correction levels\n" +
+    //            "• Perfect for testing OCR quality improvements",
+    //            "SUP File Preserved");
+    //    }
+    //    else
+    //    {
+    //        State.UpdateProcessingMessage("Cleaning up temporary files...");
+    //        try
+    //        {
+    //            File.Delete(tempSupPath);
+    //            _loggingService.LogInfo("Temporary SUP file deleted");
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            _loggingService.LogWarning($"Failed to delete temporary SUP file: {ex.Message}");
+    //            // Ignore cleanup errors
+    //        }
+    //    }
+    //    State.UpdateProcessingMessage("PGS extraction completed!");
+    //}
+
+    ///// <summary>
+    ///// Show guidance message for VobSub subtitles which require Subtitle Edit.
+    ///// </summary>
+    //private void ShowVobSubGuidance()
+    //{
+    //    _loggingService.LogInfo("VobSub track detected - directing user to Subtitle Edit for OCR processing");
+    //    
+    //    var message = "VobSub Image-Based Subtitles Detected\n\n" +
+    //                 "This subtitle track is VobSub (image-based) which requires OCR processing.\n\n" +
+    //                 "We recommend using Subtitle Edit for VobSub extraction:\n\n" +
+    //                 "1. Open Subtitle Edit\n" +
+    //                 "2. Go to: Tools → Batch Convert\n" +
+    //                 "3. Add your MKV file(s)\n" +
+    //                 "4. Set format: SubRip (.srt)\n" +
+    //                 "5. Configure OCR settings\n" +
+    //                 "6. Click Convert\n\n" +
+    //                 "Tip: Use Tools → VobSub Track Analyzer in SrtExtractor to identify track numbers across multiple files!";
+    //    
+    //    Application.Current.Dispatcher.Invoke(() =>
+    //    {
+    //        _notificationService.ShowInfo(message, "VobSub Subtitles - Use Subtitle Edit", 8000);
+    //        State.UpdateProcessingMessage("VobSub extraction cancelled - please use Subtitle Edit");
+    //        State.AddLogMessage("VobSub track detected. Please use Subtitle Edit's batch convert feature for OCR.");
+    //    });
+    //}
+
+    // ========================================================================================================
+    // END COMMENTED OUT SECTION
+    // ========================================================================================================
 
     private Task InstallMkvToolNixAsync()
     {
