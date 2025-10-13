@@ -91,24 +91,52 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <!-- SRT Correction -->
+                        <!-- SRT Correction - Simplified -->
                         <GroupBox Header="SRT Correction" Margin="0,0,0,15">
                             <StackPanel>
-                                <CheckBox Content="Enable SRT correction (recommended)" 
-                                          IsChecked="{Binding State.EnableSrtCorrection}"
-                                          FontWeight="Bold"
-                                          Margin="0,5"/>
-                                <TextBlock Text="Automatically corrects common OCR errors in extracted subtitles. Disable to get raw OCR output without any corrections." 
+                                <TextBlock Text="Choose your correction level:" 
+                                           FontWeight="Bold"
+                                           Margin="0,0,0,10"/>
+                                
+                                <!-- Radio Button Options -->
+                                <RadioButton Content="Off (Raw OCR)" 
+                                             IsChecked="{Binding State.CorrectionLevel, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Off}"
+                                             GroupName="CorrectionLevel"
+                                             Margin="0,5"/>
+                                <TextBlock Text="No correction applied. You'll get raw OCR output with potential errors." 
                                            FontStyle="Italic" 
                                            Foreground="{StaticResource TextSecondaryBrush}" 
-                                           Margin="0,5,0,5"/>
+                                           Margin="20,0,0,10"
+                                           TextWrapping="Wrap"/>
+                                
+                                <RadioButton Content="Standard (Recommended)" 
+                                             IsChecked="{Binding State.CorrectionLevel, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Standard}"
+                                             GroupName="CorrectionLevel"
+                                             Margin="0,5"/>
+                                <TextBlock Text="Single pass correction with ~841 common OCR error patterns. Fast and effective." 
+                                           FontStyle="Italic" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
+                                           Margin="20,0,0,10"
+                                           TextWrapping="Wrap"/>
+                                
+                                <RadioButton Content="Thorough (Best Quality)" 
+                                             IsChecked="{Binding State.CorrectionLevel, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Thorough}"
+                                             GroupName="CorrectionLevel"
+                                             Margin="0,5"/>
+                                <TextBlock Text="Multiple correction passes with smart convergence. Best quality but slower." 
+                                           FontStyle="Italic" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
+                                           Margin="20,0,0,10"
+                                           TextWrapping="Wrap"/>
+                                
+                                <!-- Warning for Off mode -->
                                 <Border Background="{StaticResource BackgroundAltBrush}" 
                                         BorderBrush="{StaticResource WarningBrush}" 
                                         BorderThickness="1" 
                                         CornerRadius="{StaticResource RadiusS}" 
                                         Padding="{StaticResource ThicknessS}" 
-                                        Margin="0,5,0,0"
-                                        Visibility="{Binding State.EnableSrtCorrection, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                        Margin="0,10,0,0"
+                                        Visibility="{Binding State.CorrectionLevel, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Off}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock FontFamily="{StaticResource IconFontFamily}" 
                                                    Text="{StaticResource IconWarning}" 
@@ -122,71 +150,26 @@
                                                    TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <!-- Multi-Pass Correction -->
-                        <GroupBox Header="Multi-Pass Correction" Margin="0,0,0,15"
-                                  IsEnabled="{Binding State.EnableSrtCorrection}">
-                            <StackPanel>
-                                <CheckBox Content="Enable multi-pass correction (recommended)" 
-                                          IsChecked="{Binding State.EnableMultiPassCorrection}"
-                                          FontWeight="Bold"
-                                          Margin="0,5"/>
-                                <TextBlock Text="Performs multiple correction passes to catch different OCR errors that may be missed in a single pass." 
-                                           FontStyle="Italic" 
-                                           Foreground="{StaticResource TextSecondaryBrush}" 
-                                           Margin="0,5,0,10"/>
                                 
-                                <StackPanel Orientation="Horizontal" Margin="0,5">
-                                    <TextBlock Text="Mode:" FontWeight="Bold" Width="80"/>
-                                    <ComboBox SelectedItem="{Binding State.CorrectionMode}" 
-                                              ItemsSource="{Binding State.AvailableCorrectionModes}"
-                                              Width="120" 
-                                              Margin="4,0"/>
-                                </StackPanel>
-                                
-                                <StackPanel Orientation="Horizontal" Margin="0,5">
-                                    <TextBlock Text="Max Passes:" FontWeight="Bold" Width="80"/>
-                                    <TextBox Text="{Binding State.MaxCorrectionPasses}" 
-                                             Width="60" 
-                                             Margin="4,0"/>
-                                </StackPanel>
-                                
-                                <CheckBox Content="Use smart convergence (stop when no more changes detected)" 
-                                          IsChecked="{Binding State.UseSmartConvergence}"
-                                          Margin="0,5"/>
-                                
+                                <!-- Info for Thorough mode -->
                                 <Border Background="{StaticResource BackgroundAltBrush}" 
                                         BorderBrush="{StaticResource PrimaryBrush}" 
                                         BorderThickness="1" 
                                         CornerRadius="{StaticResource RadiusS}" 
                                         Padding="{StaticResource ThicknessS}" 
-                                        Margin="0,10,0,0">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" 
-                                                       Text="{StaticResource IconInfo}" 
-                                                       FontSize="14" 
-                                                       Foreground="{StaticResource PrimaryBrush}"
-                                                       Margin="0,0,8,0"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBlock Text="Correction Modes:" 
-                                                       FontWeight="{StaticResource FontWeightSemiBold}" 
-                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        </StackPanel>
-                                        <TextBlock Text="• Quick: 1 pass (fastest)" 
+                                        Margin="0,10,0,0"
+                                        Visibility="{Binding State.CorrectionLevel, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Thorough}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="{StaticResource IconFontFamily}" 
+                                                   Text="{StaticResource IconInfo}" 
+                                                   FontSize="14" 
+                                                   Foreground="{StaticResource PrimaryBrush}"
+                                                   Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="Thorough mode uses 3 correction passes with smart convergence for maximum quality." 
                                                    FontSize="{StaticResource FontSizeCaption}" 
                                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,2,0,0"/>
-                                        <TextBlock Text="• Standard: 3 passes with smart convergence (recommended)" 
-                                                   FontSize="{StaticResource FontSizeCaption}" 
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,2,0,0"/>
-                                        <TextBlock Text="• Thorough: 5 passes without convergence (best quality)" 
-                                                   FontSize="{StaticResource FontSizeCaption}" 
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,2,0,0"/>
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

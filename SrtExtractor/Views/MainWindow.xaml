@@ -1443,7 +1443,6 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <!-- Extraction Settings -->
@@ -1607,75 +1606,6 @@
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Tool Status -->
-                <GroupBox Header="Tool Status" Grid.Row="2">
-                    <StackPanel>
-                        <!-- MKVToolNix Status -->
-                        <Border BorderBrush="{StaticResource BorderBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="{StaticResource RadiusS}" 
-                                Padding="{StaticResource ThicknessS}" 
-                                Margin="0,0,0,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBlock Grid.Column="0"
-                                           FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToStatusIconConverter}}" 
-                                           FontSize="20" 
-                                           Margin="0,0,12,0"
-                                           VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="MKVToolNix" 
-                                               FontWeight="{StaticResource FontWeightSemiBold}"/>
-                                    <TextBlock Text="{Binding State.MkvToolNixStatus.Version, StringFormat='Version: {0}'}" 
-                                               FontSize="{StaticResource FontSizeSmall}" 
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    <TextBlock Text="Not installed" 
-                                               FontSize="{StaticResource FontSizeSmall}" 
-                                               Foreground="{StaticResource ErrorBrush}"
-                                               Visibility="{Binding State.MkvToolNixStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        
-                        <!-- FFmpeg Status -->
-                        <Border BorderBrush="{StaticResource BorderBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="{StaticResource RadiusS}" 
-                                Padding="{StaticResource ThicknessS}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBlock Grid.Column="0"
-                                           FontFamily="{StaticResource IconFontFamily}" 
-                                           Text="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToStatusIconConverter}}" 
-                                           FontSize="20" 
-                                           Margin="0,0,12,0"
-                                           VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="FFmpeg" 
-                                               FontWeight="{StaticResource FontWeightSemiBold}"/>
-                                    <TextBlock Text="{Binding State.FfmpegStatus.Version, StringFormat='Version: {0}'}" 
-                                               FontSize="{StaticResource FontSizeSmall}" 
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               Visibility="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    <TextBlock Text="Not installed" 
-                                               FontSize="{StaticResource FontSizeSmall}" 
-                                               Foreground="{StaticResource ErrorBrush}"
-                                               Visibility="{Binding State.FfmpegStatus.IsInstalled, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                </GroupBox>
             </Grid>
         </TabItem>
         

@@ -64,29 +64,42 @@ public partial class ExtractionState : ObservableObject
     [ObservableProperty]
     private string _fileNamePattern = "{basename}.{lang}{forced}.srt";
 
-    // SRT Correction Settings
+    // SRT Correction Settings - New Simplified Approach
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SettingsSummary))]
-    private bool _enableSrtCorrection = true;
+    [NotifyPropertyChangedFor(nameof(EnableSrtCorrection))]
+    [NotifyPropertyChangedFor(nameof(EnableMultiPassCorrection))]
+    [NotifyPropertyChangedFor(nameof(MaxCorrectionPasses))]
+    [NotifyPropertyChangedFor(nameof(UseSmartConvergence))]
+    [NotifyPropertyChangedFor(nameof(CorrectionMode))]
+    private CorrectionLevel _correctionLevel = CorrectionLevel.Standard;
 
     // Debugging Settings
     [ObservableProperty]
     private bool _preserveSupFiles = false;
 
-    // Multi-Pass Correction Settings
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
-    private bool _enableMultiPassCorrection = true;
-
-    [ObservableProperty]
-    private int _maxCorrectionPasses = 3;
-
-    [ObservableProperty]
-    private bool _useSmartConvergence = true;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SettingsSummary))]
-    private string _correctionMode = "Standard"; // Quick, Standard, Thorough
+    // Legacy correction settings - computed from CorrectionLevel for backward compatibility
+    public bool EnableSrtCorrection => CorrectionLevel != CorrectionLevel.Off;
+    
+    public bool EnableMultiPassCorrection => CorrectionLevel == CorrectionLevel.Thorough;
+    
+    public int MaxCorrectionPasses => CorrectionLevel switch
+    {
+        CorrectionLevel.Off => 0,
+        CorrectionLevel.Standard => 1,
+        CorrectionLevel.Thorough => 3,
+        _ => 1
+    };
+    
+    public bool UseSmartConvergence => CorrectionLevel != CorrectionLevel.Thorough;
+    
+    public string CorrectionMode => CorrectionLevel switch
+    {
+        CorrectionLevel.Off => "Off",
+        CorrectionLevel.Standard => "Standard",
+        CorrectionLevel.Thorough => "Thorough",
+        _ => "Standard"
+    };
 
     // Network Detection
     [ObservableProperty]
@@ -184,20 +197,8 @@ public partial class ExtractionState : ObservableObject
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnCorrectionModeChanged(string value)
+    partial void OnCorrectionLevelChanged(CorrectionLevel value)
     {
-        // Update max passes based on correction mode
-        MaxCorrectionPasses = value switch
-        {
-            "Quick" => 1,
-            "Standard" => 3,
-            "Thorough" => 5,
-            _ => 3
-        };
-        
-        // Update convergence setting
-        UseSmartConvergence = value != "Thorough";
-        
         // SettingsSummary notification handled by [NotifyPropertyChangedFor] attribute
         PreferencesChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -311,8 +312,13 @@ public partial class ExtractionState : ObservableObject
         get
         {
             var preference = PreferForced ? "Forced" : "CC";
-            var correction = !EnableSrtCorrection ? "NoCorrection" : 
-                            EnableMultiPassCorrection ? $"MultiPass({CorrectionMode})" : "SinglePass";
+            var correction = CorrectionLevel switch
+            {
+                CorrectionLevel.Off => "NoCorrection",
+                CorrectionLevel.Standard => "Standard",
+                CorrectionLevel.Thorough => "Thorough",
+                _ => "Unknown"
+            };
             return $"⚙️ {OcrLanguage.ToUpper()} • {preference} • {correction}";
         }
     }

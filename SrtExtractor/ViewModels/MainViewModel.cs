@@ -67,6 +67,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Ensure clean state on startup
         State.ClearFileState();
         
+        // Load settings asynchronously
+        _initializationTask = LoadSettingsAsync();
+        
 
         // Initialize commands
         PickMkvCommand = new AsyncRelayCommand(PickMkvAsync);
@@ -612,7 +615,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 State.PreferClosedCaptions = settings.PreferClosedCaptions;
                 State.OcrLanguage = settings.DefaultOcrLanguage;
                 State.FileNamePattern = settings.FileNamePattern;
-                State.EnableSrtCorrection = settings.EnableSrtCorrection;
+                
+                // Handle new CorrectionLevel with backward compatibility
+                if (settings.CorrectionLevel != default)
+                {
+                    // New settings format - use CorrectionLevel directly
+                    State.CorrectionLevel = settings.CorrectionLevel;
+                }
+                else
+                {
+                    // Legacy settings format - convert from boolean flags
+                    State.CorrectionLevel = CorrectionLevelExtensions.FromLegacySettings(
+                        settings.EnableSrtCorrection, 
+                        settings.EnableMultiPassCorrection);
+                }
+                
                 State.PreserveSupFiles = settings.PreserveSupFiles;
 
             // Load recent files
@@ -1058,7 +1075,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     DefaultOcrLanguage: State.OcrLanguage,
                     FileNamePattern: State.FileNamePattern,
                     ShowWelcomeScreen: existingSettings.ShowWelcomeScreen,
-                    EnableSrtCorrection: State.EnableSrtCorrection,
+                    CorrectionLevel: State.CorrectionLevel,
                     PreserveSupFiles: State.PreserveSupFiles
             );
 
@@ -1973,6 +1990,90 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
         }
     }
+
+    #endregion
+
+    #region Settings Management
+
+    /// <summary>
+    /// Load application settings from persistent storage.
+    /// </summary>
+    private async Task LoadSettingsAsync()
+    {
+        try
+        {
+            _loggingService.LogInfo("Loading application settings...");
+            
+            var settings = await _settingsService.LoadSettingsAsync().ConfigureAwait(false);
+            
+            // Update UI on UI thread
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Load settings into state
+                State.PreferForced = settings.PreferForced;
+                State.PreferClosedCaptions = settings.PreferClosedCaptions;
+                State.OcrLanguage = settings.DefaultOcrLanguage;
+                State.FileNamePattern = settings.FileNamePattern;
+                State.PreserveSupFiles = settings.PreserveSupFiles;
+                
+                // Handle new CorrectionLevel with backward compatibility
+                if (settings.CorrectionLevel != default)
+                {
+                    // New settings format - use CorrectionLevel directly
+                    State.CorrectionLevel = settings.CorrectionLevel;
+                }
+                else
+                {
+                    // Legacy settings format - convert from boolean flags
+                    State.CorrectionLevel = CorrectionLevelExtensions.FromLegacySettings(
+                        settings.EnableSrtCorrection, 
+                        settings.EnableMultiPassCorrection);
+                }
+                
+                _loggingService.LogInfo($"Settings loaded - Correction Level: {State.CorrectionLevel}");
+            });
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to load settings", ex);
+            // Continue with default settings
+        }
+    }
+
+    /// <summary>
+    /// Save current settings to persistent storage.
+    /// </summary>
+    public async Task SaveSettingsAsync()
+    {
+        try
+        {
+            _loggingService.LogInfo("Saving application settings...");
+            
+            var settings = new AppSettings(
+                MkvMergePath: null, // Tool paths are managed separately
+                MkvExtractPath: null,
+                TesseractDataPath: null,
+                AutoDetectTools: true,
+                LastToolCheck: DateTime.Now,
+                PreferForced: State.PreferForced,
+                PreferClosedCaptions: State.PreferClosedCaptions,
+                DefaultOcrLanguage: State.OcrLanguage,
+                FileNamePattern: State.FileNamePattern,
+                ShowWelcomeScreen: true,
+                CorrectionLevel: State.CorrectionLevel,
+                PreserveSupFiles: State.PreserveSupFiles
+            );
+            
+            await _settingsService.SaveSettingsAsync(settings).ConfigureAwait(false);
+            _loggingService.LogInfo("Settings saved successfully");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to save settings", ex);
+            throw;
+        }
+    }
+
 
     #endregion
 

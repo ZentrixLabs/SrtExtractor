@@ -13,8 +13,13 @@ namespace SrtExtractor.Models;
 /// <param name="DefaultOcrLanguage">Default language for OCR processing</param>
 /// <param name="FileNamePattern">Pattern for output file naming</param>
 /// <param name="ShowWelcomeScreen">Whether to show the welcome screen on startup</param>
-/// <param name="EnableSrtCorrection">Whether to enable SRT correction (true for corrections, false for raw OCR)</param>
+/// <param name="CorrectionLevel">Level of SRT correction to apply (Off, Standard, Thorough)</param>
 /// <param name="PreserveSupFiles">Whether to keep extracted SUP files for debugging OCR issues</param>
+/// <param name="EnableSrtCorrection">Legacy: Whether to enable SRT correction (deprecated, use CorrectionLevel instead)</param>
+/// <param name="EnableMultiPassCorrection">Legacy: Whether to enable multi-pass correction (deprecated, use CorrectionLevel instead)</param>
+/// <param name="MaxCorrectionPasses">Legacy: Maximum correction passes (deprecated, use CorrectionLevel instead)</param>
+/// <param name="UseSmartConvergence">Legacy: Whether to use smart convergence (deprecated, use CorrectionLevel instead)</param>
+/// <param name="CorrectionMode">Legacy: Correction mode string (deprecated, use CorrectionLevel instead)</param>
     public record AppSettings(
         string? MkvMergePath,
         string? MkvExtractPath,
@@ -26,8 +31,13 @@ namespace SrtExtractor.Models;
         string DefaultOcrLanguage,
         string FileNamePattern,
         bool ShowWelcomeScreen,
-        bool EnableSrtCorrection,
-        bool PreserveSupFiles
+        CorrectionLevel CorrectionLevel,
+        bool PreserveSupFiles,
+        bool EnableSrtCorrection = true,
+        bool EnableMultiPassCorrection = true,
+        int MaxCorrectionPasses = 3,
+        bool UseSmartConvergence = true,
+        string CorrectionMode = "Standard"
     )
 {
     /// <summary>
@@ -39,12 +49,12 @@ namespace SrtExtractor.Models;
         TesseractDataPath: null,
         AutoDetectTools: true,
         LastToolCheck: null,
-            PreferForced: true,
-            PreferClosedCaptions: false,
-            DefaultOcrLanguage: "eng",
-            FileNamePattern: "{basename}.{lang}{forced}.srt",
-            ShowWelcomeScreen: true,
-            EnableSrtCorrection: true,
-            PreserveSupFiles: false
+        PreferForced: true,
+        PreferClosedCaptions: false,
+        DefaultOcrLanguage: "eng",
+        FileNamePattern: "{basename}.{lang}{forced}.srt",
+        ShowWelcomeScreen: true,
+        CorrectionLevel: CorrectionLevel.Standard,
+        PreserveSupFiles: false
     );
 }

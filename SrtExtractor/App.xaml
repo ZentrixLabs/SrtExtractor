@@ -45,6 +45,8 @@
             <converters:StatusToIconConverter x:Key="StatusToIconConverter"/>
             <converters:StatusToBackgroundConverter x:Key="StatusToBackgroundConverter"/>
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
+            <converters:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter"/>
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             
             <!-- Default Control Styles -->
