@@ -96,6 +96,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ShowHelpCommand = new RelayCommand(ShowHelp);
         OpenRecentFileCommand = new RelayCommand<string>(OpenRecentFile);
         OpenBatchSrtCorrectionCommand = new RelayCommand(OpenBatchSrtCorrection);
+        OpenSupOcrCommand = new RelayCommand(OpenSupOcr);
 
         // Subscribe to state changes to update command states
         State.PropertyChanged += (_, e) =>
@@ -153,6 +154,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IRelayCommand ShowHelpCommand { get; }
     public IRelayCommand<string> OpenRecentFileCommand { get; }
     public IRelayCommand OpenBatchSrtCorrectionCommand { get; }
+    public IRelayCommand OpenSupOcrCommand { get; }
 
     #endregion
 
@@ -529,6 +531,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _loggingService.LogInfo($"Preserving SUP file for debugging: {tempSupPath}");
             State.AddLogMessage($"SUP file preserved: {Path.GetFileName(tempSupPath)}");
+            
+            // Show guidance notification to help users know what to do next
+            _notificationService.ShowInfo(
+                "SUP file preserved for debugging!\n\n" +
+                "💡 Next steps:\n" +
+                "• Use Tools → Load SUP File... to re-process with different settings\n" +
+                "• Try different OCR languages or correction levels\n" +
+                "• Perfect for testing OCR quality improvements",
+                "SUP File Preserved");
         }
         else
         {
@@ -1818,6 +1829,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _loggingService.LogError("Error opening Batch SRT Correction", ex);
+        }
+    }
+
+    private void OpenSupOcr()
+    {
+        try
+        {
+            _loggingService.LogInfo("User opened SUP OCR Tool via keyboard shortcut");
+            
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Find the MainWindow and call the click handler
+                if (Application.Current.MainWindow is Views.MainWindow mainWindow)
+                {
+                    mainWindow.LoadSupFile_Click(this, new RoutedEventArgs());
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Error opening SUP OCR Tool", ex);
         }
     }
 

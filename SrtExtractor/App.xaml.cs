@@ -88,6 +88,7 @@ namespace SrtExtractor
             services.AddTransient<MainViewModel>();
             services.AddTransient<BatchSrtCorrectionViewModel>();
             services.AddTransient<VobSubTrackAnalyzerViewModel>();
+            services.AddTransient<SupOcrViewModel>();
             services.AddTransient<WelcomeViewModel>();
 
             // Register Views
@@ -96,6 +97,7 @@ namespace SrtExtractor
             services.AddTransient<VobSubTrackAnalyzerWindow>();
             services.AddTransient<SettingsWindow>();
             services.AddTransient<SrtCorrectionWindow>();
+            services.AddTransient<SupOcrWindow>();
             services.AddTransient<WelcomeWindow>();
         }
 

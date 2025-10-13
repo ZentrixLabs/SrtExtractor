@@ -25,6 +25,7 @@
         <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding ExtractCommand}"/>
         <KeyBinding Key="B" Modifiers="Ctrl" Command="{Binding ToggleBatchModeCommand}"/>
         <KeyBinding Key="C" Modifiers="Ctrl" Command="{Binding CancelCommand}"/>
+        <KeyBinding Key="L" Modifiers="Ctrl+Shift" Command="{Binding OpenSupOcrCommand}"/>
         <KeyBinding Key="R" Modifiers="Ctrl+Shift" Command="{Binding OpenBatchSrtCorrectionCommand}"/>
         <KeyBinding Key="F5" Command="{Binding ReDetectToolsCommand}"/>
         <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
@@ -156,6 +157,7 @@
         <MenuItem Header="_Tools">
             <MenuItem Header="Load _SUP File..." 
                       Click="LoadSupFile_Click"
+                      InputGestureText="Ctrl+Shift+L"
                       ToolTip="Load a SUP file directly for OCR processing (bypasses MKV extraction)"/>
             <Separator/>
             <MenuItem Header="_Correct SRT File..." 

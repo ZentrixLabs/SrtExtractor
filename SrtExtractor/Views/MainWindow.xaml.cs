@@ -1055,7 +1055,7 @@ namespace SrtExtractor.Views
 
         #region Menu Click Handlers
 
-        private void LoadSupFile_Click(object sender, RoutedEventArgs e)
+        public void LoadSupFile_Click(object sender, RoutedEventArgs e)
         {
             try
             {
