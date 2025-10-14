@@ -117,8 +117,8 @@ public class BatchCoordinator
                         throw new InvalidOperationException("No suitable track found for extraction");
                     }
 
-                    // Extract subtitles with cancellation token
-                    await _extractSubtitlesAsync(cancellationTokenSource?.Token);
+                    // Extract subtitles with cancellation token (use CancellationToken.None if no token source provided)
+                    await _extractSubtitlesAsync(cancellationTokenSource?.Token ?? CancellationToken.None);
 
                     // Check for cancellation after extraction
                     if (cancellationTokenSource?.Token.IsCancellationRequested == true)
@@ -546,12 +546,14 @@ public class BatchCoordinator
                 batchFile.StatusMessage = "Processed successfully";
                 
                 _state.AddLogMessage($"✅ Single file processing completed: {batchFile.FileName}");
+                _state.UpdateBatchStatistics();
             }
             else
             {
                 batchFile.Status = BatchFileStatus.Error;
                 batchFile.StatusMessage = "No suitable tracks found";
                 _state.AddLogMessage($"❌ No suitable tracks found in: {batchFile.FileName}");
+                _state.UpdateBatchStatistics();
             }
         }
         catch (Exception ex)
@@ -560,6 +562,7 @@ public class BatchCoordinator
             batchFile.Status = BatchFileStatus.Error;
             batchFile.StatusMessage = ex.Message;
             _state.AddLogMessage($"❌ Error processing {batchFile.FileName}: {ex.Message}");
+            _state.UpdateBatchStatistics();
         }
     }
 }

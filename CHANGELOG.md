@@ -2,13 +2,19 @@
 
 ## Version 2.5.1 - Critical Tesseract Fix & Logging Improvements (October 14, 2025)
 
-### 🔥 Critical Bugfix
+### 🔥 Critical Bugfixes
 - **Fixed Tesseract System Fallback Issue**: Resolved critical bug causing empty SRT files during batch processing
   - **Root Cause**: App was falling back to system-installed Tesseract but passing bundled app's tessdata path
   - **Impact**: ~24,420 OCR operations failed silently with "Error opening data file" during batch processing
   - **Solution**: Removed system Tesseract fallback - now ONLY uses bundled Tesseract for consistency
   - **Result**: All Tesseract operations now use correct paths and produce populated SRT files
   - **Added Validation**: Checks for tessdata directory and language files before processing
+
+- **Fixed VobSub Batch Processing Status**: Resolved bug where VobSub tracks showed as "✅ Completed" instead of "❌ Failed"
+  - **Root Cause**: Batch coordinator passed null cancellation token, causing MainViewModel to treat batch as single-file extraction
+  - **Impact**: VobSub errors were caught but not rethrown, allowing batch to mark files as completed
+  - **Solution**: Batch coordinator now passes `CancellationToken.None` instead of null
+  - **Result**: VobSub tracks now correctly marked as failed with proper error message in batch processing
 
 ### 🚀 Logging Improvements
 - **Separate Logs Per Batch**: Each batch processing session now creates its own timestamped log file
