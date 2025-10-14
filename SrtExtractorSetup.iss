@@ -39,10 +39,10 @@ Source: "{#SrtExtractorBin}\*.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrtExtractorBin}\*.pdb"; DestDir: "{app}"; Flags: ignoreversion; Attribs: hidden
 Source: "{#SrtExtractorBin}\*.nocr"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
-; Bundled tools with subdirectories (optional - may not exist during build)
-Source: "{#SrtExtractorBin}\tesseract-bin\*"; DestDir: "{app}\tesseract-bin"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "{#SrtExtractorBin}\tessdata\*"; DestDir: "{app}\tessdata"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "{#SrtExtractorBin}\mkvtoolnix-bin\*"; DestDir: "{app}\mkvtoolnix-bin"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+; Bundled tools with subdirectories
+Source: "{#SrtExtractorBin}\tesseract-bin\*"; DestDir: "{app}\tesseract-bin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SrtExtractorBin}\tessdata\*"; DestDir: "{app}\tessdata"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SrtExtractorBin}\mkvtoolnix-bin\*"; DestDir: "{app}\mkvtoolnix-bin"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SrtExtractorBin}\ffmpeg-bin\*"; DestDir: "{app}\ffmpeg-bin"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 ; Documentation
