@@ -67,9 +67,13 @@ public class BatchCoordinator
 
         try
         {
+            // Start a new batch logging session with separate log file
+            _loggingService.StartBatchSession();
+            
             _state.IsBusy = true;
             _state.StartProcessing("Starting batch processing...");
             _state.AddLogMessage($"Starting batch processing of {_state.BatchQueue.Count} files from index {startIndex}");
+            _loggingService.LogInfo($"Starting batch processing of {_state.BatchQueue.Count} files from index {startIndex}");
 
             var totalFiles = _state.BatchQueue.Count;
             var processedCount = startIndex;
@@ -266,6 +270,9 @@ public class BatchCoordinator
         {
             _state.IsBusy = false;
             _state.StopProcessingWithProgress();
+            
+            // End the batch logging session and clean up old logs
+            _loggingService.EndBatchSession();
         }
     }
 

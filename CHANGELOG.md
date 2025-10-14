@@ -1,5 +1,42 @@
 # Changelog
 
+## Version 2.5.1 - Critical Tesseract Fix & Logging Improvements (October 14, 2025)
+
+### 🔥 Critical Bugfix
+- **Fixed Tesseract System Fallback Issue**: Resolved critical bug causing empty SRT files during batch processing
+  - **Root Cause**: App was falling back to system-installed Tesseract but passing bundled app's tessdata path
+  - **Impact**: ~24,420 OCR operations failed silently with "Error opening data file" during batch processing
+  - **Solution**: Removed system Tesseract fallback - now ONLY uses bundled Tesseract for consistency
+  - **Result**: All Tesseract operations now use correct paths and produce populated SRT files
+  - **Added Validation**: Checks for tessdata directory and language files before processing
+
+### 🚀 Logging Improvements
+- **Separate Logs Per Batch**: Each batch processing session now creates its own timestamped log file
+  - **Format**: `srt_batch_YYYYMMDD_HHmmss.txt` (e.g., `srt_batch_20251014_143022.txt`)
+  - **Non-batch operations**: Use `srt_general_YYYYMMDD_HHmmss.txt`
+  - **Benefit**: Manageable file sizes instead of multi-GB daily logs
+  
+- **Automatic Log Cleanup**: Old logs are automatically deleted after 24 hours
+  - **Before**: 7-day retention, manual cleanup required
+  - **After**: 24-hour retention, auto-cleanup on startup and after each batch
+  - **Reports**: Logs show how many files deleted and disk space freed
+
+### 📝 Technical Details
+- **Modified Files**:
+  - `TesseractOcrService.cs` - Removed system Tesseract fallback, added validation
+  - `ILoggingService.cs` - Added `StartBatchSession()` and `EndBatchSession()` methods
+  - `LoggingService.cs` - Implemented batch-specific logging and 24-hour cleanup
+  - `BatchCoordinator.cs` - Integrated batch logging session management
+
+### ✅ Benefits
+- **No more empty SRT files** from silent Tesseract failures
+- **Consistent behavior** across all installations
+- **Easier troubleshooting** with separate batch logs
+- **Automatic disk space management** via cleanup
+- **Better performance** with smaller log files
+
+---
+
 ## Version 2.5.0 - Architecture Refactoring & Code Quality (October 13, 2025)
 
 ### 🏗️ Major Architecture Improvements

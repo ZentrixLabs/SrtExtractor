@@ -52,4 +52,14 @@ public interface ILoggingService
     /// <param name="success">Whether the operation was successful</param>
     /// <param name="error">Error message if operation failed</param>
     void LogExtraction(string operation, bool success, string? error = null);
+
+    /// <summary>
+    /// Start a new batch logging session with a separate log file.
+    /// </summary>
+    void StartBatchSession();
+
+    /// <summary>
+    /// End the current batch logging session.
+    /// </summary>
+    void EndBatchSession();
 }

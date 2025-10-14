@@ -6,25 +6,57 @@ using SrtExtractor.Services.Interfaces;
 namespace SrtExtractor.Services.Implementations;
 
 /// <summary>
-/// Centralized logging service that writes to both UI and rolling file logs.
+/// Centralized logging service that writes to separate log files per batch session.
 /// </summary>
 public class LoggingService : ILoggingService
 {
     private readonly string _logDirectory;
-    private readonly string _logFilePath;
+    private string _logFilePath;
     private readonly object _lock = new();
+    private bool _inBatchSession = false;
 
     public LoggingService()
     {
         _logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), 
                                    "ZentrixLabs", "SrtExtractor", "Logs");
-        _logFilePath = Path.Combine(_logDirectory, $"srt_{DateTime.Now:yyyyMMdd}.txt");
+        
+        // Start with a default log file for non-batch operations
+        _logFilePath = Path.Combine(_logDirectory, $"srt_general_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
         
         // Ensure log directory exists
         Directory.CreateDirectory(_logDirectory);
         
-        // Clean up old logs on startup
+        // Clean up old logs on startup (older than 24 hours)
         CleanupOldLogs();
+    }
+
+    public void StartBatchSession()
+    {
+        lock (_lock)
+        {
+            // Create a new log file for this batch with timestamp
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            _logFilePath = Path.Combine(_logDirectory, $"srt_batch_{timestamp}.txt");
+            _inBatchSession = true;
+            
+            LogInfo($"=== Batch Session Started at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
+            LogInfo($"Log file: {Path.GetFileName(_logFilePath)}");
+        }
+    }
+
+    public void EndBatchSession()
+    {
+        lock (_lock)
+        {
+            if (_inBatchSession)
+            {
+                LogInfo($"=== Batch Session Ended at {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
+                _inBatchSession = false;
+                
+                // Clean up old logs after batch completes
+                CleanupOldLogs();
+            }
+        }
     }
 
     public void LogInfo(string message, [CallerMemberName] string memberName = "")
@@ -102,22 +134,30 @@ public class LoggingService : ILoggingService
     {
         try
         {
-            // Keep logs for the last 7 days
-            var cutoffDate = DateTime.Now.AddDays(-7);
+            // Keep logs for the last 24 hours only
+            var cutoffDate = DateTime.Now.AddHours(-24);
             
             if (!Directory.Exists(_logDirectory))
                 return;
                 
             var logFiles = Directory.GetFiles(_logDirectory, "srt_*.txt");
             var deletedCount = 0;
+            var totalSize = 0L;
             
             foreach (var logFile in logFiles)
             {
                 try
                 {
                     var fileInfo = new FileInfo(logFile);
-                    if (fileInfo.CreationTime < cutoffDate)
+                    
+                    // Don't delete the current log file
+                    if (logFile.Equals(_logFilePath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    
+                    // Delete files older than 24 hours
+                    if (fileInfo.LastWriteTime < cutoffDate)
                     {
+                        totalSize += fileInfo.Length;
                         File.Delete(logFile);
                         deletedCount++;
                     }
@@ -130,7 +170,8 @@ public class LoggingService : ILoggingService
             
             if (deletedCount > 0)
             {
-                LogInfo($"Cleaned up {deletedCount} old log files (older than 7 days)");
+                var sizeMB = totalSize / (1024.0 * 1024.0);
+                LogInfo($"Cleaned up {deletedCount} old log files (older than 24 hours) - freed {sizeMB:F2} MB");
             }
         }
         catch

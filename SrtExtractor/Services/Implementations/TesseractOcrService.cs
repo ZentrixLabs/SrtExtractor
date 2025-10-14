@@ -66,12 +66,12 @@ public class TesseractOcrService : ITesseractOcrService
         var totalFrames = bluRaySubtitles.Count;
         _loggingService.LogInfo($"Found {totalFrames} subtitle images to OCR using command-line Tesseract");
 
-        // Find tesseract.exe
+        // Find tesseract.exe (bundled version only)
         progress?.Report((0, totalFrames, "Initializing Tesseract"));
         var tesseractExe = FindTesseractExecutable();
         if (string.IsNullOrEmpty(tesseractExe))
         {
-            throw new FileNotFoundException("tesseract.exe not found. Please install Tesseract OCR from https://github.com/UB-Mannheim/tesseract/wiki");
+            throw new FileNotFoundException("Bundled Tesseract not found. The application may not have been installed correctly. Please reinstall SrtExtractor.");
         }
 
         _loggingService.LogInfo($"Using Tesseract executable: {tesseractExe}");
@@ -157,16 +157,27 @@ public class TesseractOcrService : ITesseractOcrService
                 await File.WriteAllBytesAsync(tempImagePath, data.ToArray(), cancellationToken);
             }
 
-            // Find tesseract.exe
+            // Find tesseract.exe (bundled version only)
             var tesseractExe = FindTesseractExecutable();
             if (string.IsNullOrEmpty(tesseractExe))
             {
-                throw new FileNotFoundException("tesseract.exe not found");
+                throw new FileNotFoundException("Bundled Tesseract not found. The application may not have been installed correctly.");
             }
 
-            // Get tessdata directory path
+            // Get tessdata directory path and validate it exists
             var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
             var tessdataPath = Path.Combine(exeDirectory, "tessdata");
+            var languageFile = Path.Combine(tessdataPath, $"{language}.traineddata");
+            
+            if (!Directory.Exists(tessdataPath))
+            {
+                throw new DirectoryNotFoundException($"Tessdata directory not found: {tessdataPath}. Please reinstall the application.");
+            }
+            
+            if (!File.Exists(languageFile))
+            {
+                throw new FileNotFoundException($"Language data file not found: {languageFile}. Please reinstall the application or check that the '{language}' language is available.");
+            }
 
             // Call tesseract.exe with PSM 6 (single uniform block of text)
             // Format: tesseract input.png output_base --tessdata-dir path --psm 6 -l eng
@@ -240,61 +251,23 @@ public class TesseractOcrService : ITesseractOcrService
     }
 
     /// <summary>
-    /// Find tesseract.exe - checks bundled version first, then system installation
+    /// Find tesseract.exe - ONLY uses bundled version for consistent behavior
     /// </summary>
     private string? FindTesseractExecutable()
     {
-        // Priority 1: Check bundled tesseract.exe next to our executable
+        // ONLY use bundled tesseract.exe - ensures consistent behavior and correct tessdata path
         var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
         var bundledTesseract = Path.Combine(exeDirectory, "tesseract-bin", "tesseract.exe");
+        
         if (File.Exists(bundledTesseract))
         {
             _loggingService.LogInfo($"Using bundled Tesseract: {bundledTesseract}");
             return bundledTesseract;
         }
 
-        // Priority 2: Check system installation paths (Windows)
-        var searchPaths = new[]
-        {
-            @"C:\Program Files\Tesseract-OCR\tesseract.exe",
-            @"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-            @"C:\Tesseract-OCR\tesseract.exe",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Tesseract-OCR", "tesseract.exe")
-        };
-
-        foreach (var path in searchPaths)
-        {
-            if (File.Exists(path))
-            {
-                _loggingService.LogInfo($"Using system Tesseract: {path}");
-                return path;
-            }
-        }
-
-        // Priority 3: Check PATH environment variable
-        var pathEnv = Environment.GetEnvironmentVariable("PATH");
-        if (!string.IsNullOrEmpty(pathEnv))
-        {
-            var paths = pathEnv.Split(Path.PathSeparator);
-            foreach (var dir in paths)
-            {
-                try
-                {
-                    var fullPath = Path.Combine(dir, "tesseract.exe");
-                    if (File.Exists(fullPath))
-                    {
-                        _loggingService.LogInfo($"Using PATH Tesseract: {fullPath}");
-                        return fullPath;
-                    }
-                }
-                catch
-                {
-                    // Continue to next path
-                }
-            }
-        }
-
-        _loggingService.LogWarning("Tesseract.exe not found in bundled location or system installation");
+        // Bundled version not found - this is an installation problem
+        _loggingService.LogError($"Bundled Tesseract not found at expected location: {bundledTesseract}");
+        _loggingService.LogError("The tesseract-bin folder may not have been installed correctly. Please reinstall the application.");
         return null;
     }
 
