@@ -368,8 +368,10 @@ This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.t
 ## 🙏 Acknowledgments
 
 - **MKVToolNix** - Matroska tools for video container operations
-- **Subtitle Edit** - OCR conversion for image-based subtitles  
+- **Subtitle Edit** - BluRay SUP parsing library for image-based subtitle conversion
+- **Tesseract OCR** - High-quality optical character recognition engine
 - **FFmpeg** - Complete multimedia framework for MP4 processing
+- **ZentrixLabs.OcrCorrection** - Professional OCR error correction patterns
 
 ## 🔗 Links
 
