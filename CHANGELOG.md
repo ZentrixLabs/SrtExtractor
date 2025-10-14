@@ -1,5 +1,27 @@
 # Changelog
 
+## Version 2.5.2 - Critical Installer Fix (October 14, 2025)
+
+### 🔥 Critical Bugfix
+- **Fixed Installer Not Packaging Bundled Tools**: Resolved critical bug where v2.5.1 installer did not include bundled tool subdirectories
+  - **Root Cause**: Inno Setup script relied on implicit `recursesubdirs` which failed to copy tool folders
+  - **Impact**: v2.5.1 installations were missing `tesseract-bin`, `tessdata`, `mkvtoolnix-bin`, and `ffmpeg-bin` folders
+  - **Error**: "Tesseract OCR is not available. Please ensure tessdata folder with language files is present."
+  - **Solution**: Made bundled tool folders explicit in Inno Setup `[Files]` section
+  - **Result**: All bundled tools now correctly installed with application
+
+### 📝 Technical Details
+- **Modified Files**:
+  - `SrtExtractorSetup.iss` - Added explicit source paths for bundled tool subdirectories
+  - Added fallback `SrtExtractorBin` variable definition for local builds
+
+### ✅ Benefits
+- **Installer now works correctly** - all bundled tools included
+- **No missing dependencies** - Tesseract, MKVToolNix, FFmpeg all present
+- **Zero-configuration installation** - works immediately after install
+
+---
+
 ## Version 2.5.1 - Critical Tesseract Fix & Logging Improvements (October 14, 2025)
 
 ### 🔥 Critical Bugfixes
