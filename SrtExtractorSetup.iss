@@ -1,3 +1,8 @@
+; Define source directory for build output
+#ifndef SrtExtractorBin
+  #define SrtExtractorBin "SrtExtractor\bin\Release\net9.0-windows"
+#endif
+
 [Setup]
 AppName=SrtExtractor
 AppVersion={#MyAppVersion}
@@ -27,7 +32,20 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
-Source: "{#SrtExtractorBin}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Main application files
+Source: "{#SrtExtractorBin}\*.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrtExtractorBin}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrtExtractorBin}\*.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrtExtractorBin}\*.pdb"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrtExtractorBin}\*.nocr"; DestDir: "{app}"; Flags: ignoreversion
+
+; Bundled tools with subdirectories
+Source: "{#SrtExtractorBin}\tesseract-bin\*"; DestDir: "{app}\tesseract-bin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SrtExtractorBin}\tessdata\*"; DestDir: "{app}\tessdata"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SrtExtractorBin}\mkvtoolnix-bin\*"; DestDir: "{app}\mkvtoolnix-bin"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SrtExtractorBin}\ffmpeg-bin\*"; DestDir: "{app}\ffmpeg-bin"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Documentation
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
