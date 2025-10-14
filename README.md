@@ -12,30 +12,24 @@ A powerful and easy-to-use desktop application for extracting subtitles from MKV
 
 SrtExtractor simplifies the process of extracting subtitles from your video files. Whether you're dealing with MKV containers or MP4 files with embedded "Timed Text" subtitles, SrtExtractor provides a seamless experience to convert them into the widely compatible SRT format.
 
-### 🆕 What's New in v2.5.0
+### 🆕 What's New in v2.5.1
 
-**Architecture Refactoring & Code Quality:**
-- **🏗️ Major Code Restructuring** - Eliminated God Object anti-pattern from MainViewModel
-- **📉 46% Code Reduction** - MainViewModel reduced from 2,190 to 1,172 lines
-- **🎯 Coordinator Pattern** - Introduced 5 focused coordinators for better separation of concerns
-- **✨ Better Maintainability** - Each coordinator has a single, clear responsibility
-- **🧪 Improved Testability** - Coordinators can be unit tested independently
-- **📚 Enhanced Readability** - No file exceeds 600 lines, easier to understand
-- **🔧 Zero Breaking Changes** - Fully backward compatible, all features preserved
+**Critical Bugfix - Tesseract OCR:**
+- **🔥 Fixed Empty SRT Files** - Resolved critical bug causing empty subtitle files during batch processing
+- **✅ Bundled Tesseract Only** - App now exclusively uses bundled Tesseract (no system fallback)
+- **🔒 Validated Components** - Added checks for tessdata directory and language files
+- **📊 Impact** - Fixes ~24,420 silent OCR failures discovered in user logs
 
-**What This Means for You:**
-- Same powerful features, better code architecture
-- Foundation for faster future development
-- More reliable and maintainable codebase
-- Easier to extend with new features
+**Logging Improvements:**
+- **📝 Separate Batch Logs** - Each batch gets its own timestamped log file (`srt_batch_YYYYMMDD_HHmmss.txt`)
+- **🧹 Auto Cleanup** - Logs older than 24 hours are automatically deleted
+- **💾 Disk Space Management** - Reports how much space was freed during cleanup
+- **⚡ Better Performance** - Smaller log files for faster write operations
 
-**Previous Major Updates (v2.0.4 & v2.0):**
-- **🔥 Fixed Tesseract OCR Quality** - OCR accuracy significantly improved
-- **📦 Fully Bundled Tools** - No external dependencies (~530 MB, completely portable)
-- **🎨 Clean Tab-Based Interface** - Separate Extract, Batch, History, and Tools tabs
-- **👤 Humanized Track Information** - User-friendly labels instead of technical jargon
-- **⚡ Speed Indicators** - Know instantly which tracks are fast (text) vs slow (OCR)
-- **🚀 Performance Boost** - 2-3x faster codec detection and batch processing
+**Previous Major Updates:**
+- **v2.5.0** - Architecture refactoring with Coordinator pattern (46% code reduction)
+- **v2.0.4** - Fixed Tesseract OCR quality, achieved ~100% accuracy
+- **v2.0** - Fully bundled tools, clean tab interface, humanized track info
 
 ## ✨ Features
 
@@ -250,6 +244,7 @@ All tools are included in the SrtExtractor release - no installation, downloads,
 - **Language Data**: English training data (`eng.traineddata`) included
 - **License**: Apache 2.0
 - **Quality**: High accuracy on clear subtitle images in our tests
+- **⚠️ Bundled Only**: App uses ONLY the bundled version (no system Tesseract fallback for consistency)
 
 ### MKVToolNix
 - **Purpose**: MKV file analysis and subtitle extraction
@@ -313,10 +308,14 @@ The correction system is incredibly effective when processing large collections:
 
 ## 📝 Logging
 
-SrtExtractor provides comprehensive logging:
+SrtExtractor provides comprehensive logging with intelligent batch session management:
 - **UI Log**: Real-time display in the application
-- **File Log**: Rolling daily logs saved to `C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\`
-- **Log Format**: `srt_YYYYMMDD.txt`
+- **Batch Session Logs**: Each batch gets its own timestamped log file
+  - Format: `srt_batch_YYYYMMDD_HHmmss.txt` (e.g., `srt_batch_20251014_143022.txt`)
+  - Benefit: Manageable file sizes instead of multi-GB daily logs
+- **General Operations**: Non-batch operations use `srt_general_YYYYMMDD_HHmmss.txt`
+- **Location**: `C:\ProgramData\ZentrixLabs\SrtExtractor\Logs\`
+- **Auto Cleanup**: Logs older than 24 hours are automatically deleted (with disk space reporting)
 - **Recommendation Logging**: Track selection decisions and reasoning are logged for transparency
 
 ## 🎨 User Interface (v2.0)
@@ -344,7 +343,7 @@ SrtExtractor provides comprehensive logging:
 
 1. **Tools Not Found**: Use "Re-detect Tools" button or check tool installation
 2. **Extraction Fails**: Verify the selected track is a supported format
-3. **OCR Issues**: Ensure Subtitle Edit CLI is properly built and available
+3. **OCR Issues / Empty SRT Files**: Ensure the bundled `tesseract-bin` and `tessdata` folders exist in the installation directory (app only uses bundled Tesseract)
 4. **Batch Mode Not Working**: Switch to the Batch tab and add files to the queue via drag & drop
 5. **Network Files Slow**: Files on network drives will take longer - this is normal
 6. **Temporary Files Left Behind**: Use the "🧹 Cleanup Temp Files" button if needed
