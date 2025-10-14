@@ -30,7 +30,7 @@ SrtExtractor simplifies the process of extracting subtitles from your video file
 - Easier to extend with new features
 
 **Previous Major Updates (v2.0.4 & v2.0):**
-- **🔥 Fixed Tesseract OCR Quality** - OCR accuracy improved to ~100%
+- **🔥 Fixed Tesseract OCR Quality** - OCR accuracy significantly improved
 - **📦 Fully Bundled Tools** - No external dependencies (~530 MB, completely portable)
 - **🎨 Clean Tab-Based Interface** - Separate Extract, Batch, History, and Tools tabs
 - **👤 Humanized Track Information** - User-friendly labels instead of technical jargon
@@ -249,7 +249,7 @@ All tools are included in the SrtExtractor release - no installation, downloads,
 - **Included**: `tesseract.exe` + 51 DLLs (~160 MB)
 - **Language Data**: English training data (`eng.traineddata`) included
 - **License**: Apache 2.0
-- **Quality**: ~100% accuracy on clear subtitle images
+- **Quality**: High accuracy on clear subtitle images in our tests
 
 ### MKVToolNix
 - **Purpose**: MKV file analysis and subtitle extraction
