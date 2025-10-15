@@ -1,0 +1,178 @@
+name: Code Sign Existing Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to sign (e.g., v1.2.3)'
+        required: true
+        type: string
+      replace_assets:
+        description: 'Replace existing release assets with signed versions'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  TEMP_DIR: ${{ github.workspace }}\temp
+  SIGNED_DIR: ${{ github.workspace }}\signed
+
+jobs:
+  sign-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create temp directories
+        run: |
+          New-Item -ItemType Directory -Force -Path "${{ env.TEMP_DIR }}"
+          New-Item -ItemType Directory -Force -Path "${{ env.SIGNED_DIR }}"
+        shell: powershell
+
+      - name: Get release information
+        id: get_release
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          $release = gh release view $tag --json id,assets,name
+          $releaseJson = $release | ConvertFrom-Json
+          
+          Write-Host "Release: $($releaseJson.name)"
+          Write-Host "Assets:"
+          foreach ($asset in $releaseJson.assets) {
+            Write-Host "  - $($asset.name)"
+          }
+          
+          # Store release ID
+          echo "RELEASE_ID=$($releaseJson.id)" | Out-File -FilePath $env:GITHUB_ENV -Append
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+
+      - name: Download SrtExtractorInstaller.exe from release
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          gh release download $tag --pattern "SrtExtractorInstaller.exe" --dir "${{ env.TEMP_DIR }}"
+          
+          if (Test-Path "${{ env.TEMP_DIR }}\SrtExtractorInstaller.exe") {
+            Write-Host "Downloaded SrtExtractorInstaller.exe successfully"
+            $fileInfo = Get-Item "${{ env.TEMP_DIR }}\SrtExtractorInstaller.exe"
+            Write-Host "  Size: $($fileInfo.Length) bytes"
+          } else {
+            Write-Error "Failed to download SrtExtractorInstaller.exe"
+            exit 1
+          }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+
+      - name: Sign SrtExtractorInstaller.exe
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.CODESIGN_USERNAME }}
+          password: ${{ secrets.CODESIGN_PASSWORD }}
+          credential_id: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.CODESIGN_TOTP_SECRET }}
+          file_path: ${{ env.TEMP_DIR }}\SrtExtractorInstaller.exe
+          output_path: ${{ env.SIGNED_DIR }}
+          environment_name: PROD
+          signing_method: v2
+          malware_block: false
+        timeout-minutes: 10
+
+      - name: Verify signed installer
+        run: |
+          if (Test-Path "${{ env.SIGNED_DIR }}\SrtExtractorInstaller.exe") {
+            Write-Host "Signed SrtExtractorInstaller.exe created successfully"
+            $fileInfo = Get-Item "${{ env.SIGNED_DIR }}\SrtExtractorInstaller.exe"
+            Write-Host "  Size: $($fileInfo.Length) bytes"
+            
+            # Verify digital signature
+            $sig = Get-AuthenticodeSignature "${{ env.SIGNED_DIR }}\SrtExtractorInstaller.exe"
+            Write-Host "  Signature Status: $($sig.Status)"
+            Write-Host "  Signer: $($sig.SignerCertificate.Subject)"
+          } else {
+            Write-Error "Signed file not found"
+            exit 1
+          }
+        shell: powershell
+
+      - name: Rename signed installer
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          $version = $tag -replace '^v', ''
+          $signedName = "SrtExtractorInstaller-$version-signed.exe"
+          
+          Move-Item "${{ env.SIGNED_DIR }}\SrtExtractorInstaller.exe" "${{ env.SIGNED_DIR }}\$signedName"
+          
+          Write-Host "Renamed to: $signedName"
+          echo "SIGNED_INSTALLER_NAME=$signedName" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: powershell
+
+      - name: Upload signed installer to release
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          
+          # Upload the signed version with new name
+          gh release upload $tag "${{ env.SIGNED_DIR }}\${{ env.SIGNED_INSTALLER_NAME }}" --clobber
+          
+          Write-Host "Uploaded signed installer: ${{ env.SIGNED_INSTALLER_NAME }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+
+      - name: Replace original installer with signed version (if requested)
+        if: ${{ inputs.replace_assets }}
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          
+          # Delete the old unsigned version
+          gh release delete-asset $tag "SrtExtractorInstaller.exe" --yes
+          
+          # Copy signed version back to original name
+          Copy-Item "${{ env.SIGNED_DIR }}\${{ env.SIGNED_INSTALLER_NAME }}" "${{ env.SIGNED_DIR }}\SrtExtractorInstaller.exe"
+          
+          # Upload with original name
+          gh release upload $tag "${{ env.SIGNED_DIR }}\SrtExtractorInstaller.exe" --clobber
+          
+          Write-Host "Replaced SrtExtractorInstaller.exe with signed version"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+
+      - name: Update release notes
+        run: |
+          $tag = "${{ inputs.release_tag }}"
+          
+          # Get current release notes
+          $release = gh release view $tag --json body
+          $releaseJson = $release | ConvertFrom-Json
+          $currentBody = $releaseJson.body
+          
+          # Prepare update message
+          $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+          $updateNote = "`n`n---`n**Code Signed**: $timestamp`nThis release has been digitally signed with SSL.com code signing certificate."
+          
+          # Append to release notes
+          $newBody = $currentBody + $updateNote
+          
+          # Update release
+          gh release edit $tag --notes "$newBody"
+          
+          Write-Host "Updated release notes with code signing information"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+
+      - name: Cleanup
+        if: always()
+        run: |
+          Remove-Item "${{ env.TEMP_DIR }}" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "${{ env.SIGNED_DIR }}" -Recurse -Force -ErrorAction SilentlyContinue
+        shell: powershell
+

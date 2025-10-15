@@ -370,3 +370,6 @@ subtitleedit/
 # Note: ffmpeg-bin is downloaded during CI/CD build, so it's gitignored
 # tesseract-bin, mkvtoolnix-bin, and tessdata are now tracked in git for bundled distribution
 SrtExtractor/ffmpeg-bin/
+
+# Downloaded FFmpeg archives
+ffmpeg*.zip

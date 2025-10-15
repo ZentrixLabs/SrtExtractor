@@ -1,4 +1,4 @@
-name: Build, Sign, and Release SrtExtractor
+name: Build and Release SrtExtractor (Unsigned)
 
 on:
   push:
@@ -12,10 +12,8 @@ permissions:
   id-token: write
 
 env:
-  SIGN_CODE: false # Disable code signing temporarily due to SSL.com regression
   BASE_DIR: ${{ github.workspace }}
   ARTIFACTS_DIR: ${{ github.workspace }}\artifacts
-  TEMP_DIR: ${{ github.workspace }}\artifacts\temp
   SolutionPath: ${{ github.workspace }}\SrtExtractor.sln
   SrtExtractorBin: ${{ github.workspace }}\SrtExtractor\bin\Release\net9.0-windows
   SrtExtractorExe: ${{ github.workspace }}\SrtExtractor\bin\Release\net9.0-windows\SrtExtractor.exe
@@ -23,7 +21,7 @@ env:
   RCEDIT_PATH: ${{ github.workspace }}\tools\rcedit\rcedit-x64.exe
 
 jobs:
-  build-sign-release:
+  build-release:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -75,10 +73,6 @@ jobs:
 
       - name: Create artifacts directory
         run: New-Item -ItemType Directory -Force -Path "${{ env.ARTIFACTS_DIR }}"
-        shell: powershell
-
-      - name: Create temp directory for signing
-        run: New-Item -ItemType Directory -Force -Path "${{ env.TEMP_DIR }}"
         shell: powershell
 
       - name: Create tools directory for rcedit
@@ -196,40 +190,6 @@ jobs:
         run: msbuild "SrtExtractor\SrtExtractor.csproj" /p:Configuration=Release /p:Platform="Any CPU"
         shell: powershell
 
-      - name: Conditionally sign SrtExtractor.exe
-        if: env.SIGN_CODE == 'true'
-        uses: sslcom/esigner-codesign@develop
-        with:
-          command: sign
-          username: ${{ secrets.CODESIGN_USERNAME }}
-          password: ${{ secrets.CODESIGN_PASSWORD }}
-          credential_id: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.CODESIGN_TOTP_SECRET }}
-          file_path: ${{ env.SrtExtractorExe }}
-          output_path: ${{ env.TEMP_DIR }}
-          environment_name: PROD
-          signing_method: v2
-          malware_block: false
-        timeout-minutes: 10
-
-      - name: Debug CodeSignTool version and output
-        if: failure() && env.SIGN_CODE == 'true'
-        run: |
-          Write-Host "Code signing failed for SrtExtractor.exe"
-          Write-Host "Checking if file exists: ${{ env.SrtExtractorExe }}"
-          if (Test-Path "${{ env.SrtExtractorExe }}") {
-            Write-Host "File exists, size: $((Get-Item '${{ env.SrtExtractorExe }}').Length) bytes"
-          } else {
-            Write-Host "File does not exist"
-          }
-        shell: powershell
-        continue-on-error: true
-
-      - name: Replace SrtExtractor.exe with signed version
-        if: env.SIGN_CODE == 'true'
-        run: Copy-Item "${{ env.TEMP_DIR }}\SrtExtractor.exe" "${{ env.SrtExtractorExe }}" -Force
-        shell: powershell
-
       - name: Download and Install Inno Setup
         run: |
           Invoke-WebRequest -Uri https://jrsoftware.org/download.php/is.exe -OutFile inno-setup-installer.exe
@@ -269,40 +229,6 @@ jobs:
         shell: powershell
         continue-on-error: true
 
-      - name: Conditionally sign SrtExtractorInstaller.exe
-        if: env.SIGN_CODE == 'true'
-        uses: sslcom/esigner-codesign@develop
-        with:
-          command: sign
-          username: ${{ secrets.CODESIGN_USERNAME }}
-          password: ${{ secrets.CODESIGN_PASSWORD }}
-          credential_id: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.CODESIGN_TOTP_SECRET }}
-          file_path: ${{ env.SrtExtractorInstallerExe }}
-          output_path: ${{ env.TEMP_DIR }}
-          environment_name: PROD
-          signing_method: v2
-          malware_block: false
-        timeout-minutes: 10
-
-      - name: Debug CodeSignTool version and output (SrtExtractorInstaller)
-        if: failure() && env.SIGN_CODE == 'true'
-        run: |
-          Write-Host "Code signing failed for SrtExtractorInstaller.exe"
-          Write-Host "Checking if file exists: ${{ env.SrtExtractorInstallerExe }}"
-          if (Test-Path "${{ env.SrtExtractorInstallerExe }}") {
-            Write-Host "File exists, size: $((Get-Item '${{ env.SrtExtractorInstallerExe }}').Length) bytes"
-          } else {
-            Write-Host "File does not exist"
-          }
-        shell: powershell
-        continue-on-error: true
-
-      - name: Replace SrtExtractorInstaller.exe with signed version
-        if: env.SIGN_CODE == 'true'
-        run: Copy-Item "${{ env.TEMP_DIR }}\SrtExtractorInstaller.exe" "${{ env.SrtExtractorInstallerExe }}" -Force
-        shell: powershell
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -311,19 +237,44 @@ jobs:
           retention-days: 7
 
   release:
-    needs: build-sign-release
+    needs: build-release
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for git log
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: SrtExtractor-Installer
           path: artifacts
 
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          # Use the last commit message as release notes
+          git log -1 --pretty=format:"%s" > release_notes.md
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "⚠️ **Note**: This release is **unsigned**. A signed version may be published later." >> release_notes.md
+          echo "" >> release_notes.md
+          echo "For silent installation:" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "SrtExtractorInstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          
+          # Output the release notes
+          cat release_notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/SrtExtractorInstaller.exe
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
