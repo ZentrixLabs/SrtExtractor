@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using SrtExtractor.Services.Interfaces;
 using ZentrixLabs.OcrCorrection.Core;
 using ZentrixLabs.OcrCorrection.Configuration;
@@ -60,28 +61,54 @@ public class SrtCorrectionService : ISrtCorrectionService
 
         try
         {
-            // Use the comprehensive OCR correction engine
+            // CRITICAL FIX: Apply OCR corrections ONLY to subtitle text, not to sequence numbers or timestamps
+            // Parse SRT content line by line and only correct the text portions
+            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var correctedLines = new List<string>();
+            int totalCorrections = 0;
             var options = new CorrectionOptions
             {
-                EnableDetailedLogging = false, // Set to true for debugging if needed
+                EnableDetailedLogging = false,
                 TrackPerformanceMetrics = true,
-                CollectCorrectionDetails = false // Set to true for detailed logging if needed
+                CollectCorrectionDetails = false
             };
 
-            var result = _ocrCorrectionEngine.Correct(content, options);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                
+                // Skip empty lines, sequence numbers, and timestamp lines
+                // Sequence number: just digits (e.g., "1", "123")
+                // Timestamp line: contains " --> " (e.g., "00:00:01,000 --> 00:00:03,500")
+                if (string.IsNullOrWhiteSpace(line) || 
+                    IsSequenceNumber(line) || 
+                    line.Contains(" --> "))
+                {
+                    // Keep these lines unchanged
+                    correctedLines.Add(line);
+                }
+                else
+                {
+                    // This is subtitle text - apply OCR corrections
+                    var result = _ocrCorrectionEngine.Correct(line, options);
+                    correctedLines.Add(result.CorrectedText);
+                    totalCorrections += result.CorrectionCount;
+                }
+            }
+
+            var correctedContent = string.Join(Environment.NewLine, correctedLines);
 
             // Log summary
-            if (result.CorrectionCount > 0)
+            if (totalCorrections > 0)
             {
-                _loggingService.LogInfo($"🎯 OCR corrections applied: {result.CorrectionCount} corrections");
-                _loggingService.LogInfo($"   • Processing time: {result.ProcessingTime.TotalMilliseconds:F0}ms");
+                _loggingService.LogInfo($"🎯 OCR corrections applied: {totalCorrections} corrections");
             }
             else
             {
                 _loggingService.LogInfo("No OCR corrections needed");
             }
 
-            return (result.CorrectedText, result.CorrectionCount);
+            return (correctedContent, totalCorrections);
         }
         catch (Exception ex)
         {
@@ -89,6 +116,22 @@ public class SrtCorrectionService : ISrtCorrectionService
             // Return original content if correction fails
             return (content, 0);
         }
+    }
+
+    /// <summary>
+    /// Check if a line is an SRT sequence number (e.g., "1", "123", "4567").
+    /// Sequence numbers are lines containing only digits and optional whitespace.
+    /// </summary>
+    private static bool IsSequenceNumber(string line)
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return false;
+        }
+        
+        // Check if line contains only digits
+        return trimmed.All(char.IsDigit);
     }
 
     public string CorrectSrtContent(string content)
