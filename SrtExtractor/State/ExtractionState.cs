@@ -394,9 +394,11 @@ public partial class ExtractionState : ObservableObject
         
         var forcedSuffix = track.Forced ? ".forced" : "";
         var ccSuffix = track.IsClosedCaption ? ".cc" : "";
+        // Normalize language code to ISO 639-1 (two-letter) for broader media app compatibility
+        var langTwoLetter = Utils.LanguageCodeUtilities.ToIso6391(track.Language);
         var pattern = FileNamePattern
             .Replace("{basename}", baseName)
-            .Replace("{lang}", track.Language)
+            .Replace("{lang}", langTwoLetter)
             .Replace("{forced}", forcedSuffix)
             .Replace("{cc}", ccSuffix);
 

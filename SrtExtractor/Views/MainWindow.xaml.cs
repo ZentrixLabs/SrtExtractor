@@ -325,19 +325,44 @@ namespace SrtExtractor.Views
                 return;
             }
 
-            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files == null || files.Length == 0)
+            var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (dropped == null || dropped.Length == 0)
                 return;
 
-            // Filter for supported video files only
-            var videoExtensions = new[] { ".mkv", ".mp4" };
-            var videoFiles = files.Where(file =>
+            // Expand dropped items: include files and recursively scan dropped folders
+            var videoExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mkv", ".mp4" };
+            var videoFiles = new List<string>();
+
+            foreach (var item in dropped)
             {
-                if (string.IsNullOrEmpty(file))
-                    return false;
-                var ext = Path.GetExtension(file)?.ToLower();
-                return videoExtensions.Contains(ext);
-            }).ToList();
+                if (string.IsNullOrEmpty(item)) continue;
+                try
+                {
+                    if (File.Exists(item))
+                    {
+                        var ext = Path.GetExtension(item);
+                        if (!string.IsNullOrEmpty(ext) && videoExtensions.Contains(ext))
+                        {
+                            videoFiles.Add(item);
+                        }
+                    }
+                    else if (Directory.Exists(item))
+                    {
+                        foreach (var path in Directory.EnumerateFiles(item, "*.*", SearchOption.AllDirectories))
+                        {
+                            var ext = Path.GetExtension(path);
+                            if (!string.IsNullOrEmpty(ext) && videoExtensions.Contains(ext))
+                            {
+                                videoFiles.Add(path);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error processing dropped item", ex);
+                }
+            }
 
             if (videoFiles.Count == 0)
             {
@@ -346,10 +371,10 @@ namespace SrtExtractor.Views
                 return;
             }
 
-          // Add files to batch queue using the ViewModel's async method
-          await viewModel.AddFilesToBatchQueueAsync(videoFiles.ToArray());
+            // Add files to batch queue using the ViewModel's async method
+            await viewModel.AddFilesToBatchQueueAsync(videoFiles.ToArray());
 
-            _loggingService.LogInfo($"Added {videoFiles.Count} file(s) to batch queue via window drag & drop");
+            _loggingService.LogInfo($"Added {videoFiles.Count} file(s) to batch queue via window drag & drop (files + expanded folders)");
             
             // Mark event as handled
             e.Handled = true;

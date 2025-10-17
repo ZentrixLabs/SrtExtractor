@@ -982,12 +982,17 @@
                                 <TextBlock FontSize="{StaticResource FontSizeCaption}" 
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            Margin="0,2,0,0">
-                                    <Run Text="2. Files will appear in the queue below"/>
+                                    <Run Text="2. Or click 'Add Folder to Queue' to recursively add MKV/MP4s"/>
                                 </TextBlock>
                                 <TextBlock FontSize="{StaticResource FontSizeCaption}" 
                                            Foreground="{StaticResource TextSecondaryBrush}"
                                            Margin="0,2,0,0">
-                                    <Run Text="3. Click 'Process Batch' to extract subtitles from all files"/>
+                                    <Run Text="3. Files will appear in the queue below"/>
+                                </TextBlock>
+                                <TextBlock FontSize="{StaticResource FontSizeCaption}" 
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,2,0,0">
+                                    <Run Text="4. Click 'Process Batch' to extract subtitles from all files"/>
                                 </TextBlock>
                                 <TextBlock FontSize="{StaticResource FontSizeCaption}" 
                                            FontStyle="Italic" 
@@ -1410,6 +1415,23 @@
                     <StackPanel>
                         <!-- Action Buttons -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                            <!-- Add Folder to Batch Queue -->
+                            <Button Command="{Binding AddFolderToBatchCommand}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Margin="0,0,12,0"
+                                    ToolTip="Select a folder and automatically add all MKV/MP4 files (recursively) to the batch queue">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFontFamily}"
+                                               Text="{StaticResource IconFolder}"
+                                               FontSize="18"
+                                               Margin="0,0,10,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock VerticalAlignment="Center">
+                                        <Run Text="Add Folder to Queue" FontSize="14"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Button>
+
                             <!-- TIER 1: PRIMARY ACTION - Process Batch -->
                             <Button Command="{Binding ProcessBatchCommand}"
                                     IsEnabled="{Binding State.HasBatchQueue}"

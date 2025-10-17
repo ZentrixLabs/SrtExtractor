@@ -3,6 +3,19 @@
   #define SrtExtractorBin "SrtExtractor\bin\Release\net9.0-windows"
 #endif
 
+; Optional signing configuration injected via command-line defines
+#ifndef EnableSigning
+  #define EnableSigning "0"
+#endif
+
+#ifndef MyCertThumbprint
+  #define MyCertThumbprint ""
+#endif
+
+#ifndef MyTimestampUrl
+  #define MyTimestampUrl "https://timestamp.digicert.com"
+#endif
+
 [Setup]
 AppName=SrtExtractor
 AppVersion={#MyAppVersion}
@@ -23,6 +36,9 @@ WizardStyle=modern
 PrivilegesRequired=admin
 UninstallDisplayIcon={app}\SrtExtractor.exe
 UninstallDisplayName=SrtExtractor - MKV/MP4 Subtitle Extractor
+
+; Sign uninstaller when signing is enabled
+SignedUninstaller={#iif(EnableSigning == "1", "yes", "no")}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -65,3 +81,9 @@ begin
   // Note: .NET 9.0 Runtime check removed to avoid compilation issues
   // Users will need to install .NET 9.0 Desktop Runtime manually if not present
 end;
+
+// Configure SignTool when signing is enabled via defines
+#if EnableSigning == "1"
+[Setup]
+SignTool="signtool sign /sha1 $q$MyCertThumbprint$q$ /fd SHA256 /td SHA256 /tr $q$MyTimestampUrl$q$ $f"
+#endif

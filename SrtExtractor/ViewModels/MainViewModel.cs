@@ -130,6 +130,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ReDetectToolsCommand = new AsyncRelayCommand(ReDetectToolsAsync);
         CleanupTempFilesCommand = new AsyncRelayCommand(CleanupTempFilesAsync);
         CorrectSrtCommand = new AsyncRelayCommand(CorrectSrtAsync);
+        AddFolderToBatchCommand = new AsyncRelayCommand(AddFolderToBatchAsync);
         
         
         // Batch mode commands
@@ -188,6 +189,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand ReDetectToolsCommand { get; }
     public IAsyncRelayCommand CleanupTempFilesCommand { get; }
     public IAsyncRelayCommand CorrectSrtCommand { get; }
+    public IAsyncRelayCommand AddFolderToBatchCommand { get; }
     
     
     // Batch mode commands
@@ -212,6 +214,62 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private Task PickMkvAsync()
     {
         return _fileCoordinator.PickMkvAsync();
+    }
+
+    /// <summary>
+    /// Opens a folder picker and adds all MKV/MP4 files (recursively) to the batch queue.
+    /// </summary>
+    private async Task AddFolderToBatchAsync()
+    {
+        try
+        {
+            var folder = await _fileCoordinator.PickFolderAsync();
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            {
+                return;
+            }
+
+            State.AddLogMessage($"Scanning folder for videos: {folder}");
+            _loggingService.LogInfo($"User selected folder for batch add: {folder}");
+
+            var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mkv", ".mp4" };
+            var files = new List<string>();
+
+            try
+            {
+                foreach (var path in Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories))
+                {
+                    var ext = Path.GetExtension(path);
+                    if (!string.IsNullOrEmpty(ext) && supportedExtensions.Contains(ext))
+                    {
+                        files.Add(path);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Error while scanning folder for videos", ex);
+                State.AddLogMessage($"Error scanning folder: {ex.Message}");
+            }
+
+            if (files.Count == 0)
+            {
+                _notificationService.ShowWarning("No MKV/MP4 files found in the selected folder.", "No Videos Found");
+                return;
+            }
+
+            // Ensure Batch tab is visible
+            State.SelectedTabIndex = 1;
+
+            await AddFilesToBatchQueueAsync(files.ToArray());
+            State.AddLogMessage($"Added {files.Count} file(s) from folder to batch queue");
+            _loggingService.LogInfo($"Added {files.Count} files to batch queue from folder");
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogError("Failed to add folder to batch queue", ex);
+            _notificationService.ShowError($"Failed to add folder to batch queue:\n{ex.Message}", "Batch Add Error");
+        }
     }
 
     private async Task ProbeTracksAsync(CancellationToken cancellationToken = default)

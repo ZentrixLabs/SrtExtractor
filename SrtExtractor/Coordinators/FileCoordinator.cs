@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
+using Ookii.Dialogs.Wpf;
 using SrtExtractor.Services.Interfaces;
 using SrtExtractor.State;
 
@@ -67,6 +68,37 @@ public class FileCoordinator
         
         return Task.CompletedTask;
     }
+
+        /// <summary>
+        /// Opens a folder picker dialog and returns the selected path.
+        /// </summary>
+        /// <returns>Selected folder path or null if cancelled</returns>
+        public Task<string?> PickFolderAsync()
+        {
+            try
+            {
+                var dialog = new VistaFolderBrowserDialog
+                {
+                    Description = "Select a folder to scan for MKV/MP4 files",
+                    UseDescriptionForTitle = true,
+                    ShowNewFolderButton = false
+                };
+
+                var result = dialog.ShowDialog(Application.Current.MainWindow);
+                if (result == true && !string.IsNullOrWhiteSpace(dialog.SelectedPath))
+                {
+                    _loggingService.LogInfo($"Selected folder: {dialog.SelectedPath}");
+                    return Task.FromResult<string?>(dialog.SelectedPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogError("Failed to pick folder", ex);
+                _notificationService.ShowError($"Failed to select folder:\n{ex.Message}", "Folder Selection Error");
+            }
+
+            return Task.FromResult<string?>(null);
+        }
 
     /// <summary>
     /// Opens a recent file by setting it as the current MKV path.

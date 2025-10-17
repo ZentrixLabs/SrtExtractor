@@ -3,7 +3,10 @@
 
 param(
     [string]$Configuration = "Release",
-    [string]$Version = "1.0.0-dev"
+    [string]$Version = "1.0.0-dev",
+    [string]$Thumbprint = "",
+    [string]$TimestampUrl = "https://timestamp.digicert.com",
+    [switch]$SkipSign
 )
 
 Write-Host "Building SrtExtractor Installer v$Version" -ForegroundColor Green
@@ -57,6 +60,36 @@ try {
         Copy-Item "tools\ffmpeg\ffprobe.exe" "SrtExtractor\bin\$Configuration\net9.0-windows\" -Force
         Write-Host "Copied FFmpeg tools to output directory" -ForegroundColor Green
     }
+
+    # Sign SrtExtractor.exe (if requested)
+    $exePath = "SrtExtractor\bin\$Configuration\net9.0-windows\SrtExtractor.exe"
+    if (-not $SkipSign.IsPresent) {
+        if (-not [string]::IsNullOrWhiteSpace($Thumbprint)) {
+            if (Test-Path $exePath) {
+                Write-Host "Signing SrtExtractor.exe..." -ForegroundColor Yellow
+                & signtool sign /sha1 $Thumbprint /fd SHA256 /td SHA256 /tr $TimestampUrl $exePath
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Code signing SrtExtractor.exe failed"
+                    exit 1
+                }
+
+                Write-Host "Verifying signature for SrtExtractor.exe..." -ForegroundColor Yellow
+                & signtool verify /pa /all $exePath
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Signature verification failed for SrtExtractor.exe"
+                    exit 1
+                }
+                Write-Host "SrtExtractor.exe signed and verified" -ForegroundColor Green
+            } else {
+                Write-Error "Executable not found at $exePath"
+                exit 1
+            }
+        } else {
+            Write-Warning "Thumbprint not provided; skipping executable signing. Use -Thumbprint to enable signing."
+        }
+    } else {
+        Write-Host "SkipSign specified; not signing SrtExtractor.exe" -ForegroundColor Yellow
+    }
     
     # Check if Inno Setup is installed
     $innoSetupPath = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -71,11 +104,34 @@ try {
     
     # Build the installer
     Write-Host "Building installer with Inno Setup..." -ForegroundColor Yellow
-    & $innoSetupPath "SrtExtractorSetup.iss" /DMyAppVersion=$Version
+    $innoArgs = @("SrtExtractorSetup.iss", "/DMyAppVersion=$Version")
+    if (-not $SkipSign.IsPresent -and -not [string]::IsNullOrWhiteSpace($Thumbprint)) {
+        $innoArgs += "/DEnableSigning=1"
+        $innoArgs += "/DMyCertThumbprint=$Thumbprint"
+        $innoArgs += "/DMyTimestampUrl=$TimestampUrl"
+    }
+    & $innoSetupPath @innoArgs
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Installer built successfully!" -ForegroundColor Green
         Write-Host "Installer location: artifacts\SrtExtractorInstaller.exe" -ForegroundColor Cyan
+        $installerPath = "artifacts\SrtExtractorInstaller.exe"
+        if (Test-Path $installerPath) {
+            if (-not $SkipSign.IsPresent -and -not [string]::IsNullOrWhiteSpace($Thumbprint)) {
+                Write-Host "Verifying installer signature..." -ForegroundColor Yellow
+                & signtool verify /pa /all $installerPath
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Signature verification failed for installer"
+                    exit 1
+                }
+                Write-Host "Installer signature verified" -ForegroundColor Green
+            } else {
+                Write-Host "Installer built without signing (SkipSign or no Thumbprint)" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Error "Expected installer not found at $installerPath"
+            exit 1
+        }
     } else {
         Write-Error "Installer build failed"
         exit 1
