@@ -1,4 +1,4 @@
 @echo off
 echo Building SrtExtractor Installer...
-powershell -ExecutionPolicy Bypass -File "build-installer.ps1" %*
+powershell -ExecutionPolicy Bypass -File "scripts\build-installer.ps1" %*
 pause

@@ -57,7 +57,7 @@ Test-Path "SrtExtractor\bin\Release\net9.0-windows\tessdata\eng.traineddata"
 #### Installer Build
 ```powershell
 # Build installer with Inno Setup
-.\build-installer.ps1
+.\scripts\build-installer.ps1
 
 # Verify installer includes:
 # - tesseract-bin\*.* (~160 MB)

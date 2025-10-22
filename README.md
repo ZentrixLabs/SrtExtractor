@@ -121,6 +121,25 @@ Since v2.0.4, all tools are bundled - no Windows Package Manager (winget) needed
 
 **That's it!** All tools are bundled - no setup, no downloads, no configuration required.
 
+## 🚢 Releasing (Maintainers)
+
+1. Build and sign the installer via Inno Setup GUI/`SrtExtractorSetup.iss`.
+2. Ensure the signed installer exists at `artifacts/SrtExtractorInstaller.exe`.
+3. Authenticate GitHub CLI once: `winget install --id GitHub.cli -e` then `gh auth login`.
+4. Publish a release (creates or replaces tag and uploads assets):
+
+   ```powershell
+   pwsh ./scripts/upload-release.ps1 -Version 2.5.2
+   ```
+
+   - By default uploads `artifacts\SrtExtractorInstaller.exe` and a SHA256 file.
+   - Use a custom path if needed:
+     ```powershell
+     pwsh ./scripts/upload-release.ps1 -Version 2.5.2 -InstallerPath "E:\Github\SrtExtractor\artifacts\SrtExtractorInstaller.exe"
+     ```
+
+GitHub auto-attaches source archives for the tag. Assets up to ~2 GB are supported.
+
 ## 🚀 Usage
 
 ### Single File Processing (Extract Tab)

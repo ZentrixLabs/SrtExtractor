@@ -13,9 +13,9 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Download FFmpeg
+# Download FFmpeg for app output
 Write-Host "`n=== Downloading FFmpeg ===" -ForegroundColor Cyan
-& "$PSScriptRoot\download-ffmpeg.ps1" -Configuration $Configuration
+& "$PSScriptRoot\download-ffmpeg-app.ps1" -Configuration $Configuration
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to download FFmpeg"

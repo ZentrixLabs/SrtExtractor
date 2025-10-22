@@ -38,34 +38,34 @@ if (-not (Test-Path $cliPath)) {
         exit 1
     }
     
-    # Copy to our output directory
-    $ourOutputDir = Join-Path $PSScriptRoot "bin\Debug\net9.0-windows"
-    if (-not (Test-Path $ourOutputDir)) {
-        New-Item -ItemType Directory -Path $ourOutputDir -Force | Out-Null
+    # Copy to our application output directory
+    $appBinDir = Join-Path (Join-Path $PSScriptRoot "..") "SrtExtractor\bin\$Configuration\net9.0-windows"
+    if (-not (Test-Path $appBinDir)) {
+        New-Item -ItemType Directory -Path $appBinDir -Force | Out-Null
     }
     
-    Write-Host "Copying seconv.exe to output directory..." -ForegroundColor Yellow
-    Copy-Item $exePath $ourOutputDir -Force
+    Write-Host "Copying seconv.exe to app output directory..." -ForegroundColor Yellow
+    Copy-Item $exePath $appBinDir -Force
     
     # Copy all dependencies (DLLs, runtime files, etc.)
     Write-Host "Copying dependencies..." -ForegroundColor Yellow
     $allFiles = Get-ChildItem $outputDir -File
     foreach ($file in $allFiles) {
-        Copy-Item $file.FullName $ourOutputDir -Force
+        Copy-Item $file.FullName $appBinDir -Force
     }
     
     # Also copy any subdirectories (like runtimes)
     $subDirs = Get-ChildItem $outputDir -Directory
     foreach ($subDir in $subDirs) {
-        $destDir = Join-Path $ourOutputDir $subDir.Name
+        $destDir = Join-Path $appBinDir $subDir.Name
         if (-not (Test-Path $destDir)) {
             New-Item -ItemType Directory -Path $destDir -Force | Out-Null
         }
-        Copy-Item $subDir.FullName $ourOutputDir -Recurse -Force
+        Copy-Item $subDir.FullName $destDir -Recurse -Force
     }
     
     Write-Host "SubtitleEdit CLI built successfully!" -ForegroundColor Green
-    Write-Host "seconv.exe is now available at: $ourOutputDir\seconv.exe" -ForegroundColor Cyan
+    Write-Host "seconv.exe is now available at: $appBinDir\seconv.exe" -ForegroundColor Cyan
     
 } finally {
     Pop-Location

@@ -5,7 +5,10 @@ param(
     [string]$Configuration = "Release",
     [string]$Version = "1.0.0-dev",
     [string]$Thumbprint = "",
-    [string]$TimestampUrl = "https://timestamp.digicert.com",
+    [string]$TimestampUrl = "http://timestamp.digicert.com",
+    [string]$KeyStorageProvider = "",
+    [string]$KeyContainer = "",
+    [string]$CertSubject = "",
     [switch]$SkipSign
 )
 
@@ -14,7 +17,30 @@ Write-Host "Building SrtExtractor Installer v$Version" -ForegroundColor Green
 # Set error action preference
 $ErrorActionPreference = "Stop"
 
+# Ensure we operate from repository root regardless of invocation location
+Set-Location -Path (Split-Path $PSScriptRoot -Parent)
+
 try {
+    function Get-LatestSigntoolPath {
+        $candidates = @()
+        $kitsRoot = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+        if (Test-Path $kitsRoot) {
+            Get-ChildItem -Path $kitsRoot -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' } |
+                Sort-Object { [version]$_.Name } -Descending |
+                ForEach-Object {
+                    $p = Join-Path $_.FullName "x64\signtool.exe"
+                    if (Test-Path $p) { $candidates += $p }
+                }
+        }
+        $alt = Join-Path ${env:ProgramFiles} "Windows Kits\10\bin\x64\signtool.exe"
+        if (Test-Path $alt) { $candidates += $alt }
+        try {
+            $where = (where.exe signtool 2>$null | Select-Object -First 1)
+            if ($where) { $candidates += $where }
+        } catch {}
+        $candidates | Select-Object -Unique | Select-Object -First 1
+    }
     # Clean previous builds
     Write-Host "Cleaning previous builds..." -ForegroundColor Yellow
     if (Test-Path "artifacts") {
@@ -52,7 +78,7 @@ try {
     
     # Download FFmpeg
     Write-Host "Downloading FFmpeg..." -ForegroundColor Yellow
-    .\download-ffmpeg.ps1
+    & "$PSScriptRoot\download-ffmpeg.ps1"
     
     # Copy FFmpeg tools to output directory
     if (Test-Path "tools\ffmpeg\ffmpeg.exe") {
@@ -62,19 +88,62 @@ try {
     }
 
     # Sign SrtExtractor.exe (if requested)
+    $signtoolPath = Get-LatestSigntoolPath
+    if (-not $signtoolPath) { Write-Warning "signtool.exe not found automatically. Install Windows 10/11 SDK." }
     $exePath = "SrtExtractor\bin\$Configuration\net9.0-windows\SrtExtractor.exe"
     if (-not $SkipSign.IsPresent) {
-        if (-not [string]::IsNullOrWhiteSpace($Thumbprint)) {
+        $hasKsp = (-not [string]::IsNullOrWhiteSpace($KeyStorageProvider)) -and (-not [string]::IsNullOrWhiteSpace($KeyContainer))
+        $hasThumb = -not [string]::IsNullOrWhiteSpace($Thumbprint)
+        if (-not $hasKsp -and -not $hasThumb) {
+            try {
+                $now = Get-Date
+                $stores = @('Cert:\CurrentUser\My','Cert:\LocalMachine\My')
+                $cs = foreach ($s in $stores) {
+                    if (Test-Path $s) { Get-ChildItem -Path $s -ErrorAction SilentlyContinue }
+                }
+                $candidates = $cs | Where-Object {
+                    $_.NotAfter -gt $now -and $_.HasPrivateKey -and (
+                        ($_.EnhancedKeyUsageList | Where-Object { $_.Oid.Value -eq '1.3.6.1.5.5.7.3.3' }).Count -gt 0 -or
+                        ($_.EnhancedKeyUsageList | Where-Object { $_.FriendlyName -eq 'Code Signing' }).Count -gt 0)
+                }
+                if ($candidates) {
+                    $best = $candidates | Sort-Object NotAfter -Descending | Select-Object -First 1
+                    $Thumbprint = $best.Thumbprint
+                    $hasThumb = $true
+                    Write-Host ("Auto-detected code signing cert: {0} (thumbprint {1}), expires {2}" -f $best.Subject, $Thumbprint, $best.NotAfter) -ForegroundColor Yellow
+                }
+            } catch {}
+        }
+        if ($hasKsp -or $hasThumb) {
             if (Test-Path $exePath) {
                 Write-Host "Signing SrtExtractor.exe..." -ForegroundColor Yellow
-                & signtool sign /sha1 $Thumbprint /fd SHA256 /td SHA256 /tr $TimestampUrl $exePath
+                $signArgs = @("sign", "/fd", "SHA256", "/td", "SHA256", "/tr", $TimestampUrl)
+                if ($hasKsp) {
+                    $signArgs += @("/csp", $KeyStorageProvider, "/kc", $KeyContainer, "/a")
+                    if (-not [string]::IsNullOrWhiteSpace($CertSubject)) { $signArgs += @("/n", $CertSubject) }
+                }
+                if ($hasThumb) { $signArgs += @("/sha1", $Thumbprint) }
+                $signArgs += $exePath
+                if ($signtoolPath) { & "$signtoolPath" @signArgs } else { throw "signtool.exe not found" }
                 if ($LASTEXITCODE -ne 0) {
-                    Write-Error "Code signing SrtExtractor.exe failed"
-                    exit 1
+                    if ($hasKsp) {
+                        Write-Error "Code signing SrtExtractor.exe failed using KSP/container. Ensure token is unlocked and provider/container are correct."
+                        exit 1
+                    } else {
+                        Write-Warning "SignTool failed; trying Set-AuthenticodeSignature fallback..."
+                        try {
+                            $cert = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -ieq $Thumbprint }
+                            if (-not $cert) { throw "Certificate not found by thumbprint $Thumbprint" }
+                            Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert -TimestampServer $TimestampUrl -HashAlgorithm SHA256 | Out-Null
+                        } catch {
+                            Write-Error ("Code signing SrtExtractor.exe failed: {0}" -f $_.Exception.Message)
+                            exit 1
+                        }
+                    }
                 }
 
                 Write-Host "Verifying signature for SrtExtractor.exe..." -ForegroundColor Yellow
-                & signtool verify /pa /all $exePath
+                & "$signtoolPath" verify /pa /all $exePath
                 if ($LASTEXITCODE -ne 0) {
                     Write-Error "Signature verification failed for SrtExtractor.exe"
                     exit 1
@@ -85,7 +154,7 @@ try {
                 exit 1
             }
         } else {
-            Write-Warning "Thumbprint not provided; skipping executable signing. Use -Thumbprint to enable signing."
+            Write-Warning "No signing parameters provided; skipping executable signing. Provide -KeyStorageProvider and -KeyContainer or -Thumbprint."
         }
     } else {
         Write-Host "SkipSign specified; not signing SrtExtractor.exe" -ForegroundColor Yellow
@@ -104,13 +173,35 @@ try {
     
     # Build the installer
     Write-Host "Building installer with Inno Setup..." -ForegroundColor Yellow
-    $innoArgs = @("SrtExtractorSetup.iss", "/DMyAppVersion=$Version")
-    if (-not $SkipSign.IsPresent -and -not [string]::IsNullOrWhiteSpace($Thumbprint)) {
-        $innoArgs += "/DEnableSigning=1"
-        $innoArgs += "/DMyCertThumbprint=$Thumbprint"
-        $innoArgs += "/DMyTimestampUrl=$TimestampUrl"
+    # Inno Setup AppVersion should be digits and periods only
+    $innoVersion = ($Version -replace "^[vV]", "") -replace "[^0-9.]", ""
+    if ([string]::IsNullOrWhiteSpace($innoVersion)) { $innoVersion = "1.0.0" }
+    $innoArgs = @("SrtExtractorSetup.iss", "/DMyAppVersion=$innoVersion")
+    if (-not $SkipSign.IsPresent) {
+        $hasKsp = (-not [string]::IsNullOrWhiteSpace($KeyStorageProvider)) -and (-not [string]::IsNullOrWhiteSpace($KeyContainer))
+        $hasThumb = -not [string]::IsNullOrWhiteSpace($Thumbprint)
+        if ($hasKsp -or $hasThumb) {
+            $innoArgs += "/DEnableSigning=1"
+            $innoArgs += "/DMyTimestampUrl=$TimestampUrl"
+            # Build sign tool definitions
+            $quotedTs = '"' + $TimestampUrl + '"'
+            if ($hasKsp) {
+                $innoArgs += "/DUseKspSigning=1"
+                $innoArgs += "/DMyKsp=$KeyStorageProvider"
+                $innoArgs += "/DMyKeyContainer=$KeyContainer"
+            } else {
+                $innoArgs += "/DMyCertThumbprint=$Thumbprint"
+            }
+
+            # Define named tools as base executable + operation; params go in .iss SignTool line
+            $innoArgs += '/S"ZLSignKsp=' + ('"' + $signtoolPath + '" sign') + '"'
+            $innoArgs += '/S"ZLSignThumb=' + ('"' + $signtoolPath + '" sign') + '"'
+        }
     }
-    & $innoSetupPath @innoArgs
+    # Capture ISCC output for diagnostics
+    $isccLog = "artifacts\\iscc.log"
+    Write-Host "ISCC args: $($innoArgs -join ' ')" -ForegroundColor DarkGray
+    & $innoSetupPath @innoArgs 2>&1 | Tee-Object -FilePath $isccLog
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Installer built successfully!" -ForegroundColor Green
@@ -119,7 +210,7 @@ try {
         if (Test-Path $installerPath) {
             if (-not $SkipSign.IsPresent -and -not [string]::IsNullOrWhiteSpace($Thumbprint)) {
                 Write-Host "Verifying installer signature..." -ForegroundColor Yellow
-                & signtool verify /pa /all $installerPath
+                & "$signtoolPath" verify /pa /all $installerPath
                 if ($LASTEXITCODE -ne 0) {
                     Write-Error "Signature verification failed for installer"
                     exit 1
@@ -134,6 +225,13 @@ try {
         }
     } else {
         Write-Error "Installer build failed"
+        if (Test-Path $isccLog) {
+            Write-Host "--- ISCC Output (last 100 lines) ---" -ForegroundColor Yellow
+            Get-Content $isccLog -Tail 100 | ForEach-Object { Write-Host $_ }
+            Write-Host "--- End ISCC Output ---" -ForegroundColor Yellow
+        } else {
+            Write-Warning "ISCC log not found at $isccLog"
+        }
         exit 1
     }
     

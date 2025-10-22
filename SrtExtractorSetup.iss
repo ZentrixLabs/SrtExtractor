@@ -3,17 +3,14 @@
   #define SrtExtractorBin "SrtExtractor\bin\Release\net9.0-windows"
 #endif
 
+; Default app version to allow GUI compile without CLI defines
+#ifndef MyAppVersion
+  #define MyAppVersion "2.5.2"
+#endif
+
 ; Optional signing configuration injected via command-line defines
 #ifndef EnableSigning
-  #define EnableSigning "0"
-#endif
-
-#ifndef MyCertThumbprint
-  #define MyCertThumbprint ""
-#endif
-
-#ifndef MyTimestampUrl
-  #define MyTimestampUrl "https://timestamp.digicert.com"
+  #define EnableSigning "1"
 #endif
 
 [Setup]
@@ -38,14 +35,18 @@ UninstallDisplayIcon={app}\SrtExtractor.exe
 UninstallDisplayName=SrtExtractor - MKV/MP4 Subtitle Extractor
 
 ; Sign uninstaller when signing is enabled
-SignedUninstaller={#iif(EnableSigning == "1", "yes", "no")}
+#if EnableSigning == "1"
+SignTool=SignTool
+SignedUninstaller=yes
+#else
+SignedUninstaller=no
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
 ; Main application files
@@ -69,7 +70,6 @@ Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{group}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\SrtExtractor.exe"
 Name: "{group}\{cm:UninstallProgram,SrtExtractor}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\SrtExtractor.exe"; Tasks: desktopicon
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\SrtExtractor"; Filename: "{app}\SrtExtractor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\SrtExtractor.exe"; Tasks: quicklaunchicon
 
 [Run]
 Filename: "{app}\SrtExtractor.exe"; Description: "{cm:LaunchProgram,SrtExtractor}"; Flags: nowait postinstall skipifsilent
@@ -82,8 +82,3 @@ begin
   // Users will need to install .NET 9.0 Desktop Runtime manually if not present
 end;
 
-// Configure SignTool when signing is enabled via defines
-#if EnableSigning == "1"
-[Setup]
-SignTool="signtool sign /sha1 $q$MyCertThumbprint$q$ /fd SHA256 /td SHA256 /tr $q$MyTimestampUrl$q$ $f"
-#endif
