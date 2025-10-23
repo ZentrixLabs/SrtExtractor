@@ -28,10 +28,23 @@ if ($fileInfo.Length -ge 2GB) {
     throw "Installer exceeds GitHub asset limit (>= 2 GB): $($fileInfo.Length) bytes"
 }
 
-# Ensure GitHub CLI is available
+# Ensure GitHub CLI is available (auto-detect common install paths if PATH hasn't refreshed)
 $gh = Get-Command gh -ErrorAction SilentlyContinue
 if (-not $gh) {
-    throw "GitHub CLI (gh) not found. Install via winget install --id GitHub.cli -e"
+    $ghCandidates = @(
+        (Join-Path ${env:ProgramFiles} "GitHub CLI\gh.exe"),
+        (Join-Path ${env:LOCALAPPDATA} "Programs\GitHub CLI\gh.exe")
+    )
+    foreach ($cand in $ghCandidates) {
+        if (Test-Path $cand) {
+            $env:Path = (Split-Path $cand) + ";" + $env:Path
+            $gh = Get-Command gh -ErrorAction SilentlyContinue
+            if ($gh) { break }
+        }
+    }
+}
+if (-not $gh) {
+    throw "GitHub CLI (gh) not found. Open a new PowerShell window or add it to PATH."
 }
 
 $tag = "v$Version"
@@ -89,5 +102,6 @@ if ($releaseExists) {
 }
 
 Write-Host "Release $tag published successfully." -ForegroundColor Green
+
 
 

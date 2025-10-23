@@ -121,9 +121,17 @@ Since v2.0.4, all tools are bundled - no Windows Package Manager (winget) needed
 
 **That's it!** All tools are bundled - no setup, no downloads, no configuration required.
 
+## 🏗️ Build (Maintainers)
+
+Build the app executable:
+
+```powershell
+pwsh ./scripts/build-app.ps1 -Configuration Release
+```
+
 ## 🚢 Releasing (Maintainers)
 
-1. Build and sign the installer via Inno Setup GUI/`SrtExtractorSetup.iss`.
+1. Build the app via `./scripts/build-app.ps1`, then build and sign the installer via Inno Setup GUI/`SrtExtractorSetup.iss`.
 2. Ensure the signed installer exists at `artifacts/SrtExtractorInstaller.exe`.
 3. Authenticate GitHub CLI once: `winget install --id GitHub.cli -e` then `gh auth login`.
 4. Publish a release (creates or replaces tag and uploads assets):
