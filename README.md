@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/ZentrixLabs/SrtExtractor?style=flat-square)](https://github.com/ZentrixLabs/SrtExtractor/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/ZentrixLabs/SrtExtractor/total?style=flat-square)](https://github.com/ZentrixLabs/SrtExtractor/releases)
-[![License](https://img.shields.io/github/license/ZentrixLabs/SrtExtractor?style=flat-square)](LICENSE.txt)
+[![License](https://img.shields.io/badge/License-LGPL--3.0--or--later-blue?style=flat-square)](LICENSE.txt)
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue?style=flat-square)](https://dotnet.microsoft.com/download/dotnet/9.0)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-lightgrey?style=flat-square)](https://www.microsoft.com/windows)
 

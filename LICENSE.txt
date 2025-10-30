@@ -4,8 +4,6 @@ Version 3, 29 June 2007
 Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
 Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
 
-This copy applies to the SrtExtractor project. Copyright (c) 2025 ZentrixLabs.
-
 This version of the GNU Lesser General Public License incorporates the terms and conditions of version 3 of the GNU General Public License, supplemented by the additional permissions listed below.
 
 0. Additional Definitions.
@@ -53,4 +51,3 @@ If the Library as you received it specifies that a proxy can decide whether futu
 
 ---
 
-For clarity: SrtExtractor is licensed under the GNU Lesser General Public License v3.0 or (at your option) any later version. See above for full terms.
