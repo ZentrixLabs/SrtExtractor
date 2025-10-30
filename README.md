@@ -389,7 +389,7 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later) — see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## 🙏 Acknowledgments
 

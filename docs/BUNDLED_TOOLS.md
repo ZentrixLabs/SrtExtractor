@@ -113,7 +113,7 @@ All bundled tools are open-source with redistribution-friendly licenses:
 - **MKVToolNix**: GPL-2.0
 - **FFmpeg**: GPL/LGPL (built with GPL configuration)
 
-**Our License**: MIT (compatible with all bundled tool licenses)
+**Our License**: LGPL-3.0-or-later (compatible with bundled tool licenses and linking requirements)
 
 As required by GPL licenses, we provide:
 - Source code repository: https://github.com/ZentrixLabs/SrtExtractor
