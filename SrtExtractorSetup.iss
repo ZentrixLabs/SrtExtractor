@@ -4,11 +4,13 @@
 #endif
 
 ; Default app version to allow GUI compile without CLI defines
+; Use scripts/update-version.ps1 to keep this in sync with SrtExtractor.csproj
 #ifndef MyAppVersion
-  #define MyAppVersion "2.5.2"
+  #define MyAppVersion "2.6.0"
 #endif
 
-; Optional signing configuration injected via command-line defines
+; Signing is enabled by default. SignTool is configured in Inno Setup IDE's Tools menu.
+; SignTool command references your certificate via the SignTool tool configured in the IDE.
 #ifndef EnableSigning
   #define EnableSigning "1"
 #endif

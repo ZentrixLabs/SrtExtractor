@@ -93,6 +93,10 @@ public class SubtitleOcrService : ISubtitleOcrService
                 await File.WriteAllTextAsync(filePath, srtContent, cancellationToken);
                 _loggingService.LogInfo("Successfully converted to SRT format");
             }
+            
+            // FIX: Consolidate duplicate timestamps to prevent bottom-to-top display issues
+            _loggingService.LogInfo("Consolidating duplicate timestamps in SRT file");
+            await ConsolidateDuplicateTimestampsAsync(filePath, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -316,5 +320,150 @@ public class SubtitleOcrService : ISubtitleOcrService
         {
             return "00:00:00,000";
         }
+    }
+
+    /// <summary>
+    /// Consolidates subtitle entries with identical timestamps into single entries.
+    /// This fixes the issue where multiple subtitle entries at the same time cause
+    /// bottom-to-top display order instead of natural top-to-bottom reading order.
+    /// </summary>
+    /// <param name="filePath">Path to the SRT file</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    private async Task ConsolidateDuplicateTimestampsAsync(string filePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var lines = content.Split('\n');
+            
+            // Parse all subtitle entries into objects
+            var entries = new List<SubtitleEntry>();
+            var i = 0;
+            
+            while (i < lines.Length)
+            {
+                // Skip empty lines
+                while (i < lines.Length && string.IsNullOrWhiteSpace(lines[i].Trim()))
+                {
+                    i++;
+                }
+                if (i >= lines.Length) break;
+                
+                // Expect subtitle number
+                var numberLine = lines[i++].Trim();
+                if (!int.TryParse(numberLine, out var entryNum))
+                {
+                    continue;
+                }
+                
+                // Expect timestamp line
+                if (i >= lines.Length || !lines[i].Trim().Contains("-->"))
+                {
+                    continue;
+                }
+                var timestamp = lines[i++].Trim();
+                
+                // Collect text lines
+                var textLines = new List<string>();
+                while (i < lines.Length)
+                {
+                    if (string.IsNullOrWhiteSpace(lines[i].Trim()))
+                    {
+                        i++;
+                        break;
+                    }
+                    textLines.Add(lines[i++].Trim());
+                }
+                
+                if (textLines.Count > 0)
+                {
+                    entries.Add(new SubtitleEntry
+                    {
+                        Number = entryNum,
+                        Timestamp = timestamp,
+                        Text = textLines
+                    });
+                }
+            }
+            
+            // Group entries by timestamp and consolidate
+            var grouped = entries
+                .GroupBy(e => e.Timestamp)
+                .Select(g => new SubtitleEntry
+                {
+                    Number = g.Min(e => e.Number),
+                    Timestamp = g.Key,
+                    Text = g.SelectMany(e => e.Text).Distinct().ToList()
+                })
+                .OrderBy(e => e.Number)
+                .ToList();
+            
+            // Renumber entries sequentially
+            for (var idx = 0; idx < grouped.Count; idx++)
+            {
+                grouped[idx].Number = idx + 1;
+            }
+            
+            // Build consolidated SRT content
+            var consolidatedLines = new List<string>();
+            foreach (var entry in grouped)
+            {
+                consolidatedLines.Add(entry.Number.ToString());
+                consolidatedLines.Add(entry.Timestamp);
+                consolidatedLines.AddRange(entry.Text);
+                consolidatedLines.Add("");
+            }
+            
+            var consolidatedContent = string.Join("\n", consolidatedLines);
+            
+            // Only write if we actually consolidated anything
+            if (entries.Count != grouped.Count)
+            {
+                await File.WriteAllTextAsync(filePath, consolidatedContent, cancellationToken);
+                _loggingService.LogInfo($"Consolidated {entries.Count} entries into {grouped.Count} entries");
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService.LogWarning($"Failed to consolidate duplicate timestamps: {ex.Message}");
+            // Don't throw - let the file remain as-is
+        }
+    }
+
+    /// <summary>
+    /// Flush a consolidated entry, merging multiple text lines into a single subtitle.
+    /// </summary>
+    private static void FlushConsolidatedEntry(List<string> entry, List<string> output)
+    {
+        if (entry.Count < 2) return;
+        
+        // Entry format: [number, timestamp, text1, text2, ...]
+        var number = entry[0];
+        var timestamp = entry[1];
+        var textLines = entry.Skip(2).ToList();
+        
+        // Remove any trailing empty lines from text
+        while (textLines.Count > 0 && string.IsNullOrWhiteSpace(textLines[textLines.Count - 1]))
+        {
+            textLines.RemoveAt(textLines.Count - 1);
+        }
+        
+        if (textLines.Count > 0)
+        {
+            output.Add(number);
+            output.Add(timestamp);
+            output.AddRange(textLines);
+            output.Add(""); // Empty line between entries
+        }
+    }
+    
+    /// <summary>
+    /// Helper class for subtitle entries during consolidation.
+    /// </summary>
+    private class SubtitleEntry
+    {
+        public int Number { get; set; }
+        public string Timestamp { get; set; } = "";
+        public List<string> Text { get; set; } = new();
     }
 }

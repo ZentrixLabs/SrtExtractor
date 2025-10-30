@@ -49,10 +49,13 @@ if (-not $gh) {
 
 $tag = "v$Version"
 
-# Compute SHA256 and write alongside installer
+# Compute SHA256 and write alongside installer (if not already exists)
 $shaFile = "$installer.sha256"
-$sha = (Get-FileHash -Algorithm SHA256 $installer).Hash
-Set-Content -Path $shaFile -NoNewline -Value $sha
+if (-not (Test-Path $shaFile)) {
+	$sha = (Get-FileHash -Algorithm SHA256 $installer).Hash
+	Set-Content -Path $shaFile -NoNewline -Value $sha
+	Write-Host "Created checksum file: $shaFile" -ForegroundColor DarkGray
+}
 
 # Ensure we're in repo root for git/gh to pick the correct remote (already attempted above)
 try {
